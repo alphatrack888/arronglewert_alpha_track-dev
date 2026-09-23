@@ -1,0 +1,102 @@
+import 'package:alpha_track/core/app_route/app_route.dart';
+import 'package:alpha_track/core/bindings/initial_bindings.dart';
+import 'package:alpha_track/services/storage_services/storage_services.dart';
+import 'package:alpha_track/utils/app_log/app_log.dart';
+import 'package:alpha_track/widgets/app_device_utils/app_device_utils.dart';
+import 'package:alpha_track/widgets/getx_observer/getx_custome_observer.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'core/app_translation/app_translation.dart';
+
+void main() async {
+  // Ensure Flutter binding is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Lock device orientation first
+  DeviceUtils.lockDevicePortrait();
+
+  // Initialize platform channels with error handling
+  await initializePlatformChannels();
+
+  // Initialize storage with enhanced error handling
+  await initializeStorage();
+
+  // Initialize bindings
+  InitialBinding().dependencies();
+
+  runApp(MyApp());
+}
+
+Future<void> initializePlatformChannels() async {
+  try {
+    // Test path provider availability
+    final directory = await getApplicationSupportDirectory();
+    appLog('Path provider initialized successfully: ${directory.path}');
+  } catch (e) {
+    appLog('Path provider initialization failed: $e');
+    // Continue without path provider - app will use fallback storage
+  }
+
+  // Add a longer delay in release mode to ensure platform channels are ready
+  if (kReleaseMode) {
+    await Future.delayed(const Duration(milliseconds: 1000));
+  } else {
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+}
+
+Future<void> initializeStorage() async {
+  // ignore: unused_local_variable
+  bool storageInitialized = false;
+
+  try {
+    // Skip GetStorage entirely and use SharedPreferences directly
+    // This avoids the path_provider dependency issue completely
+    StorageServices storageServices = StorageServices.instance;
+    await storageServices.initializeFallbackStorage();
+
+    storageInitialized = true;
+    appLog(
+      'Storage initialized successfully with SharedPreferences (bypassing GetStorage path_provider issue)',
+    );
+  } catch (e) {
+    appLog('Storage initialization failed: $e');
+    appLog('App will continue with limited functionality.');
+    // Even if storage fails completely, allow the app to continue
+    storageInitialized = true;
+  }
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final String savedLanguage =
+        StorageServices.instance.getLanguage() ?? 'english';
+    return GetMaterialApp(
+      translations: AppTranslation(),
+      locale: Locale(savedLanguage),
+      fallbackLocale: const Locale('english'),
+      navigatorObservers: [NavigationObserver()],
+      useInheritedMediaQuery: true,
+      debugShowCheckedModeBanner: false,
+      defaultTransition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 200),
+      initialRoute: AppRoute.splashScreen,
+      navigatorKey: Get.key,
+      getPages: AppRoute.appRoutes,
+      // Add error handling for the entire app
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            body: Center(child: Text('Route not found: ${settings.name}')),
+          ),
+        );
+      },
+    );
+  }
+}

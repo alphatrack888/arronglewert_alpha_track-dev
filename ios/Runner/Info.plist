@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="15.0">
+<dict>
+<key>CFBundleDevelopmentRegion</key>
+<string>$(DEVELOPMENT_LANGUAGE)</string>
+<key>CFBundleDisplayName</key>
+<string>Alpha Track</string>
+<key>CFBundleExecutable</key>
+<string>$(EXECUTABLE_NAME)</string>
+<key>CFBundleIdentifier</key>
+<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+<key>CFBundleInfoDictionaryVersion</key>
+<string>6.0</string>
+<key>CFBundleName</key>
+<string>alpha_track</string>
+<key>CFBundlePackageType</key>
+<string>APPL</string>
+<key>CFBundleShortVersionString</key>
+<string>$(FLUTTER_BUILD_NAME)</string>
+<key>CFBundleSignature</key>
+<string>????</string>
+<key>CFBundleVersion</key>
+<string>$(FLUTTER_BUILD_NUMBER)</string>
+<key>LSRequiresIPhoneOS</key>
+<true/>
+<key>UILaunchStoryboardName</key>
+<string>LaunchScreen</string>
+<key>UIMainStoryboardFile</key>
+<string>Main</string>
+<key>UISupportedInterfaceOrientations</key>
+<array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+</array>
+<key>NSLocalNetworkUsageDescription</key>
+<string>This app needs access to devices on your local network.</string>
+<key>NSBonjourServices</key>
+<array>
+</array>
+<key>UISupportedInterfaceOrientations~ipad</key>
+<array>
+<string>UIInterfaceOrientationPortrait</string>
+<string>UIInterfaceOrientationPortraitUpsideDown</string>
+<string>UIInterfaceOrientationLandscapeLeft</string>
+<string>UIInterfaceOrientationLandscapeRight</string>
+</array>
+<key>CADisableMinimumFrameDurationOnPhone</key>
+<true/>
+<key>UIApplicationSupportsIndirectInputEvents</key>
+<true/>
+<key>NSMicrophoneUsageDescription</key>
+<string>Alpha Track uses the microphone to let you record audio notes for your tasks.</string>
+<!-- Camera Permission -->
+<key>NSCameraUsageDescription</key>
+<string>Alpha Track needs access to your camera to capture images for task proof and work reports.</string>
+<!-- Apple Music Permission -->
+<key>NSAppleMusicUsageDescription</key>
+<string>Alpha Track needs access to play back your recorded voice notes and audio messages.</string>
+<!-- Photo Library Permission -->
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Alpha Track needs access to your photo library to upload proof of tasks and attach images to work reports.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Alpha Track needs permission to save images such as project reports and exported documents.</string>
+<!-- Location Permissions -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Alpha Track uses your location while you use the app to verify on-site attendance and project work.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Alpha Track uses your location in the background to confirm work hours and job-site presence for internal company records.</string>
+<key>NSLocationAlwaysUsageDescription</key>
+<string>Continuous background location access is required to validate attendance and project tasks for your employer.</string>
+<!-- Document/File Access -->
+<key>UIFileSharingEnabled</key>
+<true/>
+<key>LSSupportsOpeningDocumentsInPlace</key>
+<true/>
+<key>CFBundleDocumentTypes</key>
+<array>
+<dict>
+<key>CFBundleTypeName</key>
+<string>PDF Document</string>
+<key>LSItemContentTypes</key>
+<array>
+<string>com.adobe.pdf</string>
+</array>
+<key>LSHandlerRank</key>
+<string>Alternate</string>
+</dict>
+</array>
+</dict>
+</plist>

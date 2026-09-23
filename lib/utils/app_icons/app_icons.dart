@@ -1,0 +1,41 @@
+class AppIcons {
+  AppIcons._();
+  static const String appbarBackButton = "assets/icons/appBarBackbutton.svg";
+  static const String homeWhite = "assets/icons/homeWHite.svg";
+  static const String homeGray = "assets/icons/homeGray.svg";
+  static const String breakWhite = "assets/icons/breakWhite.svg";
+  static const String breakGray = "assets/icons/breakGray.svg";
+  static const String profileWhite = "assets/icons/profileWhite.svg";
+  static const String profileGray = "assets/icons/profileGray.svg";
+  static const String noteWhite = "assets/icons/noteWhite.svg";
+  static const String noteGray = "assets/icons/noteGray.svg";
+  static const String notificationIcons = "assets/icons/notificationIcons.svg";
+  static const String pauseIcon = "assets/icons/pauseIcons.svg";
+  static const String resumeIcons = "assets/icons/resumeIcons.svg";
+  static const String changePassword = "assets/icons/changePassword.svg";
+  static const String clockGray = "assets/icons/clockGray.svg";
+  static const String clockWhite = "assets/icons/clockWhite.svg";
+  static const String downloadIcon = "assets/icons/downloadIcon.svg";
+  static const String galleryIcon = "assets/icons/gallary.svg";
+  static const String logoutIcons = "assets/icons/logout.svg";
+  static const String payRoleIcons = "assets/icons/payRole.svg";
+  static const String pdfIcons = "assets/icons/pdfIcons01.svg";
+  static const String personalInformation =
+      "assets/icons/personalInformation.svg";
+  static const String privacyPolicy = "assets/icons/privacyPolicy.svg";
+  static const String projectgray = "assets/icons/projectGray.svg";
+  static const String projectWhite = "assets/icons/projectWhite.svg";
+  static const String settingsIcons = "assets/icons/settings.svg";
+  static const String recordingsIcons = "assets/icons/recordeIcons.svg";
+  static const String attachPhoto = "assets/icons/attachPhoto1.svg";
+  static const String deleteAccount = "assets/icons/deleteAccount.svg";
+  static const String imageNotes = "assets/icons/imageNote01.svg";
+  static const String textNotes = "assets/icons/textNote01.svg";
+  static const String audioNote = "assets/icons/audioNote01.svg";
+  static const String allNotes = "assets/icons/allNOtes.svg";
+  static const String languageChanges = "assets/icons/world 1.svg";
+  static const String englishLanguage = "assets/icons/english 1.svg";
+  static const String romanianLanguage = "assets/icons/romania 1.svg";
+  static const String arabicLanguage = "assets/icons/arabic-language 1.svg";
+  static const String germanLanguage = "assets/icons/german 1.svg";
+}

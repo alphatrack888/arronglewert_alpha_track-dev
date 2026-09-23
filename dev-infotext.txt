@@ -1,0 +1,10 @@
+ keytool -genkey -v -keystore "C:\App Dev\Aarongelwert\arronglewert_alpha_track\upload-keystore.jks" -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+Is CN=alpha track, OU=alpha, O=alpha, L=frankfurt, ST=frankfurt, C=DE
+
+ keystore password : timetrack
+ first and last name : alpha track
+ organizational unit : alpha
+ organization : alpha
+ City or Locality : frankfurt
+ State or Province : frankfurt
+ Country Code : DE

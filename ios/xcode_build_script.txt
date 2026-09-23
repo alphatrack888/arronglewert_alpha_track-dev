@@ -1,0 +1,24 @@
+# Add this script to Xcode Build Phases -> New Run Script Phase
+# Name: "Strip FFmpeg dSYMs"
+# Shell: /bin/sh
+
+if [ "$CONFIGURATION" = "Release" ]; then
+    echo "Removing FFmpeg dSYMs for App Store submission..."
+    
+    # Remove FFmpeg dSYMs from archive
+    if [ -n "$DWARF_DSYM_FOLDER_PATH" ] && [ -n "$DWARF_DSYM_FILE_NAME" ]; then
+        DSYM_DIR="${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF"
+        
+        if [ -d "$DSYM_DIR" ]; then
+            rm -f "$DSYM_DIR/ffmpegkit"
+            rm -f "$DSYM_DIR/libavcodec"
+            rm -f "$DSYM_DIR/libavdevice"
+            rm -f "$DSYM_DIR/libavfilter"
+            rm -f "$DSYM_DIR/libavformat"
+            rm -f "$DSYM_DIR/libavutil"
+            rm -f "$DSYM_DIR/libswresample"
+            rm -f "$DSYM_DIR/libswscale"
+            echo "FFmpeg dSYMs removed successfully"
+        fi
+    fi
+fi
