@@ -13,7 +13,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class NotificationScreenController extends GetxController {
+class NotificationScreenController extends GetxController
+    with WidgetsBindingObserver {
   final NotificationRepository _notificationRepository =
       NotificationRepository();
   final AppSocketAllOperation socketAllOperation =
@@ -39,6 +40,7 @@ class NotificationScreenController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     fetchNotifications();
     _setupScrollListener();
     socketCalling();
@@ -47,11 +49,32 @@ class NotificationScreenController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     scrollController.dispose();
     // Clean up socket listeners when controller is disposed
     _cleanupSocketListeners();
     _connectivitySubscription?.cancel();
     super.onClose();
+  }
+
+  // Phase 16 QA fix: this controller is a `fenix: true` app-wide singleton
+  // (see initial_bindings.dart) whose onInit only ever runs once, near app
+  // startup — its home-screen badge (home_screen.dart) reads the same
+  // cached `unreadCount` for the whole app lifetime. The live socket
+  // handler in socketCalling() only accounts for notifications that arrive
+  // while connected; anything that happened while the app was backgrounded
+  // (socket disconnected, no FCM foreground handler running) was never
+  // reflected until the user happened to manually open and pull-to-refresh
+  // the notifications screen. Resuming from background is exactly the
+  // moment that gap shows up as a stale badge/list, so it's the trigger to
+  // resync here, the same pattern HomeScreenController already uses for
+  // its own resume handling.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      fetchNotifications(isRefresh: true);
+    }
   }
 
   /// Replays any mark-read/mark-all-read actions that were queued while
