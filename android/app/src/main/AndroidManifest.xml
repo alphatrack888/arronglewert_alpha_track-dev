@@ -29,6 +29,12 @@
     <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Required on Android 13+ (API 33+) to show notifications at all —
+         firebase_messaging's requestPermission() triggers this runtime
+         prompt automatically, but the permission still has to be declared
+         here or the prompt (and delivery) never happens. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:label="Alpha Track"
         android:name="${applicationName}"
@@ -89,6 +95,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FCM: a single default channel so multiple rapid pushes (e.g.
+             several leave requests in a row) group sensibly under one
+             channel instead of each spawning ungrouped notifications. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="alpha_track_default_channel" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
     </application>
 
     <!-- Required to query activities that can process text, see:

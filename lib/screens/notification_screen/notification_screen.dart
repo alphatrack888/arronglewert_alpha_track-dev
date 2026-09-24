@@ -1,9 +1,12 @@
+import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
+import 'package:alpha_track/utils/app_icons/app_icons.dart';
 import 'package:alpha_track/utils/app_size/app_gap.dart';
 import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/notification_routing/notification_routing.dart';
 import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
 import 'package:alpha_track/widgets/app_button/app_button.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
@@ -21,14 +24,54 @@ class NotificationScreen extends StatelessWidget {
     return Scaffold(
       appBar: AuthAppBar(
         title: AppString.notifications.tr,
-        showAction: false,
+        showAction: true,
+        actionIcon: AppIcons.settingsIcons,
+        onActionPressed: () => Get.toNamed(AppRoute.notificationPreferencesScreen),
         showLeading: true,
         backgroundColor: AppColors.white200,
       ),
       backgroundColor: AppColors.white200,
       body: RefreshIndicator(
         onRefresh: controller.refreshNotifications,
-        child: Obx(() {
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSize.width(value: 16),
+                vertical: AppSize.height(value: 8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Obx(
+                    () => TextButton(
+                      onPressed: controller.unreadCount.value == 0
+                          ? null
+                          : controller.markAllAsRead,
+                      child: AppText(
+                        text: controller.unreadCount.value > 0
+                            ? '${AppString.markAllRead.tr} (${controller.unreadCount.value})'
+                            : AppString.markAllRead.tr,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: controller.unreadCount.value == 0
+                            ? Colors.grey
+                            : AppColors.blue500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildList(controller)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildList(NotificationScreenController controller) {
+    return Obx(() {
           if (controller.isLoading.value && controller.notifications.isEmpty) {
             return Center(
               child: LoadingAnimationWidget.fourRotatingDots(
@@ -117,9 +160,7 @@ class NotificationScreen extends StatelessWidget {
               );
             },
           );
-        }),
-      ),
-    );
+    });
   }
 
   Widget _buildNotificationCard(
@@ -154,8 +195,13 @@ class NotificationScreen extends StatelessWidget {
         ],
       ),
       child: InkWell(
+        onTap: () {
+          controller.markAsRead(notification.id);
+          final route = routeForNotificationCategory(notification.category);
+          if (route != null) Get.toNamed(route);
+        },
         onLongPress: () {
-          _showNotificationDetails(notification);
+          _showNotificationDetails(notification, controller);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -342,7 +388,11 @@ class NotificationScreen extends StatelessWidget {
   }
 
   /// Show notification details on long press
-  void _showNotificationDetails(Datum notification) {
+  void _showNotificationDetails(
+    Datum notification,
+    NotificationScreenController controller,
+  ) {
+    controller.markAsRead(notification.id);
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -466,6 +516,24 @@ class NotificationScreen extends StatelessWidget {
                   const Gap(height: 10),
                 ],
               ),
+
+            // View button — only shown when this notification's category
+            // has somewhere to navigate to (see routeForNotificationCategory).
+            // This is the fix for the long-press view having "no navigation
+            // at all" that Phase 12 explicitly called out.
+            if (routeForNotificationCategory(notification.category) != null) ...[
+              AppButton(
+                height: AppSize.height(value: 40),
+                title: AppString.view.tr,
+                titleColor: AppColors.white100,
+                backgroundColor: AppColors.green,
+                onTap: () {
+                  Get.back();
+                  Get.toNamed(routeForNotificationCategory(notification.category)!);
+                },
+              ),
+              const Gap(height: 10),
+            ],
 
             // Close Button
             AppButton(

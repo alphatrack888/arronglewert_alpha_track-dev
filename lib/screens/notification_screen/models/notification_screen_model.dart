@@ -63,6 +63,10 @@ class Datum {
     String? title;
     String? body;
     bool? isRead;
+    // Persisted server-side (Phase 12) so a tap on a fetched list item can
+    // route the same way a live push can — see notificationHelper.ts.
+    // Absent for older/ad-hoc notifications sent before this field existed.
+    String? category;
     DateTime? createdAt;
     DateTime? updatedAt;
     int? v;
@@ -74,6 +78,7 @@ class Datum {
         this.title,
         this.body,
         this.isRead,
+        this.category,
         this.createdAt,
         this.updatedAt,
         this.v,
@@ -92,6 +97,7 @@ class Datum {
                 title: json["title"],
                 body: json["body"],
                 isRead: json["isRead"] ?? false,
+                category: json["category"],
                 createdAt: json["createdAt"] == null ? null : DateTime.tryParse(json["createdAt"]),
                 updatedAt: json["updatedAt"] == null ? null : DateTime.tryParse(json["updatedAt"]),
                 v: json["__v"],
@@ -120,6 +126,7 @@ class Datum {
         "title": title,
         "body": body,
         "isRead": isRead,
+        "category": category,
         "createdAt": createdAt?.toIso8601String(),
         "updatedAt": updatedAt?.toIso8601String(),
         "__v": v,
@@ -257,12 +264,17 @@ class Meta {
     int? limit;
     int? total;
     int? totalPages;
+    // Server-computed (Phase 12) — true count across every notification,
+    // not just the current page. The single source of truth for the bell
+    // badge; never derived by summing !isRead over a fetched page locally.
+    int? unreadCount;
 
     Meta({
         this.page,
         this.limit,
         this.total,
         this.totalPages,
+        this.unreadCount,
     });
 
     factory Meta.fromRawJson(String str) => Meta.fromJson(json.decode(str));
@@ -274,6 +286,7 @@ class Meta {
         limit: json["limit"],
         total: json["total"],
         totalPages: json["totalPages"],
+        unreadCount: json["unreadCount"],
     );
 
     Map<String, dynamic> toJson() => {
@@ -281,5 +294,6 @@ class Meta {
         "limit": limit,
         "total": total,
         "totalPages": totalPages,
+        "unreadCount": unreadCount,
     };
 }

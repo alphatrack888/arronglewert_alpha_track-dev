@@ -6,6 +6,18 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") apply false
+}
+
+// The google-services plugin hard-fails the build if google-services.json
+// is missing — correct behavior once Firebase is actually set up, but it
+// would otherwise break every Android build (including ones unrelated to
+// push) for anyone who hasn't added the real file yet. Applied only when
+// the file is present; see FIREBASE_SETUP.md in this directory for how to
+// get the real one from the Firebase project already backing time-tracker's
+// firebase-admin setup.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 val keystoreProperties = Properties()

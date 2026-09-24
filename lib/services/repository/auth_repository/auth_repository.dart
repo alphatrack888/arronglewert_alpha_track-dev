@@ -1,6 +1,7 @@
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/api/api_services.dart';
+import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -193,6 +194,11 @@ class AuthRepository {
 
     Get.offAllNamed(AppRoute.bottomNavigation);
     AppSnackBar.success("Login Successfully");
+
+    // Fire-and-forget: push registration must never block or fail login —
+    // permission denial or a Firebase hiccup just means no push this
+    // session, degrading to the existing in-app notifications.
+    PushNotificationService.instance.registerCurrentToken();
   }
 
   //! Resend Otp

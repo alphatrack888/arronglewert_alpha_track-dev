@@ -1,8 +1,15 @@
+import 'dart:async';
+
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
+import 'package:alpha_track/services/connectivity_services/connectivity_service.dart';
+import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
+import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -20,9 +27,14 @@ class NotificationScreenController extends GetxController {
   var currentPage = 1.obs;
   var totalPages = 1.obs;
   var hasMoreData = false.obs;
+  // Server-computed (Phase 12) — the single source of truth for the bell
+  // badge, never derived by counting !isRead over whatever page happens to
+  // be loaded locally.
+  var unreadCount = 0.obs;
 
   // Controllers
   final ScrollController scrollController = ScrollController();
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void onInit() {
@@ -30,6 +42,7 @@ class NotificationScreenController extends GetxController {
     fetchNotifications();
     _setupScrollListener();
     socketCalling();
+    _setupConnectivityListener();
   }
 
   @override
@@ -37,7 +50,67 @@ class NotificationScreenController extends GetxController {
     scrollController.dispose();
     // Clean up socket listeners when controller is disposed
     _cleanupSocketListeners();
+    _connectivitySubscription?.cancel();
     super.onClose();
+  }
+
+  /// Replays any mark-read/mark-all-read actions that were queued while
+  /// offline (see markAsRead/markAllAsRead) as soon as connectivity comes
+  /// back — this is the actual "sync when connectivity returns" half of the
+  /// offline edge case, not just "don't crash while offline".
+  void _setupConnectivityListener() {
+    try {
+      final connectivityService = Get.find<ConnectivityService>();
+      _connectivitySubscription = connectivityService.onConnectivityChanged.listen((results) {
+        if (!results.contains(ConnectivityResult.none)) {
+          _syncPendingOfflineActions();
+        }
+      });
+    } catch (e) {
+      appLog("Error setting up connectivity listener: $e");
+    }
+  }
+
+  Future<void> _syncPendingOfflineActions() async {
+    try {
+      final pendingAll = storageServices.getPendingMarkAllRead();
+      final pendingIds = storageServices.getPendingMarkReadIds();
+      if (!pendingAll && pendingIds.isEmpty) return;
+
+      bool anySynced = false;
+
+      if (pendingAll) {
+        final success = await _notificationRepository.markAllNotificationsRead();
+        if (success) {
+          await storageServices.setPendingMarkAllRead(false);
+          await storageServices.clearPendingMarkReadIds();
+          anySynced = true;
+        }
+      } else {
+        final stillPending = <String>[];
+        for (final id in pendingIds) {
+          final success = await _notificationRepository.markNotificationRead(id);
+          if (!success) stillPending.add(id);
+        }
+        if (stillPending.length != pendingIds.length) anySynced = true;
+        await storageServices.clearPendingMarkReadIds();
+        for (final id in stillPending) {
+          await storageServices.addPendingMarkReadId(id);
+        }
+      }
+
+      if (anySynced) {
+        appLog("Offline mark-read queue synced");
+        AppSnackBar.success(AppString.offlineChangesSynced.tr);
+        // The server is the source of truth for isRead/unreadCount — a
+        // fresh fetch after syncing avoids any local state drifting from
+        // what actually got persisted (some queued ids can fail to sync
+        // individually, e.g. a notification deleted server-side since).
+        await fetchNotifications(isRefresh: true);
+      }
+    } catch (e) {
+      appLog("Error syncing pending offline actions: $e");
+    }
   }
 
   // Setup scroll listener for pagination
@@ -174,7 +247,9 @@ class NotificationScreenController extends GetxController {
       isLoading.value = true;
       hasError.value = false;
 
-      final response = await _notificationRepository.fetchAlltheNotificaton();
+      final response = await _notificationRepository.fetchAlltheNotificaton(
+        page: currentPage.value,
+      );
 
       if (response.success == true && response.data != null) {
         final newNotifications = response.data!.data ?? [];
@@ -188,6 +263,7 @@ class NotificationScreenController extends GetxController {
         if (response.data!.meta != null) {
           totalPages.value = response.data!.meta!.totalPages ?? 1;
           hasMoreData.value = currentPage.value < totalPages.value;
+          unreadCount.value = response.data!.meta!.unreadCount ?? unreadCount.value;
         }
         appLog(
           "Notifications loaded successfully: ${notifications.length} items",
@@ -211,16 +287,90 @@ class NotificationScreenController extends GetxController {
 
     try {
       currentPage.value++;
-      final response = await _notificationRepository.fetchAlltheNotificaton();
+      // Was previously called with no page argument at all — every "load
+      // more" silently refetched page 1 instead of advancing, a
+      // pre-existing bug caught while wiring real pagination through here.
+      final response = await _notificationRepository.fetchAlltheNotificaton(
+        page: currentPage.value,
+      );
 
       if (response.success == true && response.data != null) {
         final newNotifications = response.data!.data ?? [];
         notifications.addAll(newNotifications);
         hasMoreData.value = currentPage.value < totalPages.value;
+        if (response.data!.meta != null) {
+          unreadCount.value = response.data!.meta!.unreadCount ?? unreadCount.value;
+        }
       }
     } catch (e) {
       currentPage.value--; // Rollback page increment on error
       appLog("Error loading more notifications: $e");
+    }
+  }
+
+  /// Marks one notification read: optimistic local update always applied
+  /// first (instant UI feedback), then persisted to the backend. If the
+  /// device is offline (or the call otherwise fails), the action is queued
+  /// via StorageServices and replayed by _syncPendingOfflineActions once
+  /// connectivity returns — the local state isn't rolled back, since the
+  /// user's intent ("I read this") is still valid and shouldn't silently
+  /// disappear just because the network request failed.
+  Future<void> markAsRead(String? id) async {
+    if (id == null) return;
+    final index = notifications.indexWhere((n) => n.id == id);
+    if (index == -1) return;
+    if (notifications[index].isRead == true) return; // already read, nothing to do
+
+    notifications[index].isRead = true;
+    notifications.refresh();
+    if (unreadCount.value > 0) unreadCount.value--;
+
+    bool isOnline = true;
+    try {
+      isOnline = Get.find<ConnectivityService>().isConnected;
+    } catch (e) {
+      appLog("Error checking connectivity in markAsRead: $e");
+    }
+
+    if (!isOnline) {
+      await storageServices.addPendingMarkReadId(id);
+      AppSnackBar.customMessage(AppString.markedReadWillSyncOffline.tr);
+      return;
+    }
+
+    final success = await _notificationRepository.markNotificationRead(id);
+    if (!success) {
+      await storageServices.addPendingMarkReadId(id);
+    }
+  }
+
+  /// Same optimistic-then-persist-then-queue-on-failure shape as
+  /// [markAsRead], for all notifications at once.
+  Future<void> markAllAsRead() async {
+    if (unreadCount.value == 0) return;
+
+    for (final n in notifications) {
+      n.isRead = true;
+    }
+    notifications.refresh();
+    unreadCount.value = 0;
+
+    bool isOnline = true;
+    try {
+      isOnline = Get.find<ConnectivityService>().isConnected;
+    } catch (e) {
+      appLog("Error checking connectivity in markAllAsRead: $e");
+    }
+
+    if (!isOnline) {
+      await storageServices.setPendingMarkAllRead(true);
+      AppSnackBar.customMessage(AppString.markedReadWillSyncOffline.tr);
+      return;
+    }
+
+    final success = await _notificationRepository.markAllNotificationsRead();
+    if (!success) {
+      await storageServices.setPendingMarkAllRead(true);
     }
   }
 
@@ -280,15 +430,16 @@ class NotificationScreenController extends GetxController {
       if (existingIndex == -1) {
         // Add to the beginning of the list for newest-first display
         notifications.insert(0, newNotification);
-        
+
         // Maintain a reasonable list size for performance (optional)
         if (notifications.length > 100) {
           notifications.removeRange(100, notifications.length);
         }
-        
+
         // Trigger UI update
         notifications.refresh();
-        
+        if (newNotification.isRead != true) unreadCount.value++;
+
         appLog("New notification added: ${newNotification.title}");
       } else {
         // Update existing notification if needed
@@ -338,15 +489,21 @@ class NotificationScreenController extends GetxController {
   /// Shows a visual indicator for new notifications (optional)
   void _showNewNotificationIndicator(Datum notification) {
     try {
-      // You can implement a snackbar, toast, or other UI indicator here
-      // For example, using GetX snackbar:
+      // Shared with PushNotificationService's foreground FCM handler — the
+      // backend fires both a socket event and a push for the same event,
+      // so whichever arrives first here claims it and the other is
+      // suppressed, instead of showing two banners for one notification.
+      if (!PushNotificationService.claimForDisplay(notification.id)) {
+        appLog("Socket notification indicator suppressed — already shown via push: ${notification.id}");
+        return;
+      }
       if (Get.isSnackbarOpen == false) {
         Get.snackbar(
           notification.title ?? 'New Notification',
           notification.body ?? 'You have a new notification',
           duration: const Duration(seconds: 3),
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.blue.withOpacity(0.8),
+          backgroundColor: Colors.blue.withValues(alpha: 0.8),
           colorText: Colors.white,
           margin: const EdgeInsets.all(10),
           borderRadius: 8,

@@ -17,12 +17,14 @@ import 'package:alpha_track/screens/home_screen/project_details/project_details_
 import 'package:alpha_track/screens/home_screen/projects_notes/project_notes_screen.dart';
 import 'package:alpha_track/screens/notes_screen/note_screen/note_screen.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/note_view.dart';
+import 'package:alpha_track/screens/notification_preferences_screen/notification_preferences_screen.dart';
 import 'package:alpha_track/screens/notification_screen/notification_screen.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen_final.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen_two.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/gallery_screen.dart';
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/pay_role_screen.dart';
+import 'package:alpha_track/screens/reports_screen/reports_screen.dart';
 import 'package:alpha_track/screens/profile_screen/personal_information/personal_information.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/profile_screen.dart';
 import 'package:alpha_track/screens/profile_screen/settings_screen/change_pasword/change_password_screen.dart';
@@ -71,12 +73,14 @@ class AppRoute {
   static const String galleryScreen = "/galleryScreen";
   static const String languageScreen = "/languageScreen";
   static const String payRoleScreen = "/payRoleScreen";
+  static const String reportsScreen = "/reportsScreen";
   static const String settingScreen = "/settingScreen";
   static const String changePasswordScreen = "/changePasswordScreen";
   static const String privacyPolicyScreen = "/privacyPolicyScreen";
 
   //! Notificaiton Screen
   static const String notificationScreen = "/notificationScreen";
+  static const String notificationPreferencesScreen = "/notificationPreferencesScreen";
 
   //! Route Pages
   static List<GetPage> appRoutes = [
@@ -240,6 +244,12 @@ class AppRoute {
       middlewares: [InternetCheckMiddleWare()],
     ),
     GetPage(
+      name: AppRoute.reportsScreen,
+      page: () => const ReportsScreen(),
+      transition: Transition.rightToLeftWithFade,
+      middlewares: [InternetCheckMiddleWare()],
+    ),
+    GetPage(
       name: AppRoute.settingScreen,
       page: () => SettingScreen(),
       transition: Transition.rightToLeftWithFade,
@@ -263,6 +273,14 @@ class AppRoute {
     GetPage(
       name: AppRoute.notificationScreen,
       page: () => NotificationScreen(),
+      transition: Transition.rightToLeftWithFade,
+      middlewares: [InternetCheckMiddleWare()],
+    ),
+
+    //! Notification Preferences Screen
+    GetPage(
+      name: AppRoute.notificationPreferencesScreen,
+      page: () => const NotificationPreferencesScreen(),
       transition: Transition.rightToLeftWithFade,
       middlewares: [InternetCheckMiddleWare()],
     ),

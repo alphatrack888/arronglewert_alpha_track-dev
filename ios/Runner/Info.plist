@@ -88,5 +88,14 @@
 <string>Alternate</string>
 </dict>
 </array>
+<!-- Phase 11: lets FCM/APNs wake the app to process a push while it's
+     backgrounded (not foregrounded, not fully killed). Pairs with the
+     "Push Notifications" and "Background Modes → Remote notifications"
+     capabilities, which still need enabling in Xcode's Signing &
+     Capabilities tab — see FIREBASE_SETUP.md in this directory. -->
+<key>UIBackgroundModes</key>
+<array>
+<string>remote-notification</string>
+</array>
 </dict>
 </plist>

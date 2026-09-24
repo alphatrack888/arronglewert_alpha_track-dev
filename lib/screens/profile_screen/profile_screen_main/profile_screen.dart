@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/controller/profile_controller.dart';
+import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_icons/app_icons.dart';
@@ -138,6 +139,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             Gap(height: AppSize.height(value: 12)),
+            // Phase 13: generated timesheet/attendance reports, kept
+            // separate from Pay Role (company-uploaded payroll documents
+            // are a different concept from self-service generated
+            // reports) — see Notification_Reports_Integration_Plan.md
+            // Phase 13 for the product decision behind this split.
+            AppButtonWithIcon(
+              buttonText: AppString.report.tr,
+              svgIconPath: AppIcons.pdfIcons,
+              textColor: AppColors.blue500,
+              onPressed: () {
+                Get.toNamed(AppRoute.reportsScreen);
+              },
+            ),
+            Gap(height: AppSize.height(value: 12)),
             AppButtonWithIcon(
               buttonText: AppString.gallery.tr,
               svgIconPath: AppIcons.galleryIcon,
@@ -223,6 +238,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderColor: Colors.transparent,
                     onTap: () async {
                       try {
+                        // Must run before storageClear() below — it needs
+                        // the still-present access token to authenticate,
+                        // and deregisters this device so a shared/kiosk
+                        // device stops receiving push for this user once
+                        // logged out.
+                        await PushNotificationService.instance
+                            .deregisterCurrentToken();
                         // Clear all stored user data
                         await StorageServices.instance.storageClear();
                         // Navigate to the onboarding screen

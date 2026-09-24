@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:alpha_track/core/app_route/app_route.dart';
+import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/controller/profile_controller.dart';
 import 'package:alpha_track/widgets/app_images/app_images.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -823,11 +824,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Get.toNamed(AppRoute.notificationScreen);
                 },
-                icon: SvgPicture.asset(
-                  AppIcons.notificationIcons,
-                  width: 24,
-                  height: 24,
-                ),
+                icon: Obx(() {
+                  // NotificationScreenController is registered with
+                  // fenix:true in InitialBinding, so Get.find here either
+                  // reuses the existing instance (if the user has already
+                  // opened the notification screen this session) or
+                  // creates it fresh — either way this always reflects the
+                  // real unread count, not just while that screen is open.
+                  final unread = Get.find<NotificationScreenController>().unreadCount.value;
+                  return Badge(
+                    isLabelVisible: unread > 0,
+                    label: Text(unread > 9 ? '9+' : '$unread'),
+                    child: SvgPicture.asset(
+                      AppIcons.notificationIcons,
+                      width: 24,
+                      height: 24,
+                    ),
+                  );
+                }),
               ),
             ),
           ),
@@ -867,7 +881,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   () => AppButton(
                     height: AppSize.height(value: 35),
                     width: AppSize.width(value: 82),
-                    title: AppString.report.tr,
+                    // Was labeled "Report" — confusing alongside the real
+                    // generated PDF reports added under Profile > Reports
+                    // (Phase 13), since this toggle only ever shows
+                    // working-hours/break-hours charts.
+                    title: AppString.overview.tr,
                     fontSize: AppSize.width(value: 12),
                     titleColor: controller.isTodaySelected.value
                         ? AppColors.blue500
