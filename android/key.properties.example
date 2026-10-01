@@ -1,0 +1,6 @@
+# Local only: fill passwords privately; never commit this file.
+# Relative to android/app. Verify this key against the production Play upload certificate.
+storeFile=../../upload-keystore.jks
+keyAlias=upload
+storePassword=
+keyPassword=

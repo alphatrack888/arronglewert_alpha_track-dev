@@ -193,6 +193,7 @@ class AuthRepository {
     await Future.delayed(const Duration(milliseconds: 100));
 
     Get.offAllNamed(AppRoute.bottomNavigation);
+    PushNotificationService.instance.onAuthenticatedNavigationReady();
     AppSnackBar.success("Login Successfully");
 
     // Fire-and-forget: push registration must never block or fail login —

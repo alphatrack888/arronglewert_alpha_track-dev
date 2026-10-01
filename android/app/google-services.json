@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1084676148964",
+    "project_id": "alphatrack-2026",
+    "storage_bucket": "alphatrack-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1084676148964:android:f190c82cc82f1b9e2d26f1",
+        "android_client_info": {
+          "package_name": "com.marc.alphatrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKP2xDB5Z-89xG1WjOeJY4Vfdy5Sh2neo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1084676148964:android:6acc18fb66707ff52d26f1",
+        "android_client_info": {
+          "package_name": "com.marcgelwertz.alphatrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKP2xDB5Z-89xG1WjOeJY4Vfdy5Sh2neo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

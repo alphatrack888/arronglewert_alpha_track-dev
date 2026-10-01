@@ -1,3 +1,4 @@
+import groovy.json.JsonSlurper
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -9,16 +10,22 @@ plugins {
     id("com.google.gms.google-services") apply false
 }
 
-// The google-services plugin hard-fails the build if google-services.json
-// is missing — correct behavior once Firebase is actually set up, but it
-// would otherwise break every Android build (including ones unrelated to
-// push) for anyone who hasn't added the real file yet. Applied only when
-// the file is present; see FIREBASE_SETUP.md in this directory for how to
-// get the real one from the Firebase project already backing time-tracker's
-// firebase-admin setup.
-if (file("google-services.json").exists()) {
-    apply(plugin = "com.google.gms.google-services")
+// Firebase config must belong to the production application.
+val firebaseConfigFile = file("google-services.json")
+check(firebaseConfigFile.exists()) {
+    "Download android/app/google-services.json for com.marc.alphatrack from Firebase project alphatrack-2026."
 }
+val firebaseConfig = JsonSlurper().parse(firebaseConfigFile) as Map<*, *>
+val firebaseClients = firebaseConfig["client"] as? List<*> ?: emptyList<Any>()
+check(firebaseClients.any { client ->
+    val info = (client as? Map<*, *>)?.get("client_info") as? Map<*, *>
+    val androidInfo = info?.get("android_client_info") as? Map<*, *>
+    androidInfo?.get("package_name") == "com.marc.alphatrack"
+}) {
+    "Firebase config does not match com.marc.alphatrack. Replace android/app/google-services.json " +
+        "with the production download; do not edit the test config's package_name."
+}
+apply(plugin = "com.google.gms.google-services")
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
@@ -26,8 +33,32 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val validateReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Require local production signing inputs before a release build."
+    doLast {
+        check(keystorePropertiesFile.exists()) {
+            "Missing android/key.properties. Configure the verified production upload key."
+        }
+        val required = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+        val missing = required.filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+        check(missing.isEmpty()) {
+            "Fill the missing signing properties in android/key.properties: " + missing.joinToString()
+        }
+        check(file(keystoreProperties.getProperty("storeFile")).isFile) {
+            "The keystore referenced by android/key.properties does not exist."
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild" || name == "validateSigningRelease") {
+        dependsOn(validateReleaseSigning)
+    }
+}
+
 android {
-    namespace = "com.marcgelwertz.alphatrack"
+    namespace = "com.marc.alphatrack"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
     
@@ -41,7 +72,7 @@ android {
     }
     
     defaultConfig {
-        applicationId = "com.marcgelwertz.alphatrack"
+        applicationId = "com.marc.alphatrack"
         minSdk = 24
         targetSdk = 36
         versionCode = flutter.versionCode

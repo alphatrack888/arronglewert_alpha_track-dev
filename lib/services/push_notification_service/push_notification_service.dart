@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:alpha_track/utils/notification_routing/pending_notification_route.dart';
+
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/api/api_services.dart';
@@ -47,6 +49,7 @@ class PushNotificationService {
   final StorageServices _storageServices = StorageServices.instance;
 
   bool _listenersAttached = false;
+  final _pendingNavigation = PendingNotificationRoute();
 
   /// Wires up the parts of FCM that don't depend on being logged in: the
   /// background handler, foreground/tap listeners, and token-refresh
@@ -97,7 +100,7 @@ class PushNotificationService {
         return;
       }
 
-      final token = await FirebaseMessaging.instance.getToken();
+      final token = await _getReadyToken();
       if (token == null || token.isEmpty) {
         appLog("FCM token unavailable after permission grant");
         return;
@@ -117,10 +120,11 @@ class PushNotificationService {
     if (_storageServices.getAccessToken().isEmpty) return;
 
     try {
-      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
       if (!_isGranted(settings)) return;
 
-      final token = await FirebaseMessaging.instance.getToken();
+      final token = await _getReadyToken();
       if (token == null || token.isEmpty) return;
 
       if (token != _storageServices.getRegisteredDeviceToken()) {
@@ -131,11 +135,45 @@ class PushNotificationService {
     }
   }
 
+  // Permission can be granted before iOS finishes APNs registration.
+  Future<String?> _getReadyToken() async {
+    if (Platform.isIOS) {
+      for (var attempt = 0; attempt < 10; attempt++) {
+        final token = await FirebaseMessaging.instance.getAPNSToken();
+        if (token != null && token.isNotEmpty) {
+          return FirebaseMessaging.instance.getToken();
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      appLog('APNs token not ready; registration will retry on resume');
+      return null;
+    }
+    return FirebaseMessaging.instance.getToken();
+  }
+
+  /// Call after splash/login selects the authenticated home route.
+  void onAuthenticatedNavigationReady() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_storageServices.getAccessToken().isEmpty) return;
+      _pendingNavigation.markReady();
+      _openPendingNotification();
+    });
+  }
+
+  void _openPendingNotification() {
+    if (_storageServices.getAccessToken().isEmpty ||
+        Get.key.currentState == null)
+      return;
+    final route = _pendingNavigation.take();
+    if (route != null) Get.toNamed(route);
+  }
+
   bool _isGranted(NotificationSettings settings) =>
       settings.authorizationStatus == AuthorizationStatus.authorized ||
       settings.authorizationStatus == AuthorizationStatus.provisional;
 
   Future<void> _registerToken(String token) async {
+    if (_storageServices.getAccessToken().isEmpty) return;
     try {
       String appVersion = "";
       try {
@@ -170,6 +208,7 @@ class PushNotificationService {
   /// out; the next login on the same device registers its own token
   /// normally.
   Future<void> deregisterCurrentToken() async {
+    _pendingNavigation.reset();
     final token = _storageServices.getRegisteredDeviceToken();
     if (token.isEmpty) return;
 
@@ -254,7 +293,8 @@ class PushNotificationService {
     try {
       appLog("Notification tapped: ${message.data}");
       final route = routeForNotificationCategory(message.data['category']);
-      Get.toNamed(route ?? AppRoute.notificationScreen);
+      _pendingNavigation.enqueue(route ?? AppRoute.notificationScreen);
+      _openPendingNotification();
     } catch (e) {
       errorLog("_handleNotificationTap", e);
     }

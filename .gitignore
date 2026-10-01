@@ -54,3 +54,18 @@ key.properties
 android/key.properties
 # Debug/profiler artifacts
 *.hprof
+
+# CI signing and release tooling
+*.p12
+*.p8
+*.mobileprovision
+.bundle/
+vendor/bundle/
+fastlane/report.xml
+fastlane/Preview.html
+ci/__pycache__/
+
+# Local release credentials (never commit)
+.env
+.env.*
+!.env.example

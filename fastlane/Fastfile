@@ -1,0 +1,144 @@
+require "base64"
+require "fileutils"
+require "json"
+require "open3"
+require "plist"
+require "securerandom"
+
+ROOT = File.expand_path("..", __dir__)
+SIGNING_DIR = File.join(ENV.fetch("RUNNER_TEMP", "/tmp"), "alphatrack-signing")
+KEYCHAIN = File.join(SIGNING_DIR, "release.keychain-db")
+APP_ID = "com.marc.alphatrack"
+
+def secret(name, allow_empty: false)
+  value = ENV[name]
+  UI.user_error!("Missing GitHub Secret: #{name}") if value.nil? || (!allow_empty && value.empty?)
+  value
+end
+
+def write_secret(path, bytes)
+  FileUtils.mkdir_p(File.dirname(path))
+  File.write(path, bytes, mode: "wb", perm: 0600)
+end
+
+def signing_cleanup
+  if File.exist?(KEYCHAIN)
+    # Capture output; it can contain local signing metadata.
+    Open3.capture3("security", "delete-keychain", KEYCHAIN)
+  end
+  marker = File.join(SIGNING_DIR, "profile-path")
+  if File.exist?(marker)
+    profile_path = File.read(marker)
+    allowed = File.expand_path("~/Library/Developer/Xcode/UserData/Provisioning Profiles/")
+    if profile_path.start_with?(allowed + "/") && profile_path.end_with?(".mobileprovision")
+      FileUtils.rm_f(profile_path)
+    end
+  end
+  FileUtils.rm_rf(SIGNING_DIR)
+end
+
+platform :android do
+  desc "Upload the signed AAB to the existing Play internal testing track"
+  lane :internal do
+    upload_to_play_store(
+      package_name: APP_ID,
+      json_key_data: secret("PLAY_SERVICE_ACCOUNT_JSON"),
+      aab: File.join(ROOT, "build/app/outputs/bundle/release/app-release.aab"),
+      track: "internal",
+      release_status: "completed",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true
+    )
+  end
+end
+
+platform :ios do
+  desc "Create a distribution-signed IPA without publishing it"
+  lane :build do
+    begin
+      FileUtils.mkdir_p(SIGNING_DIR)
+      p12 = File.join(SIGNING_DIR, "distribution.p12")
+      profile_file = File.join(SIGNING_DIR, "distribution.mobileprovision")
+      write_secret(p12, Base64.strict_decode64(secret("IOS_DISTRIBUTION_P12_BASE64").gsub(/\s/, "")))
+      write_secret(profile_file, Base64.strict_decode64(secret("IOS_PROVISIONING_PROFILE_BASE64").gsub(/\s/, "")))
+      xml, status = Open3.capture2("security", "cms", "-D", "-i", profile_file)
+      UI.user_error!("Unable to decode distribution provisioning profile") unless status.success?
+      profile = Plist.parse_xml(xml)
+      team = secret("APPLE_TEAM_ID")
+      entitlements = profile.fetch("Entitlements")
+      UI.user_error!("Profile does not match the production app/team") unless
+        profile.fetch("TeamIdentifier").include?(team) &&
+        entitlements.fetch("application-identifier").end_with?("." + APP_ID)
+      UI.user_error!("Use an App Store distribution profile") if
+        profile.key?("ProvisionedDevices") || profile["ProvisionsAllDevices"] ||
+        entitlements["get-task-allow"]
+      UI.user_error!("Distribution profile must support production push") unless
+        entitlements["aps-environment"] == "production"
+
+      profile_path = install_provisioning_profile(path: profile_file)
+      write_secret(File.join(SIGNING_DIR, "profile-path"), profile_path)
+      password = SecureRandom.hex(32)
+      puts "::add-mask::#{password}"
+      create_keychain(path: KEYCHAIN, password: password, default_keychain: false,
+                      unlock: true, timeout: 7200, lock_when_sleeps: false,
+                      add_to_search_list: true)
+      import_certificate(certificate_path: p12,
+                         certificate_password: secret("IOS_DISTRIBUTION_P12_PASSWORD", allow_empty: true),
+                         keychain_path: KEYCHAIN, keychain_password: password)
+      update_code_signing_settings(
+        path: File.join(ROOT, "ios/Runner.xcodeproj"),
+        targets: ["Runner"], build_configurations: ["Release"],
+        use_automatic_signing: false, team_id: team,
+        code_sign_identity: "Apple Distribution",
+        profile_uuid: profile.fetch("UUID"),
+        profile_name: profile.fetch("Name"),
+        bundle_identifier: APP_ID
+      )
+      # Distribution signing needs production APNs; change only this ephemeral checkout.
+      entitlements_file = File.join(ROOT, "ios/Runner/Runner.entitlements")
+      app_entitlements = Plist.parse_xml(entitlements_file)
+      app_entitlements["aps-environment"] = "production"
+      File.write(entitlements_file, app_entitlements.to_plist)
+      export_options = File.join(SIGNING_DIR, "ExportOptions.plist")
+      File.write(export_options, {
+        "method" => "app-store-connect", "signingStyle" => "manual",
+        "teamID" => team, "signingCertificate" => "Apple Distribution",
+        "provisioningProfiles" => { APP_ID => profile.fetch("UUID") },
+        "manageAppVersionAndBuildNumber" => false,
+        "uploadSymbols" => true
+      }.to_plist)
+      Dir.chdir(ROOT) do
+        sh("flutter", "build", "ipa", "--release",
+           "--build-name=#{ENV.fetch('RELEASE_VERSION')}",
+           "--build-number=#{ENV.fetch('RELEASE_BUILD_NUMBER')}",
+           "--export-options-plist=#{export_options}")
+      end
+      UI.user_error!("IPA export did not produce an artifact") if Dir[File.join(ROOT, "build/ios/ipa/*.ipa")].empty?
+    ensure
+      signing_cleanup
+    end
+  end
+
+  desc "Upload the existing IPA to TestFlight, without public App Store publication"
+  lane :beta do
+    api_key = app_store_connect_api_key(
+      key_id: secret("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: secret("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: secret("APP_STORE_CONNECT_KEY_BASE64"),
+      is_key_content_base64: true, in_house: false
+    )
+    ipa = Dir[File.join(ROOT, "build/ios/ipa/*.ipa")].first
+    UI.user_error!("Build the IPA first") unless ipa
+    upload_to_testflight(
+      api_key: api_key, app_identifier: APP_ID, ipa: ipa,
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+  end
+
+  lane :cleanup do
+    signing_cleanup
+  end
+end
