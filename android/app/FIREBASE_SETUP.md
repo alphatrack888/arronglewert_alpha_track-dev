@@ -1,19 +1,16 @@
-# Production Android Firebase setup
+# Android Firebase configuration
 
-The production application ID and namespace are `com.marc.alphatrack`.
+The existing production Play listing uses `com.marcgelwertz.alphatrack`.
+The Android application ID, namespace, MainActivity and Play upload lane use this ID.
+iOS separately uses `com.marc.alphatrack`.
 
-Replace `android/app/google-services.json` with the download for that Android
-app in Firebase project `alphatrack-2026`. The existing local file and the copy
-in `cred/` belong to the test app `com.marcgelwertz.alphatrack`.
-They have been preserved; do not edit their package name.
+Use `android/app/google-services.json` from Firebase project `alphatrack-2026`.
+The current file includes both clients; Google Services selects the client matching
+the Android application ID. Do not manually rename a Firebase client's package.
 
-Gradle validates the application ID before applying Google Services.
-A missing or mismatched file fails with instructions.
+CI restores this file from `ANDROID_GOOGLE_SERVICES_JSON_BASE64`.
+Its existing value remains suitable if it contains the production Android client.
+The build and release preparation reject configurations without that client.
 
-The notification permission, default channel, Google Services plugin and Flutter
-Firebase dependencies are configured. Supply the existing production upload key
-through `android/key.properties`; confirm it belongs to the production Play app.
-
-After installing the correct config, run `flutter pub get`, tests, and a signed
-`flutter build appbundle --release`. Test token registration, background push,
-cold-start notification taps, and logout on a device with Google Play services.
+If replacing the file, download it from Firebase project settings for the Android
+app `com.marcgelwertz.alphatrack`, then update the GitHub Secret.

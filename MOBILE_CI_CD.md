@@ -1,16 +1,49 @@
 # Mobile CI/CD
 
-Production Android application ID and iOS bundle ID: `com.marc.alphatrack`.
+Production Android application ID: `com.marcgelwertz.alphatrack`.
+Production iOS bundle ID: `com.marc.alphatrack`.
 The client has confirmed both store records and signing setup. Implementation
 proceeds on that basis; there is no additional identity-verification prerequisite.
 
+## Android development and tag releases
+
+Work on `dev` and open a PR into `main`. Pushes to either branch and PRs into
+`main` run Mobile CI only. Pushing a tag such as `v1.0.1` runs Mobile release:
+checks, a signed Android build, and upload to Play internal testing.
+The tagged commit must be an ancestor of (or equal to) current `main`.
+Both annotated and lightweight tags work. Only exact `vX.Y.Z` tags are accepted.
+iOS remains manual; public Play production promotion remains manual.
+
+After the workflow changes have been merged, tag the selected main commit:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git tag -a v1.0.1 -m "Android 1.0.1"
+git push origin v1.0.1
+```
+
+Automatic version name comes from the tag, overriding pubspec's version name.
+Android version code is the pubspec build-number base plus the release workflow's
+GitHub run number. Keep the workflow file name stable to preserve its counter.
+If a manual upload uses a higher code, raise the pubspec build-number base before
+the next release. Reruns reuse their code; do not repeat an already successful
+upload or move a released tag. The generated code must exceed all prior uploads.
+
+If the `mobile-release` environment has branch/tag restrictions, allow version
+tags `v*` as well as `main` for manual runs.
+
+Manual Android/iOS releases remain available on main with explicit version/build
+inputs and the Upload checkbox. Branch merges no longer trigger an upload.
+
 ## What runs
 
-- **Mobile CI** runs on pull requests to `main` and pushes to `main`.
+- **Mobile CI** runs on pull requests to `main` and pushes to `dev` and `main`.
   It resolves locked Dart dependencies, runs analysis, Flutter tests, and tests
   for release preparation. Existing analyzer warnings remain visible but do not
   block; errors and failing tests do.
-- **Mobile release** is manually started from `main`. It reruns those checks,
+- **Mobile release** runs automatically on version-tag pushes for Android.
+  It can also be manually started from `main`. It reruns those checks,
   builds Android, iOS, or both, and saves the signed artifacts for 30 days.
 - Select **Upload** to send the Android AAB to **Play internal testing** and
   the iOS IPA to **TestFlight**. No production-track rollout or public App Store
@@ -27,8 +60,7 @@ or dashboard repositories: Settings → Secrets and variables → Actions →
 New repository secret. All values below are **Secrets**, not Variables.
 
 The jobs reference a GitHub environment named `mobile-release`. You may put
-these secrets in that environment instead of repository secrets. Restrict that
-environment to `main`. No additional human approval is required by the workflow.
+these secrets in that environment instead of repository secrets. Allow `main` and version tags `v*` for that environment. No additional human approval is required by the workflow.
 
 ### Android
 
@@ -85,7 +117,7 @@ base64 -w 0 "/c/path/to/AuthKey_KEYID.p8" | clip.exe
 Copy the Play JSON without base64: `cat "/c/path/to/play-service-account.json" | clip.exe`.
 Do not commit credential files or paste their contents into chat.
 
-## First release
+## Manual release (optional; version tags upload Android automatically)
 
 1. Commit and push the Flutter project changes, including the workflows,
    `ci/`, `fastlane/`, `Gemfile`, updated `pubspec.lock`, and the earlier

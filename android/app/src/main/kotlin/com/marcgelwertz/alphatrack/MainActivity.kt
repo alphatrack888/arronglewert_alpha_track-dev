@@ -1,4 +1,4 @@
-package com.marc.alphatrack
+package com.marcgelwertz.alphatrack
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
