@@ -13,16 +13,16 @@ plugins {
 // Firebase config must belong to the production application.
 val firebaseConfigFile = file("google-services.json")
 check(firebaseConfigFile.exists()) {
-    "Download android/app/google-services.json for com.marc.alphatrack from Firebase project alphatrack-2026."
+    "Download android/app/google-services.json for com.marcgelwertz.alphatrack from Firebase project alphatrack-2026."
 }
 val firebaseConfig = JsonSlurper().parse(firebaseConfigFile) as Map<*, *>
 val firebaseClients = firebaseConfig["client"] as? List<*> ?: emptyList<Any>()
 check(firebaseClients.any { client ->
     val info = (client as? Map<*, *>)?.get("client_info") as? Map<*, *>
     val androidInfo = info?.get("android_client_info") as? Map<*, *>
-    androidInfo?.get("package_name") == "com.marc.alphatrack"
+    androidInfo?.get("package_name") == "com.marcgelwertz.alphatrack"
 }) {
-    "Firebase config does not match com.marc.alphatrack. Replace android/app/google-services.json " +
+    "Firebase config does not match com.marcgelwertz.alphatrack. Replace android/app/google-services.json " +
         "with the production download; do not edit the test config's package_name."
 }
 apply(plugin = "com.google.gms.google-services")
@@ -58,7 +58,7 @@ tasks.configureEach {
 }
 
 android {
-    namespace = "com.marc.alphatrack"
+    namespace = "com.marcgelwertz.alphatrack"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
     
@@ -72,7 +72,7 @@ android {
     }
     
     defaultConfig {
-        applicationId = "com.marc.alphatrack"
+        applicationId = "com.marcgelwertz.alphatrack"
         minSdk = 24
         targetSdk = 36
         versionCode = flutter.versionCode

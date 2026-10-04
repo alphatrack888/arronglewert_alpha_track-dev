@@ -8,7 +8,8 @@ require "securerandom"
 ROOT = File.expand_path("..", __dir__)
 SIGNING_DIR = File.join(ENV.fetch("RUNNER_TEMP", "/tmp"), "alphatrack-signing")
 KEYCHAIN = File.join(SIGNING_DIR, "release.keychain-db")
-APP_ID = "com.marc.alphatrack"
+ANDROID_APP_ID = "com.marcgelwertz.alphatrack"
+IOS_APP_ID = "com.marc.alphatrack"
 
 def secret(name, allow_empty: false)
   value = ENV[name]
@@ -41,7 +42,7 @@ platform :android do
   desc "Upload the signed AAB to the existing Play internal testing track"
   lane :internal do
     upload_to_play_store(
-      package_name: APP_ID,
+      package_name: ANDROID_APP_ID,
       json_key_data: secret("PLAY_SERVICE_ACCOUNT_JSON"),
       aab: File.join(ROOT, "build/app/outputs/bundle/release/app-release.aab"),
       track: "internal",
@@ -70,7 +71,7 @@ platform :ios do
       entitlements = profile.fetch("Entitlements")
       UI.user_error!("Profile does not match the production app/team") unless
         profile.fetch("TeamIdentifier").include?(team) &&
-        entitlements.fetch("application-identifier").end_with?("." + APP_ID)
+        entitlements.fetch("application-identifier").end_with?("." + IOS_APP_ID)
       UI.user_error!("Use an App Store distribution profile") if
         profile.key?("ProvisionedDevices") || profile["ProvisionsAllDevices"] ||
         entitlements["get-task-allow"]
@@ -94,7 +95,7 @@ platform :ios do
         code_sign_identity: "Apple Distribution",
         profile_uuid: profile.fetch("UUID"),
         profile_name: profile.fetch("Name"),
-        bundle_identifier: APP_ID
+        bundle_identifier: IOS_APP_ID
       )
       # Distribution signing needs production APNs; change only this ephemeral checkout.
       entitlements_file = File.join(ROOT, "ios/Runner/Runner.entitlements")
@@ -105,7 +106,7 @@ platform :ios do
       File.write(export_options, {
         "method" => "app-store-connect", "signingStyle" => "manual",
         "teamID" => team, "signingCertificate" => "Apple Distribution",
-        "provisioningProfiles" => { APP_ID => profile.fetch("UUID") },
+        "provisioningProfiles" => { IOS_APP_ID => profile.fetch("UUID") },
         "manageAppVersionAndBuildNumber" => false,
         "uploadSymbols" => true
       }.to_plist)
@@ -132,7 +133,7 @@ platform :ios do
     ipa = Dir[File.join(ROOT, "build/ios/ipa/*.ipa")].first
     UI.user_error!("Build the IPA first") unless ipa
     upload_to_testflight(
-      api_key: api_key, app_identifier: APP_ID, ipa: ipa,
+      api_key: api_key, app_identifier: IOS_APP_ID, ipa: ipa,
       skip_waiting_for_build_processing: true,
       distribute_external: false
     )

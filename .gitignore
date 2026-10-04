@@ -69,3 +69,5 @@ ci/__pycache__/
 .env
 .env.*
 !.env.example
+/dev-infotext.txt
+/project-6cbf3eda-78c4-49f3-88a-1699064415a5.json
