@@ -1,3 +1,4 @@
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:alpha_track/screens/home_screen/models/all_project_models.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/controller/note_veiw_controller.dart';
 import 'package:alpha_track/services/repository/project_repository/project_repository.dart';
@@ -11,7 +12,7 @@ class NotesScreenController extends GetxController {
   final ProjectRepository projectRepository = ProjectRepository();
   RxBool isLoading = false.obs;
   Rxn<AllProjectModel> allProjectData = Rxn<AllProjectModel>();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePickerService _picker = ImagePickerService();
   final RxList<XFile> selectedImages = <XFile>[].obs;
   final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
 
@@ -24,12 +25,12 @@ class NotesScreenController extends GetxController {
 
   Future<void> sendPhoto() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final List<XFile> images = await _picker.pickMultipleImages();
       if (images.isNotEmpty) {
         selectedImages.assignAll(images);
       }
     } catch (e) {
-      AppSnackBar.error('Error picking images: ${e.toString()}');
+      AppSnackBar.error(ImagePickerService.errorMessage(e));
     }
   }
 

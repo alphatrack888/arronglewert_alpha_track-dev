@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
+import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:alpha_track/screens/notes_screen/note_screen/controller/notes_screen_controller.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/controller/note_veiw_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -654,10 +655,18 @@ class NoteView extends StatelessWidget {
                   const Gap(height: 8),
                   AppButton(
                     onTap: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final List<XFile> images = await picker.pickMultiImage();
-                      if (images.isNotEmpty) {
-                        controller.selectedImages.addAll(images);
+                      try {
+                        final images =
+                            await ImagePickerService().pickMultipleImages();
+                        if (controller.isClosed) return;
+                        if (images.isNotEmpty) {
+                          controller.selectedImages.addAll(images);
+                        }
+                      } catch (error) {
+                        if (!controller.isClosed) {
+                          AppSnackBar.error(
+                              ImagePickerService.errorMessage(error));
+                        }
                       }
                     },
                     backgroundColor: AppColors.blue100,

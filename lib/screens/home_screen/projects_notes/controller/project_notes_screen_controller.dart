@@ -1,3 +1,5 @@
+import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'dart:developer';
 
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -10,7 +12,7 @@ import 'dart:io';
 
 class ProjectNotesScreenController extends GetxController {
   final TextEditingController textController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePickerService _picker = ImagePickerService();
   final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
   final RxList<XFile> selectedImages = <XFile>[].obs;
 
@@ -32,13 +34,14 @@ class ProjectNotesScreenController extends GetxController {
 
   Future<void> sendPhoto() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final List<XFile> images = await _picker.pickMultipleImages();
       if (images.isNotEmpty) {
         selectedImages.assignAll(images);
         showSelectedImages();
       }
     } catch (e) {
       log('Error picking images: $e');
+      AppSnackBar.error(ImagePickerService.errorMessage(e));
     }
   }
 
