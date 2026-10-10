@@ -13,6 +13,8 @@ import 'package:path_provider/path_provider.dart';
 
 import 'core/app_translation/app_translation.dart';
 
+// AlphaTrack employee app entry point (Flutter / GetX).
+
 void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
