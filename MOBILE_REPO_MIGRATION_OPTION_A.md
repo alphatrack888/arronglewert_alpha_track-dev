@@ -78,7 +78,9 @@ git tag legacy/final && git push origin legacy/final   # once, before cutover
 git checkout -b redesign/main
 # Replace everything except .git with alpha_track_app contents:
 find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-rsync -a --exclude build --exclude .dart_tool /path/to/alpha_track_app/ ./
+rsync -a --exclude build --exclude .dart_tool --exclude android/.gradle /path/to/alpha_track_app/ ./
+
+# Do not use rsync --delete on the clone — it can remove .git.
 
 git add -A
 git commit -m "Replace app with 2026 redesign; port mobile CI/CD"
@@ -95,8 +97,8 @@ Merge `redesign/main` → `main` on GitHub (or push directly to `main` if that i
 |------|--------|
 | CI/CD in `alpha_track_app/` | Done |
 | Tag `legacy/final` on GitHub | Done |
-| Branch `redesign/main` pushed | Done (`bc6f4c3`) |
-| `main` = redesign | **Pending merge** (open PR or merge when ready) |
+| `redesign/main` / `main` at `c91395b` | Done (fast-forward merge to `main`) |
+| Mobile CI on `main` | Done ([run 38504751838](https://github.com/alphatrack888/arronglewert_alpha_track-dev/actions/runs/38504751838)) |
 
 ---
 
