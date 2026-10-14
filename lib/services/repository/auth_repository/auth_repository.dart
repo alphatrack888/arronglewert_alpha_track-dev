@@ -2,6 +2,8 @@ import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/api/api_services.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
+import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
+import 'package:alpha_track/services/socket_service/socket_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -12,6 +14,54 @@ import 'package:dio/dio.dart';
 class AuthRepository {
   ApiServices apiServices = ApiServices.instance;
   StorageServices storageServices = StorageServices.instance;
+
+  //! Register Employee (Create Account)
+  //
+  // NOTE: the backend register endpoint/contract is unconfirmed (see
+  // [ApiUrls.register]). On success the backend is expected to send a
+  // verification OTP, so we route to the OTP screen with screen=createAccount
+  // (matches the resend-OTP authType and the account-verify path in
+  // [otpVerification]). Adjust the request/response shape once the API is known.
+  Future<bool> registerEmployee({
+    required String name,
+    required String email,
+    required String contactNumber,
+    required String designation,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await apiServices.apiPostServices(
+        url: ApiUrls.register,
+        body: {
+          "name": name,
+          "email": email,
+          "contactNumber": contactNumber,
+          "designation": designation,
+          "password": password,
+          "confirmPassword": confirmPassword,
+        },
+      );
+      if (response != null && response["success"] == true) {
+        Get.toNamed(
+          AppRoute.otpVerificationScreen,
+          arguments: {"email": email, "screen": "createAccount"},
+        );
+        AppSnackBar.customMessage(
+          response["message"] ?? "We have sent an OTP to your email",
+          color: AppColors.mediumBlue,
+        );
+        return true;
+      } else {
+        AppSnackBar.error(response?["message"] ?? "Account creation failed");
+        return false;
+      }
+    } catch (e) {
+      appLog("Register error: $e");
+      AppSnackBar.error("An error occurred during account creation");
+      return false;
+    }
+  }
 
   //! Login Employee
   Future<bool> loginEmployee({
@@ -174,6 +224,7 @@ class AuthRepository {
 
     // Save token and wait for completion
     await storageServices.setAccessToken(accessToken);
+    AppSocketAllOperation.instance.connectIfAuthenticated();
 
     // Verify token was saved
     final savedToken = storageServices.getAccessToken();
@@ -192,14 +243,13 @@ class AuthRepository {
     // Add a small delay to ensure storage is fully committed
     await Future.delayed(const Duration(milliseconds: 100));
 
-    Get.offAllNamed(AppRoute.bottomNavigation);
-    PushNotificationService.instance.onAuthenticatedNavigationReady();
-    AppSnackBar.success("Login Successfully");
+    await EmployeeSocketSubscriptions.primeUserIdFromProfileIfNeeded();
 
-    // Fire-and-forget: push registration must never block or fail login —
-    // permission denial or a Firebase hiccup just means no push this
-    // session, degrading to the existing in-app notifications.
-    PushNotificationService.instance.registerCurrentToken();
+    PushNotificationService.instance.onAuthenticatedNavigationReady();
+    await PushNotificationService.instance.registerCurrentToken();
+
+    Get.offAllNamed(AppRoute.bottomNavigation);
+    AppSnackBar.success("Login Successfully");
   }
 
   //! Resend Otp

@@ -12,16 +12,20 @@ import 'package:alpha_track/services/repository/time_tracker_repository/time_tra
 
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_size/app_gap.dart';
 import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/widgets/ds/ds_dialog.dart';
 import 'package:alpha_track/services/stopwatch_service/stopwatch_service.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../services/repository/project_repository/project_repository.dart';
+import 'package:alpha_track/services/socket_service/socket_service.dart';
 
 enum TimerState { stopped, running, paused }
 
@@ -52,6 +56,24 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final Rxn<SingleProjectModel> singleProjectData = Rxn<SingleProjectModel>();
   final RxString selectedProjectTitle = ''.obs;
 
+  // Break state (demo): counts up while on a break.
+  final RxInt _breakMilliseconds = 0.obs;
+  Timer? _breakTimer;
+  DateTime? breakStartedAt;
+
+  // Whether the "Break Reminder" banner is currently shown. Snoozed via the
+  // "Remind in 15 min" action; reset each time a new break starts.
+  final RxBool reminderVisible = true.obs;
+
+  /// Hide the break reminder banner ("Remind in 15 min").
+  void snoozeReminder() {
+    reminderVisible.value = false;
+    AppSnackBar.customMessage(
+      'remindAgain15'.tr,
+      color: AppColors.mediumBlue,
+    );
+  }
+
   // Service instances
   final LocationService _locationService = LocationService.instance;
   final StorageServices _storageService = StorageServices.instance;
@@ -59,6 +81,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final ProjectRepository _projectRepository = ProjectRepository();
   final ReportRepository _reportRepository = ReportRepository();
   final StopwatchService _stopwatchService = StopwatchService();
+  final AppSocketAllOperation _socket = AppSocketAllOperation.instance;
+  String? _projectSocketUserId;
 
   // Function variable that can be overridden from UI
   Function()? showOneMinuteDialog;
@@ -68,6 +92,30 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     super.onInit();
     WidgetsBinding.instance.addObserver(this);
     _initializeApp();
+    registerProjectSocketListeners();
+  }
+
+  /// Listens for assignment changes and refreshes the project list (Phase 2).
+  void registerProjectSocketListeners() {
+    final userId = _storageService.getUserId();
+    if (userId.isEmpty) return;
+    if (_projectSocketUserId == userId) return;
+    _projectSocketUserId = userId;
+
+    _socket.connectIfAuthenticated();
+    _socket.readEvent(
+      event: "newProject::$userId",
+      handler: _handleProjectListSocketEvent,
+    );
+    _socket.readEvent(
+      event: "removedProject::$userId",
+      handler: _handleProjectListSocketEvent,
+    );
+  }
+
+  void _handleProjectListSocketEvent(dynamic data) {
+    appLog('Project socket event received, refreshing project list: $data');
+    loadProjectList();
   }
 
   @override
@@ -127,6 +175,24 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   bool get isRunning => _timerState.value == TimerState.running;
   bool get isPaused => _timerState.value == TimerState.paused;
   bool get isStopped => _timerState.value == TimerState.stopped;
+  bool get isOnBreak => _timerState.value == TimerState.paused;
+
+  String get formattedBreakTime {
+    final s = _breakMilliseconds.value ~/ 1000;
+    final h = s ~/ 3600, m = (s % 3600) ~/ 60, sec = s % 60;
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(h)}:${two(m)}:${two(sec)}';
+  }
+
+  int get breakMinutes => _breakMilliseconds.value ~/ 60000;
+
+  String get breakStartedLabel {
+    final t = breakStartedAt;
+    if (t == null) return '';
+    final hour12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final ampm = t.hour < 12 ? 'AM' : 'PM';
+    return '${'pausedAt'.tr} $hour12:${t.minute.toString().padLeft(2, '0')} $ampm';
+  }
   String get currentSessionId => _currentSessionId.value;
   String get currentProjectId => _currentProjectId.value;
   String get currentCompanyId => _currentCompanyId.value;
@@ -147,13 +213,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   String get formattedLocation {
     if (currentLatitude.value == 0.0 && currentLongitude.value == 0.0) {
-      return 'Location not available';
+      return 'locationNotAvailable'.tr;
     }
     return '${currentLatitude.value.toStringAsFixed(6)}, ${currentLongitude.value.toStringAsFixed(6)}';
   }
 
   String get pauseResumeButtonText {
-    if (isApiLoading) return 'Loading...';
+    if (isApiLoading) return 'loading'.tr;
     if (isStopped) return 'Start';
     if (isPaused) return 'Resume';
     return 'Pause';
@@ -161,18 +227,28 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   // Current selected project info
   String get currentProjectTitle {
-    if (_currentProjectId.value.isEmpty) return 'No project selected';
+    if (_currentProjectId.value.isEmpty) return 'noProjectSelected'.tr;
 
     final projects = allProjectData.value?.data?.data;
     if (projects != null) {
       final currentProject = projects.firstWhereOrNull(
         (project) => project.id == _currentProjectId.value,
       );
-      return currentProject?.title ?? 'Unknown project';
+      return currentProject?.title ?? 'unknownProject'.tr;
     }
     return selectedProjectTitle.value.isEmpty
-        ? 'Unknown project'
+        ? 'unknownProject'.tr
         : selectedProjectTitle.value;
+  }
+
+  // Company/team name of the currently selected project.
+  String get currentProjectCompany {
+    if (_currentProjectId.value.isEmpty) return '';
+    final projects = allProjectData.value?.data?.data;
+    final p = projects?.firstWhereOrNull(
+      (project) => project.id == _currentProjectId.value,
+    );
+    return p?.company?.name ?? '';
   }
 
   //! ==================== INITIALIZATION ====================
@@ -188,8 +264,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Load saved location
       _loadSavedLocation();
 
-      // Check and request location permission
-      _locationService.checkAndRequestLocationPermission();
+      // Check and request location permission — skipped in demo/review builds
+      // so a TestFlight tester or App Reviewer is never blocked by the location
+      // prompt (demo data needs no real GPS).
+      if (!kDemoMode) {
+        _locationService.checkAndRequestLocationPermission();
+      }
 
       // Load timer state for the current project
       if (_currentProjectId.value.isNotEmpty) {
@@ -226,6 +306,18 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   //! ==================== PROJECT MANAGEMENT ====================
   Future<void> loadProjectList() async {
+    // TEMPORARY demo mode — show sample projects without a backend/login.
+    if (kDemoMode) {
+      allProjectData.value = DemoData.projects;
+      final first = DemoData.projects.data?.data?.first;
+      if (first != null) {
+        _currentProjectId.value = first.id ?? '';
+        _currentCompanyId.value = first.company?.id ?? '';
+        selectedProjectTitle.value = first.title ?? '';
+      }
+      projectLoadingState.value = LoadingState.idle;
+      return;
+    }
     try {
       projectLoadingState.value = LoadingState.loading;
 
@@ -257,7 +349,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       projectLoadingState.value = LoadingState.error;
       appLog('Error loading project list: $e');
       AppSnackBar.error(
-        'Error loading projects. Please check your connection.',
+        'errLoadProjects'.tr,
       );
     } finally {
       if (projectLoadingState.value != LoadingState.error) {
@@ -282,7 +374,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       }
     } catch (e) {
       appLog('Error loading single project: $e');
-      AppSnackBar.error('Error loading project details');
+      AppSnackBar.error('errLoadProjectDetails'.tr);
     } finally {
       apiLoadingState.value = LoadingState.idle;
     }
@@ -545,6 +637,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
+    // TEMPORARY demo mode — run the timer locally without location/backend.
+    if (kDemoMode) {
+      _currentSessionId.value = 'demo_session';
+      _timerState.value = TimerState.running;
+      _startTimer();
+      return;
+    }
+
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -582,7 +682,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         if (permission == LocationPermission.denied) {
           apiLoadingState.value = LoadingState.idle;
           AppSnackBar.error(
-            'Location permission is required to start the timer.',
+            'locationRequiredToStart'.tr,
           );
           appLog('Location permission denied by user');
           return;
@@ -612,7 +712,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (!locationSuccess) {
         apiLoadingState.value = LoadingState.idle;
         AppSnackBar.error(
-          'Unable to get your location. Please check your location settings.',
+          'locationUnable'.tr,
         );
         return;
       }
@@ -634,11 +734,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         appLog('Timer started successfully with session ID: $sessionId');
         appLog('Company ID for running timer: ${_currentCompanyId.value}');
       } else {
-        AppSnackBar.error('Failed to start timer. Please try again.');
+        AppSnackBar.error('timerStartFailed'.tr);
       }
     } catch (e) {
       appLog('Error starting timer: $e');
-      AppSnackBar.error('An error occurred while starting timer');
+      AppSnackBar.error('timerStartError'.tr);
     } finally {
       apiLoadingState.value = LoadingState.idle;
     }
@@ -646,66 +746,35 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   /// Show dialog when location permission is permanently denied
   Future<bool> _showPermissionDeniedDialog() async {
-    return await Get.dialog<bool>(
-          AlertDialog(
-            backgroundColor: AppColors.white100,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.location_off, color: AppColors.red, size: 28),
-                Gap(width: AppSize.width(value: 10)),
-                Expanded(
-                  child: AppText(
-                    text: 'Location Permission Required',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.black500,
-                  ),
-                ),
-              ],
-            ),
-            content: AppText(
-              text:
-                  'To track your work time, we need access to your location. You can enable this in Settings.',
-              fontSize: 14,
-              color: AppColors.black400,
-              maxLines: 5,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Get.back(result: false),
-                child: AppText(
-                  text: 'Not Now',
-                  fontSize: 14,
-                  color: AppColors.black400,
-                ),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.blue500,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () => Get.back(result: true),
-                child: AppText(
-                  text: 'Open Settings',
-                  fontSize: 14,
-                  color: AppColors.white100,
-                ),
-              ),
-            ],
-          ),
-          barrierDismissible: false,
-        ) ??
-        false;
+    return await DsDialog.confirm(
+      title: 'locationPermissionRequired'.tr,
+      message:
+          'locationPermissionBody'.tr,
+      confirmLabel: 'openSettings'.tr,
+      cancelLabel: 'notNow'.tr,
+      tone: DsDialogTone.warning,
+      icon: LucideIcons.mapPin,
+      destructive: false,
+    );
   }
 
   Future<void> pause({bool isAutoPause = false}) async {
     if (_timerState.value != TimerState.running) {
       appLog('Timer is not running, cannot pause');
+      return;
+    }
+
+    if (kDemoMode) {
+      _timerState.value = TimerState.paused;
+      _timer?.cancel();
+      breakStartedAt = DateTime.now();
+      reminderVisible.value = true;
+      _breakMilliseconds.value = 0;
+      _breakTimer?.cancel();
+      _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _breakMilliseconds.value += 1000;
+      });
+      if (isAutoPause) _showOneMinuteDialog();
       return;
     }
 
@@ -719,7 +788,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (!locationSuccess) {
         Get.snackbar(
           'Warning',
-          'Location update failed, but timer will be paused.',
+          'locationUpdateFailedPause'.tr,
         );
       }
 
@@ -742,14 +811,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
           _showOneMinuteDialog();
         }
 
-        AppSnackBar.success('Timer paused');
+        AppSnackBar.success('timerPaused'.tr);
         appLog('Timer paused successfully via API');
       } else {
-        AppSnackBar.error('Failed to pause timer. Please try again.');
+        AppSnackBar.error('timerPauseFailed'.tr);
       }
     } catch (e) {
       appLog('Error pausing timer: $e');
-      AppSnackBar.error('An error occurred while pausing timer');
+      AppSnackBar.error('timerPauseError'.tr);
     } finally {
       apiLoadingState.value = LoadingState.idle;
     }
@@ -761,6 +830,15 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
+    if (kDemoMode) {
+      _breakTimer?.cancel();
+      _breakMilliseconds.value = 0;
+      breakStartedAt = null;
+      _timerState.value = TimerState.running;
+      _startTimer();
+      return;
+    }
+
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -769,7 +847,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (!locationSuccess) {
         Get.snackbar(
           'Warning',
-          'Location update failed, but timer will be resumed.',
+          'locationUpdateFailedResume'.tr,
         );
       }
 
@@ -788,20 +866,27 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         _startTimer();
         await _saveTimerStateForProject(_currentProjectId.value);
 
-        AppSnackBar.success('Timer resumed');
+        AppSnackBar.success('timerResumed'.tr);
         appLog('Timer resumed successfully via API');
       } else {
-        AppSnackBar.error('Failed to resume timer. Please try again.');
+        AppSnackBar.error('timerResumeFailed'.tr);
       }
     } catch (e) {
       appLog('Error resuming timer: $e');
-      AppSnackBar.error('An error occurred while resuming timer');
+      AppSnackBar.error('timerResumeError'.tr);
     } finally {
       apiLoadingState.value = LoadingState.idle;
     }
   }
 
   Future<void> stop() async {
+    if (kDemoMode) {
+      _breakTimer?.cancel();
+      _breakMilliseconds.value = 0;
+      breakStartedAt = null;
+      _resetTimer();
+      return;
+    }
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -810,7 +895,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (!locationSuccess) {
         Get.snackbar(
           'Warning',
-          'Location update failed, but timer will be stopped.',
+          'locationUpdateFailedStop'.tr,
         );
       }
 
@@ -824,14 +909,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (success) {
         _resetTimer();
 
-        AppSnackBar.success('Timer stopped and reset');
+        AppSnackBar.success('timerStopped'.tr);
         appLog('Timer stopped successfully via API');
       } else {
-        AppSnackBar.error('Failed to stop timer. Please try again.');
+        AppSnackBar.error('timerStopFailed'.tr);
       }
     } catch (e) {
       appLog('Error stopping timer: $e');
-      AppSnackBar.error('An error occurred while stopping timer');
+      AppSnackBar.error('timerStopError'.tr);
     } finally {
       apiLoadingState.value = LoadingState.idle;
     }
@@ -910,7 +995,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       await resume();
     } catch (e) {
       appLog('Error on continue pressed: $e');
-      AppSnackBar.error('Failed to continue timer');
+      AppSnackBar.error('failedContinueTimer'.tr);
     }
   }
 
@@ -922,10 +1007,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       await _getCurrentLocationForEvent('break');
 
       // Navigate to break screen
-      Get.toNamed(AppRoute.bottomNavigation, arguments: {'selectedIndex': 1});
+      // (Redesign: Break is no longer a bottom-nav tab, so route to it directly.)
+      Get.toNamed(AppRoute.breakScreen);
     } catch (e) {
       appLog('Error on break pressed: $e');
-      AppSnackBar.error('Failed to start break');
+      AppSnackBar.error('failedStartBreak'.tr);
     }
   }
 
@@ -950,7 +1036,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       AppSnackBar.success('Data refreshed successfully');
     } catch (e) {
       appLog('Error refreshing data: $e');
-      AppSnackBar.error('Failed to refresh data');
+      AppSnackBar.error('failedRefreshData'.tr);
     }
   }
 
@@ -958,7 +1044,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   bool _validateProjectSelection() {
     if (_currentProjectId.value.isEmpty) {
-      AppSnackBar.error('Please select a project first');
+      AppSnackBar.error('selectProjectFirst'.tr);
       return false;
     }
     return true;
@@ -967,7 +1053,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   bool _validateSession() {
     if (_currentSessionId.value.isEmpty) {
       appLog('No session ID available for operation');
-      AppSnackBar.error('No active session found');
+      AppSnackBar.error('noActiveSession'.tr);
       return false;
     }
     return true;
@@ -989,7 +1075,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         return 'Paused - $currentProjectTitle';
       case TimerState.stopped:
         return _currentProjectId.value.isEmpty
-            ? 'Select a project to start'
+            ? 'selectProjectToStart'.tr
             : 'Ready to start - $currentProjectTitle';
     }
   }
@@ -1035,6 +1121,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final Rx<LoadingState> reportLoadingState = LoadingState.idle.obs;
 
   Future<void> loadReportData() async {
+    // TEMPORARY demo mode — populate report screens without a backend.
+    if (kDemoMode) {
+      breakHoursData.value = DemoData.breakHours;
+      dailySummaryData.value = DemoData.dailySummary;
+      workingHoursSummary.value = DemoData.workingHours;
+      reportLoadingState.value = LoadingState.idle;
+      return;
+    }
     try {
       reportLoadingState.value = LoadingState.loading;
 
@@ -1044,7 +1138,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
       // Validate project selection
       if (_currentProjectId.value.isEmpty) {
-        AppSnackBar.error('Please select a project first');
+        AppSnackBar.error('selectProjectFirst'.tr);
         return;
       }
 
@@ -1080,7 +1174,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       appLog('Report data loaded successfully for date: $formattedDate');
     } catch (e) {
       appLog('Error loading report data: $e');
-      AppSnackBar.error('Failed to load report data');
+      AppSnackBar.error('failedLoadReport'.tr);
     } finally {
       reportLoadingState.value = LoadingState.idle;
     }

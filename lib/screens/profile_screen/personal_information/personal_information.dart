@@ -2,16 +2,16 @@ import 'package:alpha_track/screens/profile_screen/personal_information/controll
 import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
 import 'package:alpha_track/widgets/app_text_field/app_text_field.dart';
+import 'package:alpha_track/widgets/ds/ds_auth_header.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class PersonalInformation extends StatefulWidget {
@@ -59,142 +59,165 @@ class _PersonalInformationState extends State<PersonalInformation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AuthAppBar(
-        title: AppString.personalInformation,
-        showAction: false,
-        showLeading: true,
-        backgroundColor: AppColors.white200,
-      ),
-      backgroundColor: AppColors.white200,
-      body: Obx(
-        () => SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Obx(
+          () => Column(
             children: [
-              Gap(height: AppSize.height(value: 25)),
-              Center(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Profile Image
-                    Obx(
-                      () => CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _controller.profileImage.value != null
-                            ? FileImage(_controller.profileImage.value!)
-                            : null,
-                        child: _controller.profileImage.value == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.grey,
-                              )
-                            : null,
-                      ),
-                    ),
-                    // Loading Overlay
-                    if (_isImageLoading)
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(60),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: DsAuthHeader(title: 'editPersonalInformation'.tr),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Profile Image
+                            Obx(
+                              () => CircleAvatar(
+                                radius: 56,
+                                backgroundColor: AppColors.fill,
+                                backgroundImage:
+                                    _controller.profileImage.value != null
+                                    ? FileImage(_controller.profileImage.value!)
+                                    : null,
+                                child: _controller.profileImage.value == null
+                                    ? const Icon(
+                                        LucideIcons.user,
+                                        size: 56,
+                                        color: AppColors.textFaint,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            // Loading Overlay
+                            if (_isImageLoading)
+                              Container(
+                                width: 112,
+                                height: 112,
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(56),
+                                ),
+                                child: Center(
+                                  child: LoadingAnimationWidget.beat(
+                                    size: 24,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            // Edit Button
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: GestureDetector(
+                                onTap: _isImageLoading
+                                    ? null
+                                    : _pickAndUpdateImage,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _isImageLoading
+                                        ? AppColors.textFaint
+                                        : AppColors.surface,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.stroke,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    _isImageLoading
+                                        ? LucideIcons.hourglass
+                                        : LucideIcons.squarePen,
+                                    color: AppColors.primary,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Center(
-                          child: LoadingAnimationWidget.beat(
-                            size: 24,
-                            color: Colors.white,
-                          ),
-                        ),
                       ),
-                    // Edit Button
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: _isImageLoading ? null : _pickAndUpdateImage,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _isImageLoading
-                                ? Colors.grey
-                                : AppColors.blue500,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Icon(
-                            _isImageLoading
-                                ? Icons.hourglass_empty
-                                : Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
+                      const SizedBox(height: 28),
+                      //! Name Field
+                      _fieldLabel(AppString.fullName.tr),
+                      const SizedBox(height: 8),
+                      CustomTextField(
+                        hintText: AppString.enterYourFullName.tr,
+                        height: 52,
+                        controller: _controller.fullNameController,
+                        backgroundColor: AppColors.surface,
+                        borderRadius: 12,
+                        borderColor: AppColors.stroke,
+                        keyboardType: TextInputType.name,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 18),
+                      //! Email
+                      _fieldLabel(AppString.email.tr),
+                      const SizedBox(height: 8),
+                      CustomTextField(
+                        hintText: AppString.enterYourEmail.tr,
+                        height: 52,
+                        controller: _controller.emailController,
+                        backgroundColor: AppColors.surface,
+                        borderRadius: 12,
+                        borderColor: AppColors.stroke,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 18),
+                      //! Phone Number
+                      _fieldLabel(AppString.phoneNumber.tr),
+                      const SizedBox(height: 8),
+                      CustomTextField(
+                        hintText: AppString.enterYourContactNumber.tr,
+                        height: 52,
+                        controller: _controller.contactNumberController,
+                        backgroundColor: AppColors.surface,
+                        borderRadius: 12,
+                        borderColor: AppColors.stroke,
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              //! Name Field
-              Gap(height: 15),
-              AppText(
-                text: AppString.fullName,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.black500,
-              ),
-              Gap(height: AppSize.height(value: 05)),
-              CustomTextField(
-                hintText: AppString.enterYourFullName,
-                height: AppSize.height(value: 48),
-                controller: _controller.fullNameController,
-                backgroundColor: AppColors.blue50,
-                borderRadius: 6,
-                borderColor: Colors.transparent,
-                keyboardType: TextInputType.name,
-              ),
-              Gap(height: AppSize.height(value: 12)),
-              //! Contact Number
-              AppText(
-                text: AppString.contactNumber,
-                fontSize: AppSize.width(value: 14),
-                fontWeight: FontWeight.w600,
-                color: AppColors.black500,
-              ),
-              Gap(height: 05),
-              CustomTextField(
-                hintText: AppString.enterYourContactNumber,
-                height: AppSize.height(value: 48),
-                controller: _controller.contactNumberController,
-                backgroundColor: AppColors.blue50,
-                borderRadius: 6,
-                borderColor: Colors.transparent,
-                keyboardType: TextInputType.number,
-              ),
-              Gap(height: AppSize.height(value: 20)),
-              AppButton(
-                title: _controller.isLoading.value
-                    ? AppString.updating.tr
-                    : AppString.editNow.tr,
-                height: AppSize.height(value: 48),
-                width: double.infinity,
-                backgroundColor: _controller.isLoading.value
-                    ? Colors.grey
-                    : AppColors.blue500,
-                borderradius: 6,
-                onTap: _controller.isLoading.value
-                    ? null
-                    : () async {
-                        await _controller.updateProfile();
-                      },
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: PrimaryButton(
+                  label: _controller.isLoading.value
+                      ? AppString.updating.tr
+                      : 'saveChanges'.tr,
+                  isLoading: _controller.isLoading.value,
+                  isTranslate: false,
+                  color: _controller.isLoading.value
+                      ? AppColors.textFaint
+                      : AppColors.primary,
+                  onTap: _controller.isLoading.value
+                      ? null
+                      : () async {
+                          final ok = await _controller.updateProfile();
+                          if (ok && context.mounted) dsPop(context);
+                        },
+                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _fieldLabel(String text) {
+    return Text(
+      text,
+      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
     );
   }
 }

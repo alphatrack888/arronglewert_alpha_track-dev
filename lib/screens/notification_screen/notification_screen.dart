@@ -2,384 +2,451 @@ import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_icons/app_icons.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/utils/notification_routing/notification_routing.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
+import 'package:alpha_track/widgets/ds/ds_bottom_sheet.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:alpha_track/utils/i18n/server_text.dart';
 
-class NotificationScreen extends StatelessWidget {
+class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<NotificationScreenController>();
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
 
+class _NotificationScreenState extends State<NotificationScreen> {
+  final NotificationScreenController controller =
+      Get.find<NotificationScreenController>();
+
+  // Local UI state for "Manage" multi-select mode (presentation only).
+  bool _manageMode = false;
+  final Set<String> _selectedIds = <String>{};
+
+  void _enterManageMode() {
+    setState(() {
+      _manageMode = true;
+      _selectedIds.clear();
+    });
+  }
+
+  void _exitManageMode() {
+    setState(() {
+      _manageMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelection(String? id) {
+    if (id == null) return;
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  Future<void> _markSelectedAsRead(Iterable<Datum> items) async {
+    for (final n in items) {
+      if (n.isRead != true) {
+        await controller.markAsRead(n.id);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AuthAppBar(
-        title: AppString.notifications.tr,
-        showAction: true,
-        actionIcon: AppIcons.settingsIcons,
-        onActionPressed: () => Get.toNamed(AppRoute.notificationPreferencesScreen),
-        showLeading: true,
-        backgroundColor: AppColors.white200,
-      ),
-      backgroundColor: AppColors.white200,
-      body: RefreshIndicator(
-        onRefresh: controller.refreshNotifications,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSize.width(value: 16),
-                vertical: AppSize.height(value: 8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Obx(
-                    () => TextButton(
-                      onPressed: controller.unreadCount.value == 0
-                          ? null
-                          : controller.markAllAsRead,
-                      child: AppText(
-                        text: controller.unreadCount.value > 0
-                            ? '${AppString.markAllRead.tr} (${controller.unreadCount.value})'
-                            : AppString.markAllRead.tr,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: controller.unreadCount.value == 0
-                            ? Colors.grey
-                            : AppColors.blue500,
+            _buildHeader(),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: controller.refreshNotifications,
+                color: AppColors.primary,
+                child: Obx(() {
+                  if (controller.isLoading.value &&
+                      controller.notifications.isEmpty) {
+                    return Center(
+                      child: LoadingAnimationWidget.fourRotatingDots(
+                        color: AppColors.primary,
+                        size: 50,
                       ),
+                    );
+                  }
+
+                  if (controller.hasError.value &&
+                      controller.notifications.isEmpty) {
+                    return _buildErrorState();
+                  }
+
+                  if (controller.notifications.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  return ListView.builder(
+                    controller: controller.scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      bottom: _manageMode ? 120 : 16,
                     ),
-                  ),
-                ],
+                    itemCount:
+                        controller.notifications.length +
+                        (controller.hasMoreData.value ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= controller.notifications.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final notification = controller.notifications[index];
+                      return _buildNotificationRow(notification);
+                    },
+                  );
+                }),
               ),
             ),
-            Expanded(child: _buildList(controller)),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomActionBar(),
+    );
+  }
+
+  void _showNotificationMenu() {
+    DsBottomSheet.show(
+      DsBottomSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSheetAction(
+              icon: LucideIcons.listChecks,
+              label: AppString.notificationManage.tr,
+              onTap: () {
+                Get.back();
+                _enterManageMode();
+              },
+            ),
+            DsSheetAction(
+              icon: LucideIcons.settings,
+              label: AppString.notificationPreferences.tr,
+              showChevron: true,
+              onTap: () {
+                Get.back();
+                Get.toNamed(AppRoute.notificationPreferencesScreen);
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildList(NotificationScreenController controller) {
-    return Obx(() {
-          if (controller.isLoading.value && controller.notifications.isEmpty) {
-            return Center(
-              child: LoadingAnimationWidget.fourRotatingDots(
-                color: AppColors.blue500,
-                size: 50,
+  // ---------------------------------------------------------------------------
+  // Header
+  // ---------------------------------------------------------------------------
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Row(
+        children: [
+          if (!_manageMode) const DsBackButton(),
+          if (!_manageMode) const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              AppString.notifications.tr,
+              style: AppTextStyles.headline,
+            ),
+          ),
+          if (_manageMode)
+            GestureDetector(
+              onTap: _exitManageMode,
+              behavior: HitTestBehavior.opaque,
+              child: Text(
+                'Cancel',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 16,
+                ),
               ),
-            );
-          }
-
-          if (controller.hasError.value && controller.notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                  Gap(height: AppSize.height(value: 16)),
-                  Text(
-                    controller.errorMessage.value,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                    textAlign: TextAlign.center,
-                  ),
-                  Gap(height: AppSize.height(value: 16)),
-                  ElevatedButton(
-                    onPressed: controller.fetchNotifications,
-                    child: Text(AppString.retry.tr),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (controller.notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  Gap(height: AppSize.height(value: 16)),
-                  Text(
-                    AppString.noNotificationsYet.tr,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Gap(height: AppSize.height(value: 8)),
-                  Text(
-                    AppString.notificationsHint.tr,
-                    style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            controller: controller.scrollController,
-            padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 16)),
-            itemCount:
-                controller.notifications.length +
-                (controller.hasMoreData.value ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index >= controller.notifications.length) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: LoadingAnimationWidget.beat(
-                      size: 24,
-                      color: AppColors.blue500,
-                    ),
-                  ),
-                );
-              }
-
-              final notification = controller.notifications[index];
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: _buildNotificationCard(notification, controller, index),
-              );
-            },
-          );
-    });
+            )
+          else
+            DsCircleIconButton(
+              icon: LucideIcons.ellipsis,
+              onTap: _showNotificationMenu,
+            ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildNotificationCard(
-    Datum notification,
-    NotificationScreenController controller,
-    int index,
-  ) {
-    final isNewNotification =
-        index == 0 &&
-        notification.createdAt != null &&
-        DateTime.now().difference(notification.createdAt!).inSeconds < 10;
+  // ---------------------------------------------------------------------------
+  // Notification row
+  // ---------------------------------------------------------------------------
+  Widget _buildNotificationRow(Datum notification) {
+    final id = notification.id;
+    final isSelected = id != null && _selectedIds.contains(id);
+    final isUnread = notification.isRead != true;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSize.height(value: 12)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isNewNotification
-              ? Colors.green.withValues(alpha: 0.4)
-              : Colors.grey.withValues(alpha: 0.2),
-          width: isNewNotification ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isNewNotification
-                ? Colors.green.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: isNewNotification ? 8 : 4,
-            offset: const Offset(0, 2),
+    final row = Container(
+      color: isSelected ? AppColors.surface : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_manageMode) ...[
+            _SelectionBox(selected: isSelected),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        localizeServerText(notification.title) ?? AppString.notification.tr,
+                        style: AppTextStyles.titleSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isUnread && !_manageMode) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (notification.body != null &&
+                    notification.body!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    localizeServerText(notification.body)!,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (notification.from?.name != null ||
+                    notification.createdAt != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (notification.from?.name != null)
+                        Expanded(
+                          child: Text(
+                            '${AppString.from.tr}: ${_getEnumValue(notification.from!.name)}',
+                            style: AppTextStyles.caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                      Text(
+                        controller.formatNotificationTime(
+                          notification.createdAt,
+                        ),
+                        style: AppTextStyles.caption,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
-      child: InkWell(
-        onTap: () {
-          controller.markAsRead(notification.id);
-          final route = routeForNotificationCategory(notification.category);
-          if (route != null) Get.toNamed(route);
-        },
-        onLongPress: () {
-          _showNotificationDetails(notification, controller);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: EdgeInsets.all(AppSize.width(value: 16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // New notification indicator
-              if (isNewNotification)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    AppString.newLabel.tr,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    );
+
+    final tappableRow = InkWell(
+      onTap: _manageMode ? () => _toggleSelection(id) : null,
+      onLongPress: _manageMode
+          ? null
+          : () => _showNotificationDetails(notification),
+      child: row,
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Swipe left on a single notification to delete it. Disabled while the
+        // multi-select "Manage" mode is active, and only when the row has an id
+        // the controller can remove by.
+        if (_manageMode || id == null)
+          tappableRow
+        else
+          Dismissible(
+            key: ValueKey('notif_$id'),
+            direction: DismissDirection.endToStart,
+            onDismissed: (_) {
+              controller.deleteNotification(id);
+            },
+            background: Container(
+              color: AppColors.danger.withValues(alpha: 0.12),
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Notification Icon with pulse animation for new notifications
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 500),
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _getNotificationIconColor(notification.title),
-                      shape: BoxShape.circle,
-                      boxShadow: isNewNotification
-                          ? [
-                              BoxShadow(
-                                color: _getNotificationIconColor(
-                                  notification.title,
-                                ).withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Icon(
-                      _getNotificationIcon(notification.title),
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  Gap(width: AppSize.width(value: 12)),
-
-                  // Notification Content
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notification.title ?? AppString.notification.tr,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        if (notification.body != null &&
-                            notification.body!.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              top: AppSize.height(value: 4),
-                            ),
-                            child: Text(
-                              notification.body!,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                                height: 1.4,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-
-                        // Sender and Time Info
-                        Padding(
-                          padding: EdgeInsets.only(
-                            top: AppSize.height(value: 8),
-                          ),
-                          child: Row(
-                            children: [
-                              if (notification.from?.name != null)
-                                Expanded(
-                                  child: Text(
-                                    '${AppString.from.tr}: ${_getEnumValue(notification.from!.name)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500],
-                                    ),
-                                  ),
-                                ),
-                              Text(
-                                controller.formatNotificationTime(
-                                  notification.createdAt,
-                                ),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  const Icon(LucideIcons.trash2,
+                      size: 20, color: AppColors.danger),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Delete',
+                    style: AppTextStyles.bodySemibold
+                        .copyWith(color: AppColors.danger),
                   ),
                 ],
               ),
-            ],
+            ),
+            child: tappableRow,
           ),
+        const Divider(height: 1, thickness: 1, color: AppColors.stroke),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bottom action bar (manage mode)
+  // ---------------------------------------------------------------------------
+  Widget? _buildBottomActionBar() {
+    if (!_manageMode) return null;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: PrimaryButton(
+                label: 'markAsRead'.tr,
+                isTranslate: false,
+                onTap: () async {
+                  final selected = controller.notifications
+                      .where((n) => n.id != null && _selectedIds.contains(n.id))
+                      .toList();
+                  await _markSelectedAsRead(selected);
+                  _exitManageMode();
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SecondaryButton(
+                label: 'markAllAsRead'.tr,
+                isTranslate: false,
+                onTap: () async {
+                  await controller.markAllAsRead();
+                  _exitManageMode();
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  IconData _getNotificationIcon(String? title) {
-    if (title == null) return Icons.notifications;
-
-    final lowerTitle = title.toLowerCase();
-    if (lowerTitle.contains('message') || lowerTitle.contains('chat')) {
-      return Icons.chat_bubble;
-    } else if (lowerTitle.contains('update') || lowerTitle.contains('news')) {
-      return Icons.update;
-    } else if (lowerTitle.contains('warning') || lowerTitle.contains('alert')) {
-      return Icons.warning;
-    } else if (lowerTitle.contains('success') ||
-        lowerTitle.contains('completed')) {
-      return Icons.check_circle;
-    } else if (lowerTitle.contains('reminder')) {
-      return Icons.access_time;
-    } else {
-      return Icons.notifications;
-    }
+  // ---------------------------------------------------------------------------
+  // Empty / error states
+  // ---------------------------------------------------------------------------
+  Widget _buildEmptyState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        Icon(
+          LucideIcons.bellOff,
+          size: 64,
+          color: AppColors.textFaint,
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(
+            AppString.noNotificationsYet.tr,
+            style: AppTextStyles.titleSmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            AppString.notificationsHint.tr,
+            style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ],
+    );
   }
 
-  Color _getNotificationIconColor(String? title) {
-    if (title == null) return Colors.blue;
-
-    final lowerTitle = title.toLowerCase();
-    if (lowerTitle.contains('message') || lowerTitle.contains('chat')) {
-      return Colors.green;
-    } else if (lowerTitle.contains('update') || lowerTitle.contains('news')) {
-      return Colors.blue;
-    } else if (lowerTitle.contains('warning') || lowerTitle.contains('alert')) {
-      return Colors.orange;
-    } else if (lowerTitle.contains('success') ||
-        lowerTitle.contains('completed')) {
-      return Colors.teal;
-    } else if (lowerTitle.contains('reminder')) {
-      return Colors.purple;
-    } else {
-      return Colors.blue;
-    }
+  Widget _buildErrorState() {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        Icon(LucideIcons.circleAlert, size: 64, color: AppColors.textFaint),
+        const SizedBox(height: 16),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              controller.errorMessage.value,
+              style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: SizedBox(
+            width: 160,
+            child: PrimaryButton(
+              label: AppString.retry.tr,
+              isTranslate: false,
+              onTap: controller.fetchNotifications,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
+  // ---------------------------------------------------------------------------
+  // Helpers (logic preserved from original)
+  // ---------------------------------------------------------------------------
   String _getEnumValue(dynamic enumValue) {
     if (enumValue is String) {
       return enumValue;
@@ -387,166 +454,57 @@ class NotificationScreen extends StatelessWidget {
     return enumValue.toString().split('.').last.replaceAll('_', ' ');
   }
 
-  /// Show notification details on long press
-  void _showNotificationDetails(
-    Datum notification,
-    NotificationScreenController controller,
-  ) {
-    controller.markAsRead(notification.id);
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
+  /// Show notification details on long press.
+  void _showNotificationDetails(Datum notification) {
+    if (notification.isRead != true) {
+      controller.markAsRead(notification.id);
+    }
+    DsBottomSheet.show(
+      DsBottomSheet(
+        title: AppString.notificationDetails.tr,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const Gap(height: 15),
-
-            // Title
-            AppText(
-              text: AppString.notificationDetails.tr,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-            const Gap(height: 14),
-
-            // Notification Title
             if (notification.title != null && notification.title!.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: AppString.titleLabel.tr,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                  const Gap(height: 4),
-                  AppText(
-                    text: notification.title!,
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
-                  const Gap(height: 10),
-                ],
-              ),
-
-            // Notification Body
+              _detailBlock(AppString.titleLabel.tr, notification.title!),
             if (notification.body != null && notification.body!.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: AppString.messageLabel.tr,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                  const Gap(height: 4),
-                  AppText(
-                    text: notification.body!,
-                    fontSize: 14,
-                    color: Colors.black87,
-                    height: 1.4,
-                    maxLines: 3,
-                    textAlign: TextAlign.start,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Gap(height: 10),
-                ],
-              ),
-
-            // From Information
+              _detailBlock(AppString.messageLabel.tr, notification.body!),
             if (notification.from?.name != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: AppString.from.tr,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                  const Gap(height: 4),
-                  AppText(
-                    text: _getEnumValue(notification.from!.name),
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  const Gap(height: 10),
-                ],
+              _detailBlock(
+                AppString.from.tr,
+                _getEnumValue(notification.from!.name),
               ),
-
-            // Created At
             if (notification.createdAt != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: AppString.received.tr,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                  const Gap(height: 4),
-                  AppText(
-                    text: _formatFullDateTime(notification.createdAt!),
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  const Gap(height: 10),
-                ],
+              _detailBlock(
+                AppString.received.tr,
+                _formatFullDateTime(notification.createdAt!),
               ),
-
-            // View button — only shown when this notification's category
-            // has somewhere to navigate to (see routeForNotificationCategory).
-            // This is the fix for the long-press view having "no navigation
-            // at all" that Phase 12 explicitly called out.
-            if (routeForNotificationCategory(notification.category) != null) ...[
-              AppButton(
-                height: AppSize.height(value: 40),
-                title: AppString.view.tr,
-                titleColor: AppColors.white100,
-                backgroundColor: AppColors.green,
-                onTap: () {
-                  Get.back();
-                  Get.toNamed(routeForNotificationCategory(notification.category)!);
-                },
-              ),
-              const Gap(height: 10),
-            ],
-
-            // Close Button
-            AppButton(
-              height: AppSize.height(value: 40),
-              title: AppString.close.tr,
-              titleColor: AppColors.white100,
-              backgroundColor: AppColors.blue500,
+            PrimaryButton(
+              label: AppString.close.tr,
+              isTranslate: false,
               onTap: () => Get.back(),
             ),
-            const Gap(height: 15),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _detailBlock(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodySemibold.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(value, style: AppTextStyles.body),
+        const SizedBox(height: 12),
+      ],
     );
   }
 
@@ -595,5 +553,31 @@ class NotificationScreen extends StatelessWidget {
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     final period = isPm ? AppString.pm.tr : AppString.am.tr;
     return '$displayHour:$minute $period';
+  }
+}
+
+/// Square selection checkbox shown in manage mode.
+class _SelectionBox extends StatelessWidget {
+  const _SelectionBox({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.primary : AppColors.surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: selected ? AppColors.primary : AppColors.textFaint,
+          width: 1.5,
+        ),
+      ),
+      child: selected
+          ? const Icon(LucideIcons.check, size: 16, color: AppColors.white50)
+          : null,
+    );
   }
 }

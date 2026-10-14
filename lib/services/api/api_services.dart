@@ -41,7 +41,7 @@ class ApiServices {
       }
     } on SocketException catch (e) {
       errorLog('api socket exception', e);
-      AppSnackBar.error("Check Your Internet Connection");
+      AppSnackBar.error('checkInternetTitle'.tr);
       return null;
     } on TimeoutException catch (e) {
       errorLog('api time out exception', e);
@@ -111,7 +111,7 @@ class ApiServices {
       }
     } on SocketException catch (e) {
       errorLog('api socket exception', e);
-      AppSnackBar.error("Check Your Internet Connection");
+      AppSnackBar.error('checkInternetTitle'.tr);
       return null;
     } on TimeoutException catch (e) {
       errorLog('api time out exception', e);
@@ -182,7 +182,7 @@ class ApiServices {
     }
   } on SocketException catch (e) {
     errorLog('api socket exception', e);
-    AppSnackBar.error("Check Your Internet Connection");
+    AppSnackBar.error('checkInternetTitle'.tr);
     return null;
   } on TimeoutException catch (e) {
     errorLog('api time out exception', e);
@@ -229,7 +229,7 @@ class ApiServices {
       }
     } on SocketException catch (e) {
       errorLog('api socket exception', e);
-      AppSnackBar.error("Check Your Internet Connection");
+      AppSnackBar.error('checkInternetTitle'.tr);
       return null;
     } on TimeoutException catch (e) {
       errorLog('api time out exception', e);
@@ -280,7 +280,7 @@ class ApiServices {
       }
     } on SocketException catch (e) {
       errorLog('api socket exception', e);
-      AppSnackBar.error("Check Your Internet Connection");
+      AppSnackBar.error('checkInternetTitle'.tr);
       return null;
     } on TimeoutException catch (e) {
       errorLog('api time out exception', e);
@@ -340,7 +340,7 @@ class ApiServices {
       }
     } on SocketException catch (e) {
       errorLog('api socket exception', e);
-      AppSnackBar.error("Check Your Internet Connection");
+      AppSnackBar.error('checkInternetTitle'.tr);
       return null;
     } on TimeoutException catch (e) {
       errorLog('api time out exception', e);

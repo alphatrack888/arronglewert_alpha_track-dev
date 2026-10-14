@@ -1,14 +1,15 @@
 import 'package:alpha_track/screens/profile_screen/settings_screen/change_pasword/controller/chanage_password_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_text_field/app_text_field.dart';
+import 'package:alpha_track/widgets/ds/ds_auth_header.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
+import 'package:alpha_track/widgets/ds/ds_password_criteria.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ChangePasswordScreen extends StatelessWidget {
   ChangePasswordScreen({super.key});
@@ -18,95 +19,95 @@ class ChangePasswordScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AuthAppBar(
-        title: AppString.changePasswod.tr,
-        showAction: false,
-        showLeading: true,
-        backgroundColor: AppColors.white200,
-      ),
-      backgroundColor: AppColors.white200,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Gap(height: AppSize.height(value: 25)),
-            //! Old Password
-            AppText(
-              text: AppString.oldPassword.tr,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.black500,
-            ),
-            Gap(height: AppSize.height(value: 05)),
-            CustomTextField(
-              hintText: AppString.enterYourPassword.tr,
-              height: AppSize.height(value: 48),
-              isPassword: true,
-              controller: chanagePasswordController.oldPasswordController,
-              backgroundColor: AppColors.blue50,
-              borderRadius: 6,
-              borderColor: Colors.transparent,
-              keyboardType: TextInputType.visiblePassword,
-            ),
-            Gap(height: AppSize.height(value: 15)),
-            //! New Password
-            AppText(
-              text: AppString.newPassword.tr,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.black500,
-            ),
-            Gap(height: AppSize.height(value: 05)),
-            CustomTextField(
-              hintText: AppString.enterYourPassword.tr,
-              height: AppSize.height(value: 48),
-              controller: chanagePasswordController.newPasswordController,
-              isPassword: true,
-              backgroundColor: AppColors.blue50,
-              borderRadius: 6,
-              borderColor: Colors.transparent,
-              keyboardType: TextInputType.visiblePassword,
-            ),
-            Gap(height: AppSize.height(value: 15)),
-            //! Confirm Password
-            AppText(
-              text: AppString.confirmPassword.tr,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.black500,
-            ),
-            Gap(height: AppSize.height(value: 05)),
-            CustomTextField(
-              hintText: AppString.enterYourPassword.tr,
-              height: AppSize.height(value: 48),
-              controller: chanagePasswordController.confirmPasswordController,
-              backgroundColor: AppColors.blue50,
-              borderRadius: 6,
-              isPassword: true,
-              borderColor: Colors.transparent,
-              keyboardType: TextInputType.visiblePassword,
-            ),
-            Gap(height: AppSize.height(value: 15)),
-            //! Save Button
-            Obx(
-              () => AppButton(
-                title: AppString.saveChanges.tr,
-                height: AppSize.height(value: 48),
-                width: double.infinity,
-                borderradius: 6,
-                fontSize: 16,
-                backgroundColor: AppColors.blue500,
-                titleColor: AppColors.white200,
-                isLoading: chanagePasswordController.isLoading.value,
-                onTap: () {
-                  chanagePasswordController.changePassword();
-                },
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DsAuthHeader(
+                title: AppString.changePasswod.tr,
+                subtitle: 'createOrResetPassword'.tr,
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              //! Old Password
+              _fieldLabel(AppString.oldPassword.tr),
+              const SizedBox(height: 8),
+              CustomTextField(
+                hintText: AppString.enterYourPassword.tr,
+                height: 52,
+                isPassword: true,
+                prefixIcon: LucideIcons.lock,
+                controller: chanagePasswordController.oldPasswordController,
+                backgroundColor: AppColors.surface,
+                borderRadius: 12,
+                borderColor: AppColors.stroke,
+                keyboardType: TextInputType.visiblePassword,
+              ),
+              const SizedBox(height: 18),
+              //! New Password
+              _fieldLabel(AppString.newPassword.tr),
+              const SizedBox(height: 8),
+              CustomTextField(
+                hintText: AppString.enterYourPassword.tr,
+                height: 52,
+                controller: chanagePasswordController.newPasswordController,
+                isPassword: true,
+                prefixIcon: LucideIcons.lock,
+                backgroundColor: AppColors.surface,
+                borderRadius: 12,
+                borderColor: AppColors.stroke,
+                keyboardType: TextInputType.visiblePassword,
+              ),
+              const SizedBox(height: 18),
+              //! Confirm Password
+              _fieldLabel(AppString.confirmPassword.tr),
+              const SizedBox(height: 8),
+              CustomTextField(
+                hintText: AppString.enterYourPassword.tr,
+                height: 52,
+                controller: chanagePasswordController.confirmPasswordController,
+                backgroundColor: AppColors.surface,
+                borderRadius: 12,
+                isPassword: true,
+                prefixIcon: LucideIcons.lock,
+                borderColor: AppColors.stroke,
+                keyboardType: TextInputType.visiblePassword,
+              ),
+              const SizedBox(height: 18),
+              // Password requirements (live, reacts to New Password)
+              DsPasswordCriteria(
+                controller: chanagePasswordController.newPasswordController,
+              ),
+              const SizedBox(height: 24),
+              //! Save Button
+              Obx(
+                () => PrimaryButton(
+                  label: 'saveNewPassword'.tr,
+                  isTranslate: false,
+                  isLoading: chanagePasswordController.isLoading.value,
+                  onTap: chanagePasswordController.isLoading.value
+                      ? null
+                      : () async {
+                          final ok = await chanagePasswordController
+                              .changePassword();
+                          if (ok && context.mounted) dsPop(context);
+                        },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _fieldLabel(String text) {
+    return Text(
+      text,
+      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+    );
+  }
+
 }

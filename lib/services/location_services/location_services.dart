@@ -1,8 +1,11 @@
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
@@ -66,123 +69,79 @@ class LocationService {
 
   /// Prominent disclosure dialog for location data collection (Google Play policy requirement)
   Future<bool> _showLocationDisclosureDialog() async {
-    return await showDialog<bool>(
-          context: Get.context!,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              backgroundColor: AppColors.white100,
-              title: const Row(
-                children: [
-                  Icon(Icons.location_on, color: Colors.blue, size: 28),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Location Access Required',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              content: const Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Alpha Track collects your location data to:',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('  \u2022  ', style: TextStyle(fontSize: 14)),
-                      Expanded(
-                        child: Text(
-                          'Verify your on-site attendance and work location for project tracking.',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('  \u2022  ', style: TextStyle(fontSize: 14)),
-                      Expanded(
-                        child: Text(
-                          'Record your location when you start and stop work sessions.',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('  \u2022  ', style: TextStyle(fontSize: 14)),
-                      Expanded(
-                        child: Text(
-                          'Track location in the background during active work sessions to confirm job-site presence.',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Your location data is sent to our servers and used solely for attendance and project management purposes. Location tracking is only active during your work sessions.',
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Deny'),
+    return await Get.dialog<bool>(
+          DsDialog(
+            title: 'locationAccessRequired'.tr,
+            tone: DsDialogTone.info,
+            icon: LucideIcons.mapPin,
+            barrierDismissible: false,
+            confirmLabel: 'allow'.tr,
+            cancelLabel: 'deny'.tr,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'locCollectsTo'.tr,
+                  style: AppTextStyles.bodySemibold,
                 ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue500,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Allow'),
+                const SizedBox(height: 12),
+                _disclosureBullet(
+                    'locBullet1'.tr),
+                _disclosureBullet(
+                    'locBullet2'.tr),
+                _disclosureBullet(
+                    'locBullet3'.tr),
+                const SizedBox(height: 12),
+                Text(
+                  'locFooter'.tr,
+                  style: AppTextStyles.caption.copyWith(height: 1.45),
                 ),
               ],
-            );
-          },
+            ),
+          ),
+          barrierDismissible: false,
+          barrierColor: Colors.black.withValues(alpha: 0.25),
         ) ??
         false;
   }
 
+  Widget _disclosureBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: AppTextStyles.body)),
+        ],
+      ),
+    );
+  }
+
   // // Helper method to show dialog
   Future<bool> _showLocationServiceDialog() async {
-    return await showDialog<bool>(
-          context: Get.context!,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              backgroundColor: AppColors.white100,
-              title: Text('Location Services Disabled'),
-              content: Text(
-                'Location services are turned off. Please enable location services to use this feature.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: Text('Open Settings'),
-                ),
-              ],
-            );
-          },
-        ) ??
-        false;
+    return await DsDialog.confirm(
+      title: 'locationServicesDisabled'.tr,
+      message:
+          'locationServicesDisabledBody'.tr,
+      confirmLabel: 'openSettings'.tr,
+      cancelLabel: 'Cancel',
+      tone: DsDialogTone.warning,
+      icon: LucideIcons.mapPin,
+      destructive: false,
+    );
   }
 
   /// Request location permissions with background support
@@ -228,7 +187,7 @@ class LocationService {
 
       return position;
     } catch (e) {
-      print('Error getting current location: $e');
+      debugPrint('Error getting current location: $e');
       return null;
     }
   }
@@ -320,7 +279,7 @@ class LocationService {
     try {
       return await Geolocator.getLastKnownPosition();
     } catch (e) {
-      print('Error getting last known position: $e');
+      debugPrint('Error getting last known position: $e');
       return null;
     }
   }
@@ -343,7 +302,7 @@ class LocationService {
           return position;
         }
       } catch (e) {
-        print('Location attempt ${i + 1} failed: $e');
+        debugPrint('Location attempt ${i + 1} failed: $e');
         if (i < maxRetries - 1) {
           await Future.delayed(retryDelay);
         }

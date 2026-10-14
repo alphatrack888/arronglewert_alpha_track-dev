@@ -51,4 +51,60 @@ class AppColors {
       // Color(0xff9E7A4D),
     ],
   );
+
+  // ===========================================================================
+  // 2026 Redesign tokens (from Figma "Design System")
+  // Additive: do NOT remove the legacy tokens above — existing screens use them.
+  // ===========================================================================
+
+  // Brand / primary
+  static const Color primary = Color(0xFF1F58D8); // Primary/80
+  static const Color primaryDark = Color(0xFF1037B7); // Primary/Purple 80
+
+  // Surfaces
+  static const Color background = Color(0xFFF5F6F9); // app scaffold background
+  static const Color surface = Color(0xFFFFFFFF); // cards, sheets
+  static const Color stroke = Color(0xFFE9EBEF); // borders / dividers
+  static const Color fill = Color(0xFFF3F3F3); // Black/5 — chips, inputs
+
+  // Text (Black scale)
+  static const Color textPrimary = Color(0xFF101214); // Black/100
+  static const Color textSecondary = Color(0xFF40495C); // Black/80
+  static const Color textMuted = Color(0xFF7C8598); // Black/60
+  static const Color textFaint = Color(0xFFA0A8B9); // Black/40
+
+  // Status
+  static const Color success = Color(0xFF1E9E56); // Alert/Success 100
+  static const Color warning = Color(0xFFDB881F); // Alert/Warning 100
+  static const Color danger = Color(0xFFFB4958); // Alert/Error 100
+
+  // Tracking pill (mini timer widget on the project-details bottom bar)
+  static const Color trackingDot = Color(0xFF46FF97); // live green indicator
+  static const Color trackingStopBg = Color(0x66FF6C73); // translucent red stop
+  static const Color trackingPauseBg = Color(0xFFFFFFFF); // white pause/resume
+
+  // Soft status backgrounds (chips/badges)
+  static const Color successSoft = Color(0xFFE7F5EE);
+  static const Color warningSoft = Color(0xFFFBF1E3);
+  static const Color primarySoft = Color(0xFFEAF0FC);
+  static const Color neutralSoft = Color(0xFFEFF1F5);
+
+  // Gradient cards
+  static const Gradient timerCardGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFE9B98C), Color(0xFF6E86E0), Color(0xFF2F55D4)],
+  );
+
+  static const Gradient runningCardGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFF4F74E0), Color(0xFF2A4FD0)],
+  );
+
+  static const Gradient breakCardGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [Color(0xFFE98A8A), Color(0xFFD85A5A)],
+  );
 }

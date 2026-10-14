@@ -1,24 +1,12 @@
-# Production iOS Firebase setup
+# iOS Firebase / FCM (redesign)
 
-Runner uses `com.marc.alphatrack`. The matching `GoogleService-Info.plist`
-from `cred/` is installed and included in Runner's Copy Bundle Resources.
-Push Notifications and Background Modes are enabled in the project.
-All Runner build configurations reference `Runner/Runner.entitlements`.
+**Bundle ID:** `com.marcgelwertz.alphatrack` (see Xcode project settings).
 
-Remaining account/build steps on a Mac:
+Push is **not configured** until you:
 
-1. Verify the existing Apple development team owns the production bundle ID.
-   Select its provisioning profiles and signing identity in Xcode.
-2. In Firebase project `alphatrack-2026`, verify an APNs authentication key
-   is uploaded for the production iOS app with the correct Apple team/key ID.
-3. Run `flutter pub get`, then `cd ios && pod install`. Commit the resulting
-   Podfile.lock after checking it; the current lockfile predates Firebase.
-4. Open `Runner.xcworkspace`, build on a device, and archive/export for distribution.
-   The source entitlement uses development for local device builds; Xcode's
-   distribution signing/export must produce the production APNs entitlement.
-   Inspect the exported signed app's entitlements before TestFlight upload.
-5. Test permission/token registration, foreground and background push, taps from
-   a terminated app, and logout. Store signing and APNs delivery cannot be
-   validated by merely inspecting the Firebase plist.
+1. Register an iOS app with this bundle ID in Firebase project **alphatrack-2026**.
+2. Upload your APNs authentication key in Firebase Console.
+3. Download `GoogleService-Info.plist` into this `ios/Runner/` directory.
+4. Enable Push Notifications capability in Xcode for the Runner target.
 
-See https://firebase.google.com/docs/cloud-messaging/flutter/get-started.
+Do **not** reuse `cred/GoogleService-Info.plist` — it is for legacy `com.marc.alphatrack`.

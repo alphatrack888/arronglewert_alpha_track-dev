@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/models/profile_model.dart';
 import 'package:alpha_track/services/repository/profile_repository/profile_repository.dart';
+import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:get/get.dart';
 
 import '../../../../utils/app_log/app_log.dart';
@@ -21,10 +24,17 @@ class ProfileController extends GetxController {
   }
 
   void onTap() {
-    print("===================${profileData.value!.data!.profile}");
+    // Null-safe: profileData can be null before the first successful fetch.
+    debugPrint("profile image => ${profileData.value?.data?.profile}");
   }
 
   Future<void> fetchProfile({bool refreshImage = false}) async {
+    // Demo/review builds have no backend session — serve the local demo
+    // profile so the Account tab and Edit form are populated.
+    if (kDemoMode) {
+      profileData.value = DemoData.profile;
+      return;
+    }
     try {
       isLoading(true);
 
@@ -39,6 +49,7 @@ class ProfileController extends GetxController {
         // Set user id in storage
         await storageServie.setUserId(response.data?.id ?? '');
         appLog("User id: ${storageServie.getUserId()}");
+        EmployeeSocketSubscriptions.onUserIdReady();
         // Reset the flag after a short delay to allow the UI to update
         if (refreshImage) {
           await Future.delayed(const Duration(milliseconds: 100));

@@ -8,7 +8,11 @@ import 'package:get/get.dart';
 class ConnectivityService extends GetxController {
   RxList<ConnectivityResult> connectionStatus = <ConnectivityResult>[].obs;
   final Connectivity connectivity = Connectivity();
-  late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
+  // Nullable (not `late`): initConnectivity() is async, so a cold-start dispose
+  // (e.g. deep-link/web-reload onto a middleware-guarded route) can call
+  // onClose() before this is assigned. `late` threw LateInitializationError →
+  // blank screen. Nullable + guarded cancel degrades gracefully instead.
+  StreamSubscription<List<ConnectivityResult>>? connectivitySubscription;
   
   // Store the previous route to navigate back when internet is restored
   String? _previousRoute;
@@ -91,7 +95,7 @@ class ConnectivityService extends GetxController {
 
   @override
   void onClose() {
-    connectivitySubscription.cancel();
+    connectivitySubscription?.cancel();
     super.onClose();
   }
 }

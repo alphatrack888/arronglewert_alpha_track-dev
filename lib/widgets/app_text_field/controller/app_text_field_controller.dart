@@ -36,7 +36,7 @@ class AppTextFieldController extends GetxController {
 
     if (isFormValid) {
       // Proceed with form submission
-      print('Form is valid! Submitting...');
+      debugPrint('Form is valid! Submitting...');
     }
   }
 }

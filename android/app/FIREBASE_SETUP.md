@@ -1,16 +1,12 @@
 # Android Firebase configuration
 
-The existing production Play listing uses `com.marcgelwertz.alphatrack`.
-The Android application ID, namespace, MainActivity and Play upload lane use this ID.
-iOS separately uses `com.marc.alphatrack`.
+Production Android application ID: **`com.marcgelwertz.alphatrack`**.
 
-Use `android/app/google-services.json` from Firebase project `alphatrack-2026`.
-The current file includes both clients; Google Services selects the client matching
-the Android application ID. Do not manually rename a Firebase client's package.
+1. Download `google-services.json` from Firebase project **alphatrack-2026** for that package.
+2. Place it at `android/app/google-services.json` (not committed — use `cred/google-services.json` locally or CI secret `ANDROID_GOOGLE_SERVICES_JSON_BASE64`).
 
-CI restores this file from `ANDROID_GOOGLE_SERVICES_JSON_BASE64`.
-Its existing value remains suitable if it contains the production Android client.
-The build and release preparation reject configurations without that client.
+The Gradle build verifies the file contains a client for `com.marcgelwertz.alphatrack`.
 
-If replacing the file, download it from Firebase project settings for the Android
-app `com.marcgelwertz.alphatrack`, then update the GitHub Secret.
+## iOS (redesign)
+
+Bundle ID **`com.marcgelwertz.alphatrack`** requires its own `GoogleService-Info.plist` in `ios/Runner/`. The `cred/GoogleService-Info.plist` in this repo targets legacy **`com.marc.alphatrack`** and must not be used for the redesign app. See `ios/Runner/FIREBASE_SETUP.md`.

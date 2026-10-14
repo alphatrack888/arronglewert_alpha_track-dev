@@ -48,7 +48,7 @@ class AudioController extends GetxController {
           AudioSource.uri(Uri.parse(apiUrl)), 
         );
       } else {
-        throw Exception('Failed to load audio');
+        throw Exception('failedLoadAudio'.tr);
       }
     } finally {
       isLoading.value = false;

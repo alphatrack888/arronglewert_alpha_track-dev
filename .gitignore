@@ -47,27 +47,7 @@ app.*.map.json
 # FVM Version Cache
 .fvm/
 
-# Signing keys and secrets
-*.jks
-*.keystore
-key.properties
-android/key.properties
-# Debug/profiler artifacts
-*.hprof
-
-# CI signing and release tooling
-*.p12
-*.p8
-*.mobileprovision
-.bundle/
-vendor/bundle/
-fastlane/report.xml
-fastlane/Preview.html
-ci/__pycache__/
-
-# Local release credentials (never commit)
+# Local release / GitHub secret mirror (never commit real values)
 .env
 .env.*
 !.env.example
-/dev-infotext.txt
-/project-6cbf3eda-78c4-49f3-88a-1699064415a5.json

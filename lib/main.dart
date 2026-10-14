@@ -2,18 +2,17 @@ import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/core/bindings/initial_bindings.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/widgets/app_device_utils/app_device_utils.dart';
 import 'package:alpha_track/widgets/getx_observer/getx_custome_observer.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'core/app_translation/app_translation.dart';
-
-// AlphaTrack employee app entry point (Flutter / GetX).
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -28,31 +27,26 @@ void main() async {
   // Initialize storage with enhanced error handling
   await initializeStorage();
 
+  // Load intl locale data so AppDate can format dates in de/ar/ro, not just en.
+  await initializeDateFormatting();
+
   // Initialize bindings
   InitialBinding().dependencies();
 
   await initializePushNotifications();
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 Future<void> initializePushNotifications() async {
   try {
-    // No explicit FirebaseOptions here (no `firebase_options.dart` /
-    // DefaultFirebaseOptions) — this app is mobile-only, so Firebase reads
-    // its config from the native google-services.json (Android) /
-    // GoogleService-Info.plist (iOS) files instead. Those aren't committed
-    // (real project credentials, one per environment) — see
-    // android/app/README_FIREBASE_SETUP.md / ios/Runner/README_FIREBASE_SETUP.md.
     await Firebase.initializeApp();
     await PushNotificationService.instance.initialize();
     appLog('Push notifications initialized');
   } catch (e) {
-    // Deliberately non-fatal: a missing/misconfigured Firebase project must
-    // not crash the app or block startup — it should just mean push doesn't
-    // work this session, same as the existing "continue without path
-    // provider" pattern above.
-    appLog('Push notification initialization failed (continuing without push): $e');
+    appLog(
+      'Push notification initialization failed (continuing without push): $e',
+    );
   }
 }
 
@@ -118,9 +112,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Covers the edge case where the user denied push permission, then
-    // granted it later from OS Settings without going through login again
-    // — re-checked on every resume, not just at app start.
     if (state == AppLifecycleState.resumed) {
       PushNotificationService.instance.refreshRegistrationIfNeeded();
     }
@@ -131,6 +122,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final String savedLanguage =
         StorageServices.instance.getLanguage() ?? 'english';
     return GetMaterialApp(
+      theme: ThemeData(fontFamily: 'Hanken Grotesk'),
       translations: AppTranslation(),
       locale: Locale(savedLanguage),
       fallbackLocale: const Locale('english'),
@@ -140,7 +132,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
       initialRoute: AppRoute.splashScreen,
-      navigatorKey: Get.key,
+      // NOTE: do not pass `navigatorKey: Get.key` here. GetMaterialApp already
+      // installs Get.key itself; re-passing it can leave the global key's
+      // currentState detached, which makes Get.back() a silent no-op.
       getPages: AppRoute.appRoutes,
       // Add error handling for the entire app
       onUnknownRoute: (settings) {

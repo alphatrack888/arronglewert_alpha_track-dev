@@ -5,6 +5,7 @@ import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_size/app_gap.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class AppAudioPlayer extends StatefulWidget {
   final String audioUrl;
@@ -124,8 +125,8 @@ class _AppAudioPlayerState extends State<AppAudioPlayer> {
                 return IconButton(
                   icon: Icon(
                     isPlaying
-                        ? Icons.pause_circle_filled
-                        : Icons.play_circle_fill,
+                        ? LucideIcons.pause
+                        : LucideIcons.play,
                     size: 30,
                   ),
                   onPressed: () async {
@@ -140,7 +141,7 @@ class _AppAudioPlayerState extends State<AppAudioPlayer> {
             )
           else
             IconButton(
-              icon: const Icon(Icons.play_circle_fill, size: 30),
+              icon: const Icon(LucideIcons.play, size: 30),
               onPressed: _initializePlayer,
             ),
 

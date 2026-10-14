@@ -13,13 +13,13 @@ class LoginScreenController extends GetxController {
   Future<void> loginEmployee() async {
     try {
       if (email.text.trim().isEmpty || password.text.isEmpty) {
-        AppSnackBar.error("Please fill all fields");
+        AppSnackBar.error('vFillAllFields'.tr);
         return;
       }
       
       // Validate email format
       if (!GetUtils.isEmail(email.text.trim())) {
-        AppSnackBar.error("Please enter a valid email address");
+        AppSnackBar.error('vValidEmail'.tr);
         return;
       }
 
@@ -31,8 +31,8 @@ class LoginScreenController extends GetxController {
       );
       
     } catch (e) {
-      print("Login controller error: $e");
-      AppSnackBar.error("An unexpected error occurred");
+      debugPrint("Login controller error: $e");
+      AppSnackBar.error('errUnexpected'.tr);
     } finally {
       isLoading.value = false;
     }

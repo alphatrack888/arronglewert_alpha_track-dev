@@ -42,11 +42,6 @@ class AppApi {
           if (kDebugMode) {
             appLog("API Request to: ${options.path}");
             appLog("Token present: ${token.isNotEmpty}");
-            if (token.isNotEmpty) {
-              appLog(
-                "Token (first 20 chars): ${token.substring(0, token.length > 20 ? 20 : token.length)}...",
-              );
-            }
           }
 
           if (token.isNotEmpty) {

@@ -53,6 +53,7 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: isLoading ? null : onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: Durations.long1,
         curve: Curves.ease,

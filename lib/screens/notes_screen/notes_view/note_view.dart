@@ -1,23 +1,26 @@
 import 'dart:io';
-import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
-import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:alpha_track/screens/notes_screen/note_screen/controller/notes_screen_controller.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/controller/note_veiw_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_icons/app_icons.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_size/app_gap.dart';
 import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
 import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_button/app_icon_button.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
+import 'package:alpha_track/widgets/ds/ds_bottom_sheet.dart';
+import 'package:alpha_track/widgets/ds/ds_dialog.dart';
+import 'package:alpha_track/widgets/ds/ds_card.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
 import 'package:alpha_track/widgets/app_text_field/app_text_field.dart';
 import 'package:alpha_track/widgets/app_audio_player/enhanced_audio_player.dart';
 import 'package:alpha_track/widgets/image_preview_widget/image_preview_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class NoteView extends StatelessWidget {
@@ -65,8 +68,8 @@ class NoteView extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showNoteOptions(controller, notesScreenController),
-        backgroundColor: AppColors.blue500,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primary,
+        child: const Icon(LucideIcons.plus, color: Colors.white),
       ),
     );
   }
@@ -76,20 +79,16 @@ class NoteView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.note_add, size: 64, color: Colors.grey[400]),
+          Icon(LucideIcons.filePlus, size: 64, color: AppColors.textFaint),
           const Gap(height: 16),
-          AppText(
-            text: AppString.noNotesYet.tr,
-            fontSize: AppSize.width(value: 18),
-            color: AppColors.white900,
-            fontWeight: FontWeight.w500,
+          Text(
+            AppString.noNotesYet.tr,
+            style: AppTextStyles.title.copyWith(fontSize: 18),
           ),
           const Gap(height: 8),
-          AppText(
-            text: AppString.tapPlusToCreateFirstNote.tr,
-            fontSize: AppSize.width(value: 14),
-            color: AppColors.white900,
-            fontWeight: FontWeight.w500,
+          Text(
+            AppString.tapPlusToCreateFirstNote.tr,
+            style: AppTextStyles.subtitle,
           ),
         ],
       ),
@@ -104,7 +103,7 @@ class NoteView extends StatelessWidget {
         imagePath,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Icon(Icons.broken_image, color: Colors.grey);
+          return Icon(LucideIcons.imageOff, color: Colors.grey);
         },
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
@@ -124,7 +123,7 @@ class NoteView extends StatelessWidget {
         File(imagePath),
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          return Icon(Icons.broken_image, color: Colors.grey);
+          return Icon(LucideIcons.imageOff, color: Colors.grey);
         },
       );
     }
@@ -136,23 +135,11 @@ class NoteView extends StatelessWidget {
     NoteVeiwController controller,
   ) {
     appLog('Note data: $note');
-    return Container(
+    return DsCard(
       margin: const EdgeInsets.only(bottom: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4.0,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12.0),
-        onTap: () => _showNoteDetails(note, index, controller),
-        child: Padding(
+      padding: EdgeInsets.zero,
+      onTap: () => _showNoteDetails(note, index, controller),
+      child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,20 +153,18 @@ class NoteView extends StatelessWidget {
                       Icon(
                         _getNoteIcon(note),
                         size: 16,
-                        color: AppColors.blue500,
+                        color: AppColors.primary,
                       ),
-                      const Gap(width: 4),
-                      AppText(
-                        text: note['createdBy'] ?? AppString.unknownUser.tr,
-                        fontSize: AppSize.width(value: 14),
-                        color: AppColors.blue500,
-                        fontWeight: FontWeight.w500,
+                      const Gap(width: 6),
+                      Text(
+                        note['createdBy'] ?? AppString.unknownUser.tr,
+                        style: AppTextStyles.bodySemibold,
                       ),
                     ],
                   ),
                   Text(
                     controller.formatTime(note['timestamp'] ?? DateTime.now()),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: AppTextStyles.caption,
                   ),
                 ],
               ),
@@ -200,7 +185,7 @@ class NoteView extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            Icons.text_fields,
+                            LucideIcons.type,
                             color: Colors.grey[600],
                             size: 16,
                           ),
@@ -242,7 +227,7 @@ class NoteView extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            Icons.image,
+                            LucideIcons.image,
                             color: Colors.blue.shade600,
                             size: 16,
                           ),
@@ -278,24 +263,23 @@ class NoteView extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  AppText(
-                    text: AppString.tapToViewDetails.tr,
-                    fontSize: 12,
-                    color: AppColors.blue500,
-                    fontWeight: FontWeight.w400,
+                  Text(
+                    AppString.tapToViewDetails.tr,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.arrow_forward_ios,
+                    LucideIcons.arrowRight,
                     size: 12,
-                    color: AppColors.blue500,
+                    color: AppColors.primary,
                   ),
                 ],
               ),
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -388,13 +372,13 @@ class NoteView extends StatelessWidget {
     int contentTypes = _getContentTypesCount(note);
 
     if (contentTypes > 1) {
-      return Icons.layers; // Mixed content
+      return LucideIcons.layers; // Mixed content
     } else if (_hasImages(note)) {
-      return Icons.image;
+      return LucideIcons.image;
     } else if (_hasAudio(note)) {
-      return Icons.mic;
+      return LucideIcons.mic;
     } else {
-      return Icons.note;
+      return LucideIcons.stickyNote;
     }
   }
 
@@ -465,89 +449,48 @@ class NoteView extends StatelessWidget {
     NoteVeiwController controller,
     NotesScreenController notesScreenController,
   ) {
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+    DsBottomSheet.show(
+      DsBottomSheet(
+        title: AppString.createNewNote.tr,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle bar
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12),
-                height: AppSize.height(value: 04),
-                width: AppSize.width(value: 40),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+            DsSheetAction(
+              icon: LucideIcons.layers,
+              label: AppString.mixedNote.tr,
+              onTap: () {
+                Get.back();
+                _showMixedNoteDialog(controller);
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppText(
-                    text: AppString.createNewNote.tr,
-                    fontSize: AppSize.width(value: 20),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  const Gap(height: 10),
-                  AppButtonWithIcon(
-                    buttonText: AppString.mixedNote.tr,
-                    svgIconPath: AppIcons.allNotes,
-                    onPressed: () {
-                      Get.back();
-                      _showMixedNoteDialog(controller);
-                    },
-                    textColor: AppColors.blue700,
-                  ),
-                  const Gap(height: 16),
-                  AppButtonWithIcon(
-                    buttonText: AppString.textNote.tr,
-                    svgIconPath: AppIcons.textNotes,
-                    onPressed: () {
-                      Get.back();
-                      _showTextNoteDialog(controller);
-                    },
-                    textColor: AppColors.blue700,
-                  ),
-                  const Gap(height: 16),
-                  AppButtonWithIcon(
-                    buttonText: AppString.imageNote.tr,
-                    svgIconPath: AppIcons.imageNotes,
-                    onPressed: () {
-                      Get.back();
-                      notesScreenController.sendPhoto();
-                    },
-                    textColor: AppColors.blue700,
-                  ),
-                  const Gap(height: 16),
-                  // Audio Note Option
-                  AppButtonWithIcon(
-                    buttonText: AppString.audioNote.tr,
-                    svgIconPath: AppIcons.audioNote,
-                    onPressed: () {
-                      Get.back();
-                      _showAdvancedAudioRecordingDialog(controller);
-                    },
-                    textColor: AppColors.blue700,
-                  ),
-                  const Gap(height: 10),
-                ],
-              ),
+            DsSheetAction(
+              icon: LucideIcons.type,
+              label: AppString.textNote.tr,
+              onTap: () {
+                Get.back();
+                _showTextNoteDialog(controller);
+              },
+            ),
+            DsSheetAction(
+              icon: LucideIcons.image,
+              label: AppString.imageNote.tr,
+              onTap: () {
+                Get.back();
+                notesScreenController.sendPhoto();
+              },
+            ),
+            DsSheetAction(
+              icon: LucideIcons.mic,
+              label: AppString.audioNote.tr,
+              onTap: () {
+                Get.back();
+                _showAdvancedAudioRecordingDialog(controller);
+              },
             ),
           ],
         ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.black.withValues(alpha: 0.5),
     );
   }
 
@@ -557,49 +500,35 @@ class NoteView extends StatelessWidget {
     controller.resetRecordingState();
 
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: AppColors.white50,
-        child: Container(
+      DsDialog(
+        title: AppString.createMixedNote.tr,
+        content: ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(Get.context!).size.height * 0.8,
           ),
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
+            child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
-                    text: AppString.createMixedNote.tr,
-                    fontSize: AppSize.width(value: 18),
-                    fontWeight: FontWeight.bold,
-                  ),
-                  const Gap(height: 16),
-
                   // Text Section
-                  AppText(
-                    text: AppString.textContentOptional.tr,
-                    fontSize: AppSize.width(value: 14),
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.blue500,
+                  Text(
+                    AppString.textContentOptional.tr,
+                    style: AppTextStyles.eyebrow,
                   ),
                   const Gap(height: 8),
                   CustomTextField(
                     hintText: AppString.writeYourNoteHere.tr,
                     maxLines: 3,
                     controller: controller.textController,
-                    backgroundColor: AppColors.blue50,
+                    backgroundColor: AppColors.fill,
                   ),
                   const Gap(height: 16),
 
                   // Images Section
-                  AppText(
-                    text: AppString.imagesOptional.tr,
-                    fontSize: AppSize.width(value: 14),
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.blue500,
+                  Text(
+                    AppString.imagesOptional.tr,
+                    style: AppTextStyles.eyebrow,
                   ),
                   const Gap(height: 8),
                   Obx(
@@ -636,63 +565,47 @@ class NoteView extends StatelessWidget {
                         : Container(
                             height: 60,
                             decoration: BoxDecoration(
-                              color: AppColors.blue50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: AppColors.blue200,
-                                style: BorderStyle.solid,
-                              ),
+                              color: AppColors.fill,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.stroke),
                             ),
                             child: Center(
-                              child: AppText(
-                                text: AppString.noImagesSelected.tr,
-                                color: AppColors.blue400,
-                                fontSize: 12,
+                              child: Text(
+                                AppString.noImagesSelected.tr,
+                                style: AppTextStyles.caption,
                               ),
                             ),
                           ),
                   ),
                   const Gap(height: 8),
-                  AppButton(
+                  SecondaryButton(
+                    label: AppString.addImages.tr,
+                    isTranslate: false,
+                    icon: LucideIcons.imagePlus,
+                    height: 44,
                     onTap: () async {
-                      try {
-                        final images =
-                            await ImagePickerService().pickMultipleImages();
-                        if (controller.isClosed) return;
-                        if (images.isNotEmpty) {
-                          controller.selectedImages.addAll(images);
-                        }
-                      } catch (error) {
-                        if (!controller.isClosed) {
-                          AppSnackBar.error(
-                              ImagePickerService.errorMessage(error));
-                        }
+                      final ImagePicker picker = ImagePicker();
+                      final List<XFile> images = await picker.pickMultiImage();
+                      if (images.isNotEmpty) {
+                        controller.selectedImages.addAll(images);
                       }
                     },
-                    backgroundColor: AppColors.blue100,
-                    title: AppString.addImages.tr,
-                    titleColor: AppColors.blue500,
-                    borderColor: AppColors.blue500,
-                    width: double.infinity,
-                    height: 35,
                   ),
                   const Gap(height: 16),
 
                   // Audio Section
-                  AppText(
-                    text: AppString.audioRecordingOptional.tr,
-                    fontSize: AppSize.width(value: 14),
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.blue500,
+                  Text(
+                    AppString.audioRecordingOptional.tr,
+                    style: AppTextStyles.eyebrow,
                   ),
                   const Gap(height: 8),
                   Obx(
                     () => Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.blue50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.blue200),
+                        color: AppColors.fill,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.stroke),
                       ),
                       child: Row(
                         children: [
@@ -704,14 +617,14 @@ class NoteView extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: controller.isRecording.value
-                                    ? Colors.red
-                                    : AppColors.blue400,
+                                    ? AppColors.danger
+                                    : AppColors.primary,
                               ),
                               child: Icon(
                                 controller.isRecording.value
-                                    ? Icons.stop
-                                    : Icons.mic,
-                                color: Colors.white,
+                                    ? LucideIcons.square
+                                    : LucideIcons.mic,
+                                color: AppColors.white50,
                                 size: 20,
                               ),
                             ),
@@ -721,20 +634,20 @@ class NoteView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                AppText(
-                                  text: controller.isRecording.value
+                                Text(
+                                  controller.isRecording.value
                                       ? AppString.recording.tr
                                       : controller.hasRecording.value
                                           ? AppString.recordingReady.tr
                                           : AppString.tapToRecord.tr,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 if (controller.hasRecording.value)
-                                  AppText(
-                                    text: controller.formattedDuration,
-                                    fontSize: 10,
-                                    color: AppColors.blue400,
+                                  Text(
+                                    controller.formattedDuration,
+                                    style: AppTextStyles.caption,
                                   ),
                               ],
                             ),
@@ -743,20 +656,20 @@ class NoteView extends StatelessWidget {
                             GestureDetector(
                               onTap: () => controller.togglePlayback(),
                               child: Container(
-                                width: 30,
-                                height: 30,
+                                width: 32,
+                                height: 32,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: controller.isPlaying.value
-                                      ? Colors.red
-                                      : Colors.green,
+                                      ? AppColors.danger
+                                      : AppColors.success,
                                 ),
                                 child: Icon(
                                   controller.isPlaying.value
-                                      ? Icons.stop
-                                      : Icons.play_arrow,
-                                  color: Colors.white,
-                                  size: 16,
+                                      ? LucideIcons.square
+                                      : LucideIcons.play,
+                                  color: AppColors.white50,
+                                  size: 18,
                                 ),
                               ),
                             ),
@@ -768,21 +681,27 @@ class NoteView extends StatelessWidget {
 
                   // Action Buttons
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      AppButton(
-                        onTap: () {
-                          Get.back();
-                        },
-                        backgroundColor: AppColors.white100,
-                        title: AppString.cancel.tr,
-                        titleColor: AppColors.blue500,
-                        borderColor: AppColors.blue500,
-                        width: 100,
-                        height: 40,
+                      Expanded(
+                        child: SecondaryButton(
+                          label: AppString.cancel.tr,
+                          isTranslate: false,
+                          height: 48,
+                          onTap: () {
+                            Get.back();
+                          },
+                        ),
                       ),
-                      Obx(
-                        () => AppButton(
+                      const Gap(width: 12),
+                      Expanded(
+                        child: Obx(
+                        () => PrimaryButton(
+                          isLoading: controller.isLoading.value,
+                          height: 48,
+                          isTranslate: false,
+                          label: controller.isLoading.value
+                              ? AppString.creating.tr
+                              : AppString.createNote.tr,
                           onTap: controller.isLoading.value
                               ? null
                               : () async {
@@ -821,21 +740,12 @@ class NoteView extends StatelessWidget {
                                         : null,
                                   );
                                 },
-                          backgroundColor: controller.isLoading.value
-                              ? AppColors.blue200
-                              : AppColors.blue500,
-                          title: controller.isLoading.value
-                              ? AppString.creating.tr
-                              : AppString.createNote.tr,
-                          titleColor: AppColors.white100,
-                          width: 120,
-                          height: 40,
+                        ),
                         ),
                       ),
                     ],
                   ),
                 ],
-              ),
             ),
           ),
         ),
@@ -846,61 +756,25 @@ class NoteView extends StatelessWidget {
   void _showTextNoteDialog(NoteVeiwController controller) {
     controller.textController.clear();
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: AppColors.white50,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+      DsDialog(
+        title: AppString.createTextNote.tr,
+        content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppText(
-                text: AppString.createTextNote.tr,
-                fontSize: AppSize.width(value: 18),
-                fontWeight: FontWeight.bold,
-              ),
-              const Gap(height: 16),
               CustomTextField(
                 hintText: AppString.writeYourNoteHere.tr,
                 maxLines: 5,
                 controller: controller.textController,
-                backgroundColor: AppColors.blue50,
-              ),
-              const Gap(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  AppButton(
-                    onTap: () {
-                      Get.back();
-                    },
-                    backgroundColor: AppColors.white100,
-                    title: AppString.cancel.tr,
-                    fontSize: AppSize.width(value: 12),
-                    titleColor: AppColors.blue500,
-                    borderColor: AppColors.blue500,
-                    width: 100,
-                    height: 40,
-                  ),
-                  AppButton(
-                    onTap: () async {
-                      Get.back();
-                      await controller.sendMessage();
-                    },
-                    backgroundColor: AppColors.white100,
-                    title: AppString.saveNote.tr,
-                    fontSize: AppSize.width(value: 12),
-                    titleColor: AppColors.blue500,
-                    borderColor: AppColors.blue500,
-                    width: 100,
-                    height: 40,
-                  ),
-                ],
+                backgroundColor: AppColors.fill,
               ),
             ],
           ),
-        ),
+        cancelLabel: AppString.cancel.tr,
+        confirmLabel: AppString.saveNote.tr,
+        onConfirm: () async {
+          await controller.sendMessage();
+        },
       ),
     );
   }
@@ -908,294 +782,152 @@ class NoteView extends StatelessWidget {
   void _showAdvancedAudioRecordingDialog(NoteVeiwController controller) {
     // Reset recording state
     controller.resetRecordingState();
-    Get.dialog(
-      Dialog(
-        backgroundColor: AppColors.white100,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+    DsBottomSheet.show(
+      DsBottomSheet(
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Title
-              AppText(
-                text: AppString.recordAudioNote.tr,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              const Gap(height: 8),
-              AppText(
-                text: AppString.tapMicToStartRecording.tr,
-                fontSize: 14,
-                color: Colors.grey[600],
-                textAlign: TextAlign.center,
-              ),
-              const Gap(height: 24),
-
-              // Recording button with animated circles
-              Obx(
-                () => GestureDetector(
-                  onTap: () => controller.toggleRecording(),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Outer animated circle
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: controller.isRecording.value ? 120 : 100,
-                        height: controller.isRecording.value ? 120 : 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.blue500.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      // Middle circle
-                      Container(
-                        width: AppSize.width(value: 80),
-                        height: AppSize.height(value: 80),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.blue500.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      // Inner circle with microphone
-                      Container(
-                        width: AppSize.width(value: 80),
-                        height: AppSize.height(value: 60),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: controller.isRecording.value
-                              ? Colors.red
-                              : AppColors.blue400,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: controller.isLoading.value
-                            ? LoadingAnimationWidget.beat(
-                                size: 24,
-                                color: AppColors.blue500,
-                              )
-                            : Icon(
-                                controller.isRecording.value
-                                    ? Icons.stop
-                                    : Icons.mic,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Gap(height: 16),
-
-              // Status text
-              Obx(
-                () => AppText(
-                  text: controller.isLoading.value
-                      ? AppString.processing.tr
-                      : controller.isRecording.value
-                          ? AppString.recordingTapToStop.tr
-                          : controller.hasRecording.value
-                              ? AppString.recordingComplete.tr
-                              : AppString.tapToStartRecording.tr,
-                  fontSize: 16,
-                  color: controller.isRecording.value
-                      ? Colors.red
-                      : Colors.orange.shade600,
-                  fontWeight: FontWeight.w600,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const Gap(height: 16),
-              // Progress bar section (only show when there's a recording)
-              Obx(
-                () => controller.hasRecording.value
-                    ? Column(
-                        children: [
-                          // Progress bar with time labels
-                          Row(
-                            children: [
-                              // Current time
-                              Obx(
-                                () => AppText(
-                                  text: controller.isPlaying.value
-                                      ? controller.formattedCurrentPosition
-                                      : '0:00',
-                                  color: Colors.black87,
-                                  fontSize: AppSize.width(value: 12),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  child: Obx(
-                                    () => SliderTheme(
-                                      data: SliderTheme.of(Get.context!)
-                                          .copyWith(
-                                            trackHeight: 4.0,
-                                            thumbShape:
-                                                const RoundSliderThumbShape(
-                                                  enabledThumbRadius: 6.0,
-                                                ),
-                                            overlayShape:
-                                                const RoundSliderOverlayShape(
-                                                  overlayRadius: 12.0,
-                                                ),
-                                            activeTrackColor: AppColors.blue300,
-                                            inactiveTrackColor: Colors.grey
-                                                .withValues(alpha: 0.3),
-                                            thumbColor: AppColors.blue300,
-                                            overlayColor: AppColors.blue300
-                                                .withValues(alpha: 0.2),
-                                          ),
-                                      child: Slider(
-                                        value: controller.playbackProgress.value
-                                            .clamp(0.0, 1.0),
-                                        onChanged: (value) {
-                                          controller.seekTo(value);
-                                        },
-                                        min: 0.0,
-                                        max: 1.0,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Total time
-                              Obx(
-                                () => AppText(
-                                  text:
-                                      controller
-                                          .formattedTotalDuration
-                                          .isNotEmpty
-                                      ? controller.formattedTotalDuration
-                                      : controller.formattedDuration,
-                                  color: Colors.black87,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Gap(height: 16),
-                        ],
-                      )
-                    : Container(),
-              ),
-              // Playback controls and duration
-              Obx(
-                () => controller.hasRecording.value
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Play button
-                          GestureDetector(
-                            onTap: () => controller.togglePlayback(),
-                            child: Container(
-                              width: 50,
-                              height: 35,
-                              decoration: BoxDecoration(
-                                color: controller.isPlaying.value
-                                    ? Colors.red
-                                    : Colors.orange.shade600,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                controller.isPlaying.value
-                                    ? Icons.stop
-                                    : Icons.play_arrow,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const Gap(width: 16),
-                          // Recording duration
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: controller.isRecording.value
-                                  ? Colors.red
-                                  : Colors.green.shade500,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              controller.formattedDuration,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Container(),
-              ),
-              const Gap(height: 24),
-
-              // Action buttons
+              // Header row: Cancel / Record Audio / Done
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TextButton(
-                    onPressed: () {
+                  GestureDetector(
+                    onTap: () {
                       controller.resetRecordingState();
                       Get.back();
                     },
-                    child: AppText(
-                      text: AppString.cancel.tr,
-                      color: Colors.grey[600],
-                      fontSize: 16,
+                    child: Text(
+                      AppString.cancel.tr,
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
+                  Text(
+                    'recordAudio'.tr,
+                    style: AppTextStyles.title.copyWith(fontSize: 18),
+                  ),
                   Obx(
-                    () => ElevatedButton(
-                      onPressed: controller.hasRecording.value
+                    () => GestureDetector(
+                      onTap: controller.hasRecording.value
                           ? () async {
                               Get.back();
                               await controller.saveAudioNote();
                             }
                           : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.blue500,
-                        disabledBackgroundColor: AppColors.blue100,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      child: Text(
+                        'Done',
+                        style: AppTextStyles.bodySemibold.copyWith(
+                          fontSize: 16,
+                          color: controller.hasRecording.value
+                              ? AppColors.primary
+                              : AppColors.textFaint,
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                      ),
-                      child: AppText(
-                        text: AppString.saveNote.tr,
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
               ),
+              const Gap(height: 36),
+
+              // Waveform / prompt area
+              Obx(() {
+                final bool active = controller.isRecording.value ||
+                    controller.hasRecording.value;
+                if (!active) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      children: [
+                        Text(
+                          'clickStartToRecord'.tr,
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const Gap(height: 18),
+                        SizedBox(
+                          height: 24,
+                          child: _RecorderWaveform(
+                            active: false,
+                            tick: controller.recordingDuration.value,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    SizedBox(
+                      height: 80,
+                      child: _RecorderWaveform(
+                        active: controller.isRecording.value,
+                        tick: controller.recordingDuration.value,
+                      ),
+                    ),
+                    const Gap(height: 20),
+                    Text(
+                      _formatRecorderClock(controller.recordingDuration.value),
+                      style: AppTextStyles.title.copyWith(fontSize: 22),
+                    ),
+                  ],
+                );
+              }),
+              const Gap(height: 36),
+
+              // Action button: Start (idle) / Pause (recording) / Resume (stopped)
+              Obx(() {
+                if (controller.isLoading.value) {
+                  return SizedBox(
+                    height: 52,
+                    child: Center(
+                      child: LoadingAnimationWidget.beat(
+                        size: 28,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  );
+                }
+                if (controller.isRecording.value) {
+                  // Recording in progress -> Pause/Stop (red)
+                  return SecondaryButton(
+                    label: 'Pause',
+                    isTranslate: false,
+                    color: AppColors.danger,
+                    onTap: () => controller.toggleRecording(),
+                  );
+                }
+                if (controller.hasRecording.value) {
+                  // Stopped with a recording -> Resume (red, restarts recording)
+                  return SecondaryButton(
+                    label: 'Resume',
+                    isTranslate: false,
+                    color: AppColors.danger,
+                    onTap: () => controller.toggleRecording(),
+                  );
+                }
+                // Idle -> Start
+                return SecondaryButton(
+                  label: 'Start',
+                  isTranslate: false,
+                  icon: LucideIcons.mic,
+                  onTap: () => controller.toggleRecording(),
+                );
+              }),
             ],
           ),
-        ),
       ),
-      barrierDismissible: false,
     );
+  }
+
+  String _formatRecorderClock(int seconds) {
+    final h = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final m = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 
   void _showNoteDetails(
@@ -1203,25 +935,13 @@ class NoteView extends StatelessWidget {
     int index,
     NoteVeiwController controller,
   ) {
-    Get.bottomSheet(
-      Container(
-        height: Get.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
+    DsBottomSheet.show(
+      DsBottomSheet(
+        padding: EdgeInsets.zero,
+        child: SizedBox(
+          height: Get.height * 0.8,
+          child: Column(
           children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              height: 4,
-              width: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
             // Header
             Container(
               padding: const EdgeInsets.all(16),
@@ -1233,7 +953,7 @@ class NoteView extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.note, size: 20, color: AppColors.blue500),
+                          Icon(LucideIcons.stickyNote, size: 20, color: AppColors.blue500),
                           const SizedBox(width: 8),
                           AppText(
                             text:
@@ -1280,7 +1000,7 @@ class NoteView extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Get.back(),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(LucideIcons.x),
                   ),
                 ],
               ),
@@ -1309,7 +1029,7 @@ class NoteView extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.text_fields,
+                                  LucideIcons.type,
                                   size: 18,
                                   color: AppColors.blue500,
                                 ),
@@ -1353,7 +1073,7 @@ class NoteView extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.image,
+                                  LucideIcons.image,
                                   size: 18,
                                   color: Colors.green[600],
                                 ),
@@ -1435,7 +1155,7 @@ class NoteView extends StatelessWidget {
                         child: Column(
                           children: [
                             Icon(
-                              Icons.info_outline,
+                              LucideIcons.info,
                               size: 48,
                               color: Colors.grey[400],
                             ),
@@ -1457,21 +1177,18 @@ class NoteView extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
     );
   }
 
   void _showSelectedImagesUI(NotesScreenController controller) {
-    Get.bottomSheet(
-      Container(
-        height: Get.height * 0.71,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
+    DsBottomSheet.show(
+      DsBottomSheet(
+        padding: EdgeInsets.zero,
+        child: SizedBox(
+          height: Get.height * 0.71,
+          child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
@@ -1541,7 +1258,7 @@ class NoteView extends StatelessWidget {
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
-                              Icons.broken_image,
+                              LucideIcons.imageOff,
                               color: Colors.grey,
                             );
                           },
@@ -1554,9 +1271,54 @@ class NoteView extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    );
+  }
+}
+
+/// Decorative waveform for the Record Audio sheet. When [active] the centre
+/// bars are emphasised in the brand colour; otherwise it renders a flat row of
+/// muted dots ("Click Start to record" prompt). Purely visual — does not drive
+/// any recording logic.
+class _RecorderWaveform extends StatelessWidget {
+  const _RecorderWaveform({required this.active, required this.tick});
+
+  final bool active;
+  final int tick;
+
+  @override
+  Widget build(BuildContext context) {
+    const int count = 41;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxHeight;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(count, (i) {
+            final distFromCenter = (i - count ~/ 2).abs() / (count / 2);
+            // Bell-shaped envelope, taller in the middle.
+            double factor = (1 - distFromCenter);
+            if (active) {
+              // Add a little per-bar variation that shifts with the timer tick.
+              final wobble = (((i * 7 + tick * 3) % 10) / 10) * 0.4;
+              factor = (factor + wobble).clamp(0.12, 1.0);
+            } else {
+              factor = 0.12;
+            }
+            final isLit = active && distFromCenter < 0.55;
+            return Container(
+              width: 3,
+              height: (maxH * factor).clamp(4.0, maxH),
+              decoration: BoxDecoration(
+                color: isLit ? AppColors.primary : AppColors.stroke,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

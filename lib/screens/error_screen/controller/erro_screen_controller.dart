@@ -11,10 +11,10 @@ class ErrorScreenController extends GetxController {
   initialDataCall() {
     try {
       if (connectivityService.connectionStatus.contains(ConnectivityResult.none)) {
-        errorMessage.value = "No internet connection!";
+        errorMessage.value = 'noInternet'.tr;
         isInternetProblem.value = true;
       } else {
-        errorMessage.value = "Error form occurs";
+        errorMessage.value = 'errorOccurs'.tr;
         isInternetProblem.value = false;
       }
     } catch (e) {

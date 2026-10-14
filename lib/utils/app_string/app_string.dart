@@ -44,6 +44,7 @@ class AppString {
   static const String no = "no";
   static const String backToLogin = "backToLogin";
   static const String contactNumber = "contactNumber";
+  static const String phoneNumber = "phoneNumber";
   static const String enterYourContactNumber = "enterYourContactNumber";
   static const String fullName = "fullName";
   static const String enterYourFullName = "enterYourFullName";
@@ -57,20 +58,6 @@ class AppString {
   static const String kamranALI = "kamranALI";
   static const String today = "today";
   static const String report = "report";
-  static const String overview = "overview";
-  static const String timesheetReport = "timesheetReport";
-  static const String attendanceReport = "attendanceReport";
-  static const String downloadReport = "downloadReport";
-  static const String shareReport = "shareReport";
-  static const String viewReport = "viewReport";
-  static const String month = "month";
-  static const String startDate = "startDate";
-  static const String endDate = "endDate";
-  static const String reportGenerating = "reportGenerating";
-  static const String reportGenerationFailed = "reportGenerationFailed";
-  static const String reportEmptyState = "reportEmptyState";
-  static const String reportDownloaded = "reportDownloaded";
-  static const String reportEndBeforeStart = "reportEndBeforeStart";
   static const String start = "start";
   static const String myallProject = "myallProject";
   static const String phoneixDevelopment = "phoneixDevelopment";
@@ -89,6 +76,8 @@ class AppString {
   static const String lawnMowing = "lawnMowing";
   static const String description = "description";
   static const String descriptionDetails = "descriptionDetails";
+  static const String privacyPolicyHeading = "privacyPolicyHeading";
+  static const String privacyPolicyBody = "privacyPolicyBody";
   static const String keyFetures = "keyFetures";
   static const String workingTime = "workingTime";
   static const String manualTime = "manualTime";
@@ -221,9 +210,8 @@ class AppString {
   static const String from = "from";
   static const String received = "received";
   static const String close = "close";
-  // Notification preferences screen (Phase 12)
   static const String notificationPreferences = "notificationPreferences";
-  static const String markAllRead = "markAllRead";
+  static const String notificationManage = "notificationManage";
   static const String pushNotifications = "pushNotifications";
   static const String pushNotificationsHint = "pushNotificationsHint";
   static const String categories = "categories";
@@ -239,9 +227,8 @@ class AppString {
   static const String languageLabel = "languageLabel";
   static const String preferencesSaved = "preferencesSaved";
   static const String preferencesSaveFailed = "preferencesSaveFailed";
-  static const String itemNoLongerAvailable = "itemNoLongerAvailable";
-  static const String markedReadWillSyncOffline = "markedReadWillSyncOffline";
-  static const String offlineChangesSynced = "offlineChangesSynced";
+  static const String preferencesNotAvailableInDemo =
+      "preferencesNotAvailableInDemo";
   static const String at = "at";
   static const String yesterday = "yesterday";
   static const String am = "am";

@@ -1,23 +1,22 @@
-import 'dart:ui';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/controller/profile_controller.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
+import 'package:alpha_track/services/socket_service/socket_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_icons/app_icons.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_button/app_icon_button.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_images/app_images.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/widgets/ds/ds_card.dart';
+import 'package:alpha_track/widgets/ds/ds_dialog.dart';
+import 'package:alpha_track/widgets/ds/ds_menu_item.dart';
+import 'package:alpha_track/widgets/ds/ds_section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,160 +28,238 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ProfileController profileController = Get.find<ProfileController>();
 
+  void _editProfile() {
+    Get.toNamed(AppRoute.personalInformationScreen);
+    profileController.onTap();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AuthAppBar(
-        title: AppString.profiles.tr,
-        showAction: false,
-        showLeading: false,
-        backgroundColor: AppColors.white200,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text('account'.tr, style: AppTextStyles.headline),
+              ),
+              const SizedBox(height: 12),
+              _buildProfileCard(),
+              const SizedBox(height: 24),
+
+              // WORK
+              DsSectionHeader(title: 'secWork'.tr, isTranslate: false),
+              const SizedBox(height: 12),
+              DsMenuItem(
+                icon: LucideIcons.image,
+                label: AppString.gallery.tr,
+                onTap: () => Get.toNamed(AppRoute.galleryScreen),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.fileText,
+                label: AppString.payRole.tr,
+                onTap: () => Get.toNamed(AppRoute.payRoleScreen),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.coffee,
+                label: 'breakSettings'.tr,
+                onTap: () => Get.toNamed(AppRoute.breakScreen),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.palmtree,
+                label: 'leaveSchedule'.tr,
+                onTap: () => Get.toNamed(AppRoute.leaveScheduleScreen),
+              ),
+              const SizedBox(height: 12),
+
+              // SECURITY & PRIVACY
+              DsSectionHeader(
+                  title: 'secSecurityPrivacy'.tr, isTranslate: false),
+              const SizedBox(height: 12),
+              DsMenuItem(
+                icon: LucideIcons.lock,
+                label: 'password'.tr,
+                onTap: () => Get.toNamed(AppRoute.changePasswordScreen),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.slidersHorizontal,
+                label: 'preferences'.tr,
+                onTap: () => Get.toNamed(AppRoute.languageScreen),
+              ),
+              const SizedBox(height: 12),
+
+              // APP
+              DsSectionHeader(title: 'secApp'.tr, isTranslate: false),
+              const SizedBox(height: 12),
+              DsMenuItem(
+                icon: LucideIcons.info,
+                label: 'contact'.tr,
+                badge: 'soon'.tr,
+                onTap: () => AppSnackBar.message('contactComingSoon'.tr),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.helpCircle,
+                label: 'help'.tr,
+                badge: 'soon'.tr,
+                onTap: () => AppSnackBar.message('helpComingSoon'.tr),
+              ),
+              DsMenuItem(
+                icon: LucideIcons.shield,
+                label: 'privacyPolicy'.tr,
+                onTap: () => Get.toNamed(AppRoute.privacyPolicyScreen),
+              ),
+              const SizedBox(height: 20),
+
+              // Log Out — red outline pill (centered)
+              Center(child: _logoutButton(context)),
+            ],
+          ),
+        ),
       ),
-      backgroundColor: AppColors.white200,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
-        child: Column(
-          children: [
-            // Replace this section in your ProfileScreen build method:
-            Gap(height: AppSize.height(value: 35)),
-            Obx(
-              () => Container(
-                width: AppSize.width(value: 140),
-                height: AppSize.width(value: 140),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(100),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black500.withValues(alpha: 0.1),
-                      spreadRadius: 2,
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(100),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Profile Image
-                      Obx(
-                        () => AppImage(
-                          url: profileController
-                              .profileData
-                              .value
-                              ?.data
-                              ?.profile,
-                          width: AppSize.width(value: 140),
-                          height: AppSize.width(value: 140),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      // Loading Indicator (shows when loading)
-                      if (profileController.isLoading.value)
-                        Container(
-                          width: AppSize.width(value: 120),
-                          height: AppSize.width(value: 120),
-                          decoration: BoxDecoration(
-                            color: AppColors.black500.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(60),
-                          ),
-                          child: Center(
-                            child: LoadingAnimationWidget.beat(
-                              size: 24,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
+    );
+  }
+
+  Widget _buildProfileCard() {
+    return DsCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Obx(
+            () => ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AppImage(
+                    url: profileController.profileData.value?.data?.profile,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
                   ),
-                ),
+                  if (profileController.isLoading.value)
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.black500.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Center(
+                        child: LoadingAnimationWidget.beat(
+                            size: 18, color: Colors.white),
+                      ),
+                    ),
+                ],
               ),
             ),
-            Gap(height: AppSize.height(value: 15)),
-            Obx(
-              () => Center(
-                child: AppText(
-                  text: profileController.fullName,
-                  fontSize: AppSize.width(value: 16),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Obx(
+              () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    profileController.fullName.isEmpty
+                        ? 'yourName'.tr
+                        : profileController.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.titleSmall,
+                  ),
+                  if (profileController.email.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    _metaLine(LucideIcons.mail, profileController.email),
+                  ],
+                  if (profileController.phone.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    _metaLine(LucideIcons.phone, profileController.phone),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _editProfile,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(9999),
+                border: Border.all(color: AppColors.primary),
+              ),
+              child: Text(
+                'editProfile'.tr,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.black500,
                 ),
               ),
             ),
-            Gap(height: 16),
-            AppButtonWithIcon(
-              buttonText: AppString.personalInformation.tr,
-              svgIconPath: AppIcons.personalInformation,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.personalInformationScreen);
-                profileController.onTap();
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            AppButtonWithIcon(
-              buttonText: AppString.settings.tr,
-              svgIconPath: AppIcons.settingsIcons,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.settingScreen);
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            AppButtonWithIcon(
-              buttonText: AppString.payRole.tr,
-              svgIconPath: AppIcons.payRoleIcons,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.payRoleScreen);
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            // Phase 13: generated timesheet/attendance reports, kept
-            // separate from Pay Role (company-uploaded payroll documents
-            // are a different concept from self-service generated
-            // reports) — see Notification_Reports_Integration_Plan.md
-            // Phase 13 for the product decision behind this split.
-            AppButtonWithIcon(
-              buttonText: AppString.report.tr,
-              svgIconPath: AppIcons.pdfIcons,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.reportsScreen);
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            AppButtonWithIcon(
-              buttonText: AppString.gallery.tr,
-              svgIconPath: AppIcons.galleryIcon,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.galleryScreen);
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            AppButtonWithIcon(
-              buttonText: AppString.languageChanges.tr,
-              svgIconPath: AppIcons.languageChanges,
-              textColor: AppColors.blue500,
-              onPressed: () {
-                Get.toNamed(AppRoute.languageScreen);
-              },
-            ),
-            Gap(height: AppSize.height(value: 12)),
-            AppButtonWithIcon(
-              buttonText: AppString.logout.tr,
-              svgIconPath: AppIcons.logoutIcons,
-              textColor: AppColors.red,
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return logoutDialog(context);
-                  },
-                );
-              },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _metaLine(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.textMuted),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.subtitle),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await DsDialog.confirm(
+      title: AppString.areyouSureYouWantToLogOut.tr,
+      message: AppString.logout.tr,
+      confirmLabel: AppString.yes.tr,
+      cancelLabel: AppString.no.tr,
+      icon: LucideIcons.logOut,
+    );
+    if (!confirmed) return;
+    try {
+      await PushNotificationService.instance.deregisterCurrentToken();
+      AppSocketAllOperation.instance.disconnectAndClear();
+      await StorageServices.instance.storageClear();
+      Get.offAllNamed(AppRoute.splashScreen);
+      AppSnackBar.success('loggedOut'.tr);
+    } catch (e) {
+      errorLog("Logout Error", e);
+      AppSnackBar.error('logoutFailed'.tr);
+    }
+  }
+
+  Widget _logoutButton(BuildContext context) {
+    return GestureDetector(
+      onTap: _confirmLogout,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(9999),
+          border: Border.all(color: AppColors.danger),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(LucideIcons.logOut, size: 18, color: AppColors.danger),
+            const SizedBox(width: 8),
+            Text(
+              AppString.logout.tr,
+              style: AppTextStyles.button.copyWith(color: AppColors.danger),
             ),
           ],
         ),
@@ -190,83 +267,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget logoutDialog(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        contentPadding: EdgeInsets.zero,
-        content: Container(
-          width: AppSize.width(value: 300),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: AppColors.white100,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Gap(height: AppSize.height(value: 20)),
-              AppText(
-                text: AppString.areyouSureYouWantToLogOut.tr,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.black500,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Gap(height: AppSize.height(value: 20)),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  AppButton(
-                    title: AppString.no.tr,
-                    width: AppSize.width(value: 60),
-                    height: AppSize.height(value: 48),
-                    backgroundColor: AppColors.blue500,
-                    borderColor: Colors.transparent,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  AppButton(
-                    title: AppString.yes.tr,
-                    width: AppSize.width(value: 60),
-                    height: AppSize.height(value: 48),
-                    backgroundColor: AppColors.red,
-                    borderColor: Colors.transparent,
-                    onTap: () async {
-                      try {
-                        // Must run before storageClear() below — it needs
-                        // the still-present access token to authenticate,
-                        // and deregisters this device so a shared/kiosk
-                        // device stops receiving push for this user once
-                        // logged out.
-                        await PushNotificationService.instance
-                            .deregisterCurrentToken();
-                        // Clear all stored user data
-                        await StorageServices.instance.storageClear();
-                        // Navigate to the onboarding screen
-                        Get.offAllNamed(AppRoute.splashScreen);
-                        // Show success message
-                        AppSnackBar.success("Logged out successfully.");
-                      } catch (e) {
-                        // Log the error and show an error message
-                        errorLog("Logout Error", e);
-                        AppSnackBar.error(
-                          "Failed to log out. Please try again.",
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-              Gap(height: AppSize.height(value: 20)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

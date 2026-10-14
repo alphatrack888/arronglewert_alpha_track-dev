@@ -2,12 +2,13 @@ name: alpha_track
 description: "A new Flutter project."
 publish_to: "none"
 
-version: 1.0.0+1
+version: 1.0.0+17
 
 environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
+  share_plus: ^12.0.2
   flutter:
     sdk: flutter
   get: ^4.7.2
@@ -35,19 +36,17 @@ dependencies:
   pluto_grid: any
   syncfusion_flutter_datagrid: ^28.2.12
   socket_io_client: ^3.1.2
-  ffmpeg_kit_flutter_new: ^4.1.0
+  # ffmpeg_kit_flutter_new: ^4.1.0  # unused; lacks arm64-simulator support → blocks iOS Simulator builds. Restore when ffmpeg is actually needed.
   syncfusion_flutter_pdfviewer: ^28.2.12
   url_launcher: ^6.3.1
   dependency_validator: ^5.0.2
   shimmer: ^3.0.0
   change_app_package_name: ^1.5.0
+  lucide_icons_flutter: ^3.1.14+2
   firebase_core: ^3.15.2
   firebase_messaging: ^15.2.10
   package_info_plus: ^8.3.0
-  share_plus: ^11.0.0
-
 dev_dependencies:
-  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
 dependency_overrides:
@@ -57,9 +56,21 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/logo/
+    - assets/images/onboarding/
     - assets/icons/
 
   fonts:
+    - family: Hanken Grotesk
+      fonts:
+        - asset: assets/fonts/HankenGrotesk-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HankenGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/HankenGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/HankenGrotesk-Bold.ttf
+          weight: 700
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf

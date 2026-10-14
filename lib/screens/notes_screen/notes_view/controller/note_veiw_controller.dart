@@ -27,6 +27,7 @@ class NoteVeiwController extends GetxController {
 
   // Enhanced audio recording properties
   var isRecording = false.obs;
+  var isRecordingPaused = false.obs;
   var isPlaying = false.obs;
   var recordingDuration = 0.obs;
   var hasRecording = false.obs;
@@ -124,8 +125,8 @@ class NoteVeiwController extends GetxController {
       final hasPermission = await _requestPermission();
       if (!hasPermission) {
         Get.snackbar(
-          'Permission Required',
-          'Microphone permission is needed to record audio',
+          'permissionRequired'.tr,
+          'micPermission'.tr,
           snackPosition: SnackPosition.BOTTOM,
         );
         isLoading.value = false;
@@ -160,8 +161,8 @@ class NoteVeiwController extends GetxController {
       isLoading.value = false;
       isRecording.value = false;
       Get.snackbar(
-        'Recording Error',
-        'Failed to start recording: ${e.toString()}',
+        'recordingError'.tr,
+        '${'failedStartRecording'.tr}: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -180,6 +181,7 @@ class NoteVeiwController extends GetxController {
 
       // Update state
       isRecording.value = false;
+      isRecordingPaused.value = false;
       isLoading.value = false;
 
       // Mark as having recording if duration > 0
@@ -198,8 +200,8 @@ class NoteVeiwController extends GetxController {
       _recordingTimer?.cancel();
       _recordingTimer = null;
       Get.snackbar(
-        'Recording Error',
-        'Failed to stop recording: ${e.toString()}',
+        'recordingError'.tr,
+        '${'failedStopRecording'.tr}: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -212,6 +214,30 @@ class NoteVeiwController extends GetxController {
       stopRecording();
     } else {
       startRecording();
+    }
+  }
+
+  Future<void> pauseRecording() async {
+    if (!isRecording.value || isRecordingPaused.value) return;
+    try {
+      await _audioRecorder.pause();
+      _recordingTimer?.cancel();
+      isRecordingPaused.value = true;
+    } catch (e) {
+      appLog('Error pausing recording: $e');
+    }
+  }
+
+  Future<void> resumeRecording() async {
+    if (!isRecording.value || !isRecordingPaused.value) return;
+    try {
+      await _audioRecorder.resume();
+      isRecordingPaused.value = false;
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        recordingDuration.value++;
+      });
+    } catch (e) {
+      appLog('Error resuming recording: $e');
     }
   }
 
@@ -230,8 +256,8 @@ class NoteVeiwController extends GetxController {
   Future<void> startPlayback() async {
     if (!hasRecording.value || _audioPath == null) {
       Get.snackbar(
-        'No Recording',
-        'Please record something first',
+        'noRecording'.tr,
+        'recordFirst'.tr,
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
@@ -258,8 +284,8 @@ class NoteVeiwController extends GetxController {
     } catch (e) {
       isLoading.value = false;
       Get.snackbar(
-        'Playback Error',
-        'Failed to play audio: ${e.toString()}',
+        'playbackError'.tr,
+        '${'failedPlayAudio'.tr}: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -323,7 +349,7 @@ class NoteVeiwController extends GetxController {
 
         // Use stored project ID instead of Get.arguments
         if (_projectId == null) {
-          AppSnackBar.error('Project ID not found. Please try again.');
+          AppSnackBar.error('projectIdNotFound'.tr);
           isLoading(false);
           return;
         }
@@ -343,11 +369,11 @@ class NoteVeiwController extends GetxController {
           await fetchAlltheNote(_projectId!);
         } else {
           appLog('❌ Failed to create audio note');
-          AppSnackBar.error('Failed to create audio note. Please try again.');
+          AppSnackBar.error('failedCreateAudioNote'.tr);
         }
       } catch (e) {
         appLog('💥 Error creating audio note: $e');
-        AppSnackBar.error('An error occurred while creating the audio note.');
+        AppSnackBar.error('errCreateAudioNote'.tr);
       } finally {
         isLoading(false);
       }
@@ -361,6 +387,7 @@ class NoteVeiwController extends GetxController {
     _playbackTimer = null;
 
     isRecording.value = false;
+    isRecordingPaused.value = false;
     isPlaying.value = false;
     recordingDuration.value = 0;
     hasRecording.value = false;
@@ -382,7 +409,7 @@ class NoteVeiwController extends GetxController {
 
       // Use stored project ID instead of Get.arguments
       if (_projectId == null) {
-        AppSnackBar.error('Project ID not found. Please try again.');
+        AppSnackBar.error('projectIdNotFound'.tr);
         isLoading(false);
         return;
       }
@@ -405,14 +432,14 @@ class NoteVeiwController extends GetxController {
         resetRecordingState();
         // Refresh notes list to show the new note
         await fetchAlltheNote(_projectId!);
-        AppSnackBar.success('Mixed content note created successfully!');
+        AppSnackBar.success('noteCreated'.tr);
       } else {
         appLog('❌ Failed to create mixed content note');
-        AppSnackBar.error('Failed to create note. Please try again.');
+        AppSnackBar.error('failedCreateNote'.tr);
       }
     } catch (e) {
       appLog('💥 Error creating mixed content note: $e');
-      AppSnackBar.error('An error occurred while creating the note.');
+      AppSnackBar.error('errCreateNote'.tr);
     } finally {
       isLoading(false);
     }
@@ -422,12 +449,12 @@ class NoteVeiwController extends GetxController {
   Future<void> sendSelectedImages() async {
     // Validate input
     if (selectedImages.isEmpty) {
-      AppSnackBar.error('Please select at least one image before saving.');
+      AppSnackBar.error('selectImageFirst'.tr);
       return;
     }
     // Check image count limit
     if (selectedImages.length > 10) {
-      AppSnackBar.error('Maximum 10 images allowed per note.');
+      AppSnackBar.error('maxImages'.tr);
       return;
     }
     try {
@@ -435,7 +462,7 @@ class NoteVeiwController extends GetxController {
 
       // Use stored project ID instead of Get.arguments
       if (_projectId == null) {
-        AppSnackBar.error('Project ID not found. Please try again.');
+        AppSnackBar.error('projectIdNotFound'.tr);
         isLoading(false);
         return;
       }
@@ -465,14 +492,14 @@ class NoteVeiwController extends GetxController {
           if (fileSize > maxFileSize) {
             appLog('⚠️ Image file too large: ${file.path} (${fileSize} bytes)');
             AppSnackBar.error(
-              'Image ${i + 1} is too large. Maximum 10MB per image.',
+              'imageTooLarge'.trParams({'n': '${i + 1}'}),
             );
             continue;
           }
 
           totalSize += fileSize;
           if (totalSize > maxTotalSize) {
-            AppSnackBar.error('Total image size exceeds 50MB limit.');
+            AppSnackBar.error('totalImagesTooLarge'.tr);
             break;
           }
 
@@ -483,7 +510,7 @@ class NoteVeiwController extends GetxController {
       }
 
       if (validImageFiles.isEmpty) {
-        AppSnackBar.error('No valid images found to upload.');
+        AppSnackBar.error('noValidImages'.tr);
         return;
       }
 
@@ -498,20 +525,20 @@ class NoteVeiwController extends GetxController {
         selectedImages.clear();
         // Refresh notes list to show the new note
         await fetchAlltheNote(_projectId!);
-        AppSnackBar.success('Image note created successfully!');
+        AppSnackBar.success('imageNoteCreated'.tr);
       } else {
         appLog('❌ Failed to create image note');
       }
     } catch (e) {
       appLog('💥 Error creating image note: $e');
-      String errorMessage = 'An error occurred while creating the image note.';
+      String errorMessage = 'errCreateImageNote'.tr;
 
       if (e.toString().contains('SocketException')) {
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'networkError'.tr;
       } else if (e.toString().contains('TimeoutException')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = 'requestTimeout'.tr;
       } else if (e.toString().contains('FormatException')) {
-        errorMessage = 'Invalid image format. Please select valid images.';
+        errorMessage = 'invalidImageFormat'.tr;
       }
       AppSnackBar.error(errorMessage);
     } finally {
@@ -523,14 +550,14 @@ class NoteVeiwController extends GetxController {
   Future<void> sendMessage() async {
     // Validate input
     if (textController.text.trim().isEmpty) {
-      AppSnackBar.error('Please enter some text before saving the note.');
+      AppSnackBar.error('enterTextFirst'.tr);
       return;
     }
 
     // Check text length
     if (textController.text.trim().length > 5000) {
       AppSnackBar.error(
-        'Text content is too long. Maximum 5000 characters allowed.',
+        'textTooLong'.tr,
       );
       return;
     }
@@ -540,7 +567,7 @@ class NoteVeiwController extends GetxController {
 
       // Use stored project ID instead of Get.arguments
       if (_projectId == null) {
-        AppSnackBar.error('Project ID not found. Please try again.');
+        AppSnackBar.error('projectIdNotFound'.tr);
         isLoading(false);
         return;
       }
@@ -560,23 +587,23 @@ class NoteVeiwController extends GetxController {
         textController.clear();
         // Refresh notes list to show the new note
         await fetchAlltheNote(_projectId!);
-        AppSnackBar.success('Text note created successfully!');
+        AppSnackBar.success('noteCreated'.tr);
       } else {
         appLog('❌ Failed to create text note');
         AppSnackBar.error(
-          'Failed to create note. Please check your internet connection and try again.',
+          'failedCreateNoteNet'.tr,
         );
       }
     } catch (e) {
       appLog('💥 Error creating text note: $e');
-      String errorMessage = 'An error occurred while creating the note.';
+      String errorMessage = 'errCreateNote'.tr;
 
       if (e.toString().contains('SocketException')) {
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'networkError'.tr;
       } else if (e.toString().contains('TimeoutException')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = 'requestTimeout'.tr;
       } else if (e.toString().contains('FormatException')) {
-        errorMessage = 'Invalid data format. Please try again.';
+        errorMessage = 'invalidDataFormat'.tr;
       }
 
       AppSnackBar.error(errorMessage);
@@ -672,7 +699,7 @@ class NoteVeiwController extends GetxController {
       fetchAlltheNote(_projectId!);
     } else {
       appLog('⚠️ Project ID not found in stored variable during refresh');
-      AppSnackBar.error('Project ID not found. Please try again.');
+      AppSnackBar.error('projectIdNotFound'.tr);
     }
   }
 

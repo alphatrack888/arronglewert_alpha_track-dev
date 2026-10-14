@@ -1,0 +1,10 @@
+# Copy to gradle-local.properties (gitignored) on machines where Gradle must not
+# use Android Studio's embedded JBR (e.g. Java 25 breaks Gradle 8.12).
+#
+#   cp gradle-local.properties.example gradle-local.properties
+#   # Edit the path if your JDK 17/21 install differs.
+#
+org.gradle.java.home=/usr/lib/jvm/java-21-openjdk
+
+# Optional: if release build still fails with Metaspace, uncomment and raise heap (needs RAM):
+# org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=1g -XX:ReservedCodeCacheSize=512m -XX:+HeapDumpOnOutOfMemoryError

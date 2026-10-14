@@ -1,13 +1,13 @@
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/controller/payrole_screen_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
 
 class PdfViewerScreen extends StatelessWidget {
   final String pdfUrl;
@@ -25,98 +25,145 @@ class PdfViewerScreen extends StatelessWidget {
         Get.find<PayroleScreenController>();
 
     return Scaffold(
-      appBar: AuthAppBar(
-        title: fileName,
-        showAction: false,
-        showLeading: true,
-        backgroundColor: AppColors.white200,
-      ),
-      body: Obx(() {
-        if (controller.hasPdfError.value) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header: filename + red Close.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const Gap(height: 16),
-                  AppText(
-                    text: 'Failed to load PDF',
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  const DsBackButton(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      fileName,
+                      style: AppTextStyles.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Gap(height: 8),
-                  AppText(
-                    text: controller.pdfErrorMessage.value.isNotEmpty
-                        ? controller.pdfErrorMessage.value
-                        : 'Unable to load the PDF document',
-                    textAlign: TextAlign.center,
-                    color: Colors.grey,
-                  ),
-
-                  const Gap(height: 8),
-                  AppText(
-                    text: 'URL: $pdfUrl',
-                    textAlign: TextAlign.center,
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-
-                  const Gap(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AppButton(
-                        onTap: () {
-                          controller.retryPdfLoad();
-                        },
-                        title: "Retry",
-                        titleColor: AppColors.blue500,
-                        borderColor: AppColors.blue500,
-                        backgroundColor: AppColors.white200,
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => Get.back(),
+                    child: Text(
+                      "Close",
+                      style: AppTextStyles.bodySemibold.copyWith(
+                        color: AppColors.danger,
                       ),
-                      const SizedBox(width: 16),
-                      AppButton(
-                        onTap: () => Get.back(),
-                        title: "Go Back",
-                        titleColor: AppColors.blue500,
-                        borderColor: AppColors.blue500,
-                        backgroundColor: AppColors.white200,
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
-          );
-        }
+            Expanded(
+              child: Obx(() {
+                if (controller.hasPdfError.value) {
+                  return Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.fill,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  LucideIcons.fileText,
+                                  size: 72,
+                                  color: AppColors.danger,
+                                ),
+                                const SizedBox(height: 20),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                  ),
+                                  child: Text(
+                                    controller.pdfErrorMessage.value.isNotEmpty
+                                        ? controller.pdfErrorMessage.value
+                                        : 'previewUnavailable'.tr,
+                                    textAlign: TextAlign.center,
+                                    style: AppTextStyles.body.copyWith(
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SecondaryButton(
+                                label: "Retry",
+                                isTranslate: false,
+                                onTap: () => controller.retryPdfLoad(),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: PrimaryButton(
+                                label: "Download",
+                                isTranslate: false,
+                                icon: LucideIcons.download,
+                                onTap: () => controller.downloadPdf(
+                                  pdfUrl,
+                                  fileName,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-        return Stack(
-          children: [
-            SfPdfViewer.network(
-              pdfUrl,
-              controller: controller.pdfViewerController,
-              onDocumentLoaded: controller.onPdfDocumentLoaded,
-              onDocumentLoadFailed: controller.onPdfDocumentLoadFailed,
+                return Stack(
+                  children: [
+                    SfPdfViewer.network(
+                      pdfUrl,
+                      controller: controller.pdfViewerController,
+                      onDocumentLoaded: controller.onPdfDocumentLoaded,
+                      onDocumentLoadFailed: controller.onPdfDocumentLoadFailed,
+                    ),
+                    if (controller.isPdfLoading.value)
+                      Container(
+                        color: AppColors.background.withValues(alpha: 0.85),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              LoadingAnimationWidget.beat(
+                                size: 24,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'loadingPdf'.tr,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              }),
             ),
-            if (controller.isPdfLoading.value)
-              Container(
-                color: Colors.white.withValues(alpha: 0.8),
-                child:  Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      LoadingAnimationWidget.beat(size: 24, color: Colors.grey,),
-                      const Gap(height: 16),
-                      Text('Loading PDF...', style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                ),
-              ),
           ],
-        );
-      }),
+        ),
+      ),
     );
   }
 }

@@ -1,7 +1,4 @@
-// Mirrors time-tracker's GET/PATCH /notification-preferences exactly (see
-// notificationpreferences.interface.ts / .service.ts) — same shape the web
-// dashboards' NotificationPreferencesModal already builds against
-// (Phases 7/9).
+// Mirrors time-tracker's GET/PATCH /notification-preferences (see API_DOCUMENTATION.md).
 class NotificationCategories {
   bool leave;
   bool project;

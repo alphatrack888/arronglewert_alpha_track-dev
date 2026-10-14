@@ -18,14 +18,14 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Image shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Container(
               width: AppSize.width(value: 335),
               height: AppSize.height(value: 185),
               decoration: BoxDecoration(
-                color: AppColors.black100,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.fill,
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),
@@ -34,13 +34,13 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Title shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Container(
               width: AppSize.width(value: 250),
               height: 20,
               decoration: BoxDecoration(
-                color: AppColors.black100,
+                color: AppColors.fill,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -50,13 +50,13 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Description label shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Container(
               width: AppSize.width(value: 120),
               height: 18,
               decoration: BoxDecoration(
-                color: AppColors.black100,
+                color: AppColors.fill,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -66,8 +66,8 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Description lines shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -76,7 +76,7 @@ class ProjectDetailsShimmer extends StatelessWidget {
                   height: 14,
                   margin: const EdgeInsets.only(bottom: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.black100,
+                    color: AppColors.fill,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -85,7 +85,7 @@ class ProjectDetailsShimmer extends StatelessWidget {
                   height: 14,
                   margin: const EdgeInsets.only(bottom: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.black100,
+                    color: AppColors.fill,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -93,7 +93,7 @@ class ProjectDetailsShimmer extends StatelessWidget {
                   width: AppSize.width(value: 280),
                   height: 14,
                   decoration: BoxDecoration(
-                    color: AppColors.black100,
+                    color: AppColors.fill,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -105,13 +105,13 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Audio label shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Container(
               width: AppSize.width(value: 140),
               height: 18,
               decoration: BoxDecoration(
-                color: AppColors.black100,
+                color: AppColors.fill,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -121,13 +121,13 @@ class ProjectDetailsShimmer extends StatelessWidget {
 
           // Audio player shimmer
           Shimmer.fromColors(
-            baseColor: AppColors.black100,
-            highlightColor: AppColors.white200,
+            baseColor: AppColors.fill,
+            highlightColor: AppColors.surface,
             child: Container(
               width: double.infinity,
               height: 60,
               decoration: BoxDecoration(
-                color: AppColors.black100,
+                color: AppColors.fill,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),

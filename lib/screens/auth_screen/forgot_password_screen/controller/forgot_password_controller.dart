@@ -16,7 +16,7 @@ class ForgotPasswordController extends GetxController {
 
   Future<void> sendForgotPasswordRequest() async {
     if (email.text.trim().isEmpty) {
-      AppSnackBar.error("Please enter your email");
+      AppSnackBar.error('vPleaseEnterEmail'.tr);
       return;
     }
     try {
@@ -33,12 +33,12 @@ class ForgotPasswordController extends GetxController {
           },
         );
 
-        AppSnackBar.success("OTP sent successfully");
+        AppSnackBar.success('otpSent'.tr);
       } else {
-        AppSnackBar.error("Failed to send OTP");
+        AppSnackBar.error('otpSendFailed'.tr);
       }
     } catch (e) {
-      AppSnackBar.error("An error occurred");
+      AppSnackBar.error('errGeneric'.tr);
     } finally {
       isLoading(false);
     }

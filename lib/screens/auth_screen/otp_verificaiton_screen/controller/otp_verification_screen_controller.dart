@@ -60,12 +60,12 @@ class OtpVerificationScreenController extends GetxController {
     appLog("Verifying OTP: ${otp.value}"); // Updated to use otp.value
 
     if (email == null) {
-      AppSnackBar.error("Email not found");
+      AppSnackBar.error('otpEmailNotFound'.tr);
       return;
     }
 
     if (otp.value.isEmpty || otp.value.length < 6) {
-      AppSnackBar.error("Please enter a valid 6-digit OTP");
+      AppSnackBar.error('otpInvalid'.tr);
       return;
     }
 
@@ -80,7 +80,7 @@ class OtpVerificationScreenController extends GetxController {
           otp: otp.value, // Use otp.value instead of otp
         );
         if (!result) {
-          AppSnackBar.error("OTP verification failed");
+          AppSnackBar.error('otpVerifyFailed'.tr);
         }
       } else {
         // Handle regular login OTP verification
@@ -89,7 +89,7 @@ class OtpVerificationScreenController extends GetxController {
           otp: otp.value, // Use otp.value instead of otp
         );
         if (!result) {
-          AppSnackBar.error("OTP verification failed");
+          AppSnackBar.error('otpVerifyFailed'.tr);
         }
       }
     } catch (e) {
@@ -103,11 +103,11 @@ class OtpVerificationScreenController extends GetxController {
   Future<void> resendOtp() async {
     try {
       if (email == null) {
-        AppSnackBar.error("Email not found");
+        AppSnackBar.error('otpEmailNotFound'.tr);
         return;
       }
       if (!canResend.value) {
-        AppSnackBar.error("Please wait before resending OTP");
+        AppSnackBar.error('otpWaitResend'.tr);
         return;
       }
 
@@ -124,16 +124,16 @@ class OtpVerificationScreenController extends GetxController {
       );
 
       if (result) {
-        AppSnackBar.success("OTP resent successfully");
+        AppSnackBar.success('otpResent'.tr);
         // Clear previous OTP when resending
         otp.value = "";
         startTimer();
       } else {
-        AppSnackBar.error("Failed to resend OTP");
+        AppSnackBar.error('otpResendFailed'.tr);
       }
     } catch (e) {
       appLog("Resend OTP Error: $e");
-      AppSnackBar.error("An error occurred while resending OTP");
+      AppSnackBar.error('otpResendError'.tr);
     } finally {
       isLoading(false);
     }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_model.dart';
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/models/payrole_model.dart';
@@ -24,6 +25,7 @@ class ProfileRepository {
   Future<bool> updaeProfile({
     String? fullName,
     String? contactNumber,
+    String? email,
     File? profileImage,
   }) async {
     try {
@@ -33,6 +35,9 @@ class ProfileRepository {
       //! Add text fields if they are provided
       if (fullName != null && fullName.isNotEmpty) {
         formData.fields.add(MapEntry('name', fullName));
+      }
+      if (email != null && email.isNotEmpty) {
+        formData.fields.add(MapEntry('email', email));
       }
       if (contactNumber != null && contactNumber.isNotEmpty) {
         formData.fields.add(MapEntry('phone', contactNumber));
@@ -77,7 +82,7 @@ class ProfileRepository {
       }
       return false;
     } catch (e) {
-      print('Profile update error: $e'); // Add logging
+      debugPrint('Profile update error: $e'); // Add logging
       return false;
     }
   }
@@ -128,7 +133,7 @@ class ProfileRepository {
         throw Exception('Profile image file does not exist');
       }
     } catch (e) {
-      print('Gallery upload error: $e'); // Add logging
+      debugPrint('Gallery upload error: $e'); // Add logging
       return false;
     }
   }

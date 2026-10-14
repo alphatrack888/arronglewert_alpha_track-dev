@@ -1,6 +1,7 @@
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_mdoel.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:get/get.dart';
 import '../../../../services/repository/leave_management_repository/leave_management_repository.dart';
 
@@ -26,6 +27,12 @@ class BreakScreenController extends GetxController {
   }
 
   void fetchLeaveBalance() async {
+    // TEMPORARY demo mode — show sample leave balance without a backend.
+    if (kDemoMode) {
+      leaveBalanceData.value = DemoData.leaveBalance;
+      isLoading(false);
+      return;
+    }
     try {
       isLoading(true);
       final response = await leaveManagementRepository
@@ -41,6 +48,12 @@ class BreakScreenController extends GetxController {
   }
 
   void fetchLeaveHistory() async {
+    // TEMPORARY demo mode — show sample leave history without a backend.
+    if (kDemoMode) {
+      leaveBalanceHistoryData.value = DemoData.leaveHistory;
+      isLeaveHistoryLoading(false);
+      return;
+    }
     try {
       isLeaveHistoryLoading(true);
       final response = await leaveManagementRepository

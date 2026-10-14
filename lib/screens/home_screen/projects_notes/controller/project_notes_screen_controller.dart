@@ -1,5 +1,3 @@
-import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
-import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'dart:developer';
 
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -12,7 +10,7 @@ import 'dart:io';
 
 class ProjectNotesScreenController extends GetxController {
   final TextEditingController textController = TextEditingController();
-  final ImagePickerService _picker = ImagePickerService();
+  final ImagePicker _picker = ImagePicker();
   final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
   final RxList<XFile> selectedImages = <XFile>[].obs;
 
@@ -34,14 +32,13 @@ class ProjectNotesScreenController extends GetxController {
 
   Future<void> sendPhoto() async {
     try {
-      final List<XFile> images = await _picker.pickMultipleImages();
+      final List<XFile> images = await _picker.pickMultiImage();
       if (images.isNotEmpty) {
         selectedImages.assignAll(images);
         showSelectedImages();
       }
     } catch (e) {
       log('Error picking images: $e');
-      AppSnackBar.error(ImagePickerService.errorMessage(e));
     }
   }
 
@@ -61,7 +58,7 @@ class ProjectNotesScreenController extends GetxController {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Obx(() => AppText(
-                        text: 'Selected Images (${selectedImages.length})',
+                        text: 'selectedImages'.trParams({'n': '${selectedImages.length}'}),
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                       )),

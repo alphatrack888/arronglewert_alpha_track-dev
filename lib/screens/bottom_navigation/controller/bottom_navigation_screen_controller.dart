@@ -1,15 +1,16 @@
-import 'package:alpha_track/screens/break_screen/break_screen/break_screen.dart';
 import 'package:alpha_track/screens/home_screen/main_home/home_screen.dart';
-import 'package:alpha_track/screens/notes_screen/note_screen/note_screen.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/profile_screen.dart';
+import 'package:alpha_track/screens/projects_screen/projects_screen.dart';
 import 'package:get/get.dart';
 
 class BottomNavScreenController extends GetxController {
   var selectedIndex = 0.obs;
+
+  // 2026 redesign: 3-tab bar — Home · Projects · Account.
+  // (Notes now live inside a project; Break/Leave moved under Account.)
   final pages = [
     HomeScreen(),
-    BreakScreen(),
-    NoteScreen(),
+    const ProjectsScreen(),
     ProfileScreen(),
   ];
 

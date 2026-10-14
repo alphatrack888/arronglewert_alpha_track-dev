@@ -11,6 +11,8 @@ import 'package:alpha_track/screens/auth_screen/signup_screen/signup_screen.dart
 import 'package:alpha_track/screens/bottom_navigation/bottom_navigation_screen.dart';
 import 'package:alpha_track/screens/break_screen/break_screen/break_screen.dart';
 import 'package:alpha_track/screens/break_screen/leave_screen/leave_screen.dart';
+import 'package:alpha_track/screens/break_screen/leave_screen/leave_schedule_screen.dart';
+import 'package:alpha_track/screens/break_screen/history_screens.dart';
 import 'package:alpha_track/screens/error_screen/erro_screen.dart';
 import 'package:alpha_track/screens/home_screen/main_home/home_screen.dart';
 import 'package:alpha_track/screens/home_screen/project_details/project_details_screen.dart';
@@ -19,12 +21,12 @@ import 'package:alpha_track/screens/notes_screen/note_screen/note_screen.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/note_view.dart';
 import 'package:alpha_track/screens/notification_preferences_screen/notification_preferences_screen.dart';
 import 'package:alpha_track/screens/notification_screen/notification_screen.dart';
+import 'package:alpha_track/screens/report_screen/report_screen.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen_final.dart';
 import 'package:alpha_track/screens/onboarding_screen/onboarding_screen_two.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/gallery_screen.dart';
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/pay_role_screen.dart';
-import 'package:alpha_track/screens/reports_screen/reports_screen.dart';
 import 'package:alpha_track/screens/profile_screen/personal_information/personal_information.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/profile_screen.dart';
 import 'package:alpha_track/screens/profile_screen/settings_screen/change_pasword/change_password_screen.dart';
@@ -61,6 +63,9 @@ class AppRoute {
   //! Break Screen Routes
   static const String breakScreen = "/breakScreen";
   static const String leaveScreen = "/leaveScreen";
+  static const String leaveScheduleScreen = "/leaveScheduleScreen";
+  static const String leaveHistoryScreen = "/leaveHistoryScreen";
+  static const String breakHistoryScreen = "/breakHistoryScreen";
 
   //! Notes Screen Routes
   static const String noteScreen = "/noteScreen";
@@ -73,14 +78,17 @@ class AppRoute {
   static const String galleryScreen = "/galleryScreen";
   static const String languageScreen = "/languageScreen";
   static const String payRoleScreen = "/payRoleScreen";
-  static const String reportsScreen = "/reportsScreen";
   static const String settingScreen = "/settingScreen";
   static const String changePasswordScreen = "/changePasswordScreen";
   static const String privacyPolicyScreen = "/privacyPolicyScreen";
 
   //! Notificaiton Screen
   static const String notificationScreen = "/notificationScreen";
-  static const String notificationPreferencesScreen = "/notificationPreferencesScreen";
+  static const String notificationPreferencesScreen =
+      "/notificationPreferencesScreen";
+
+  //! Report Screen
+  static const String reportScreen = "/reportScreen";
 
   //! Route Pages
   static List<GetPage> appRoutes = [
@@ -187,6 +195,26 @@ class AppRoute {
       binding: BreakScreenBindings(),
       middlewares: [InternetCheckMiddleWare()],
     ),
+    GetPage(
+      name: AppRoute.leaveScheduleScreen,
+      page: () => const LeaveScheduleScreen(),
+      transition: Transition.rightToLeftWithFade,
+      binding: BreakScreenBindings(),
+      middlewares: [InternetCheckMiddleWare()],
+    ),
+    GetPage(
+      name: AppRoute.leaveHistoryScreen,
+      page: () => const LeaveHistoryScreen(),
+      transition: Transition.rightToLeftWithFade,
+      binding: BreakScreenBindings(),
+      middlewares: [InternetCheckMiddleWare()],
+    ),
+    GetPage(
+      name: AppRoute.breakHistoryScreen,
+      page: () => const BreakHistoryScreen(),
+      transition: Transition.rightToLeftWithFade,
+      middlewares: [InternetCheckMiddleWare()],
+    ),
 
     //! Notes Screen Pages
     GetPage(
@@ -244,12 +272,6 @@ class AppRoute {
       middlewares: [InternetCheckMiddleWare()],
     ),
     GetPage(
-      name: AppRoute.reportsScreen,
-      page: () => const ReportsScreen(),
-      transition: Transition.rightToLeftWithFade,
-      middlewares: [InternetCheckMiddleWare()],
-    ),
-    GetPage(
       name: AppRoute.settingScreen,
       page: () => SettingScreen(),
       transition: Transition.rightToLeftWithFade,
@@ -276,11 +298,18 @@ class AppRoute {
       transition: Transition.rightToLeftWithFade,
       middlewares: [InternetCheckMiddleWare()],
     ),
-
-    //! Notification Preferences Screen
     GetPage(
       name: AppRoute.notificationPreferencesScreen,
       page: () => const NotificationPreferencesScreen(),
+      transition: Transition.rightToLeftWithFade,
+      middlewares: [InternetCheckMiddleWare()],
+    ),
+
+    //! Report Screen
+    GetPage(
+      name: AppRoute.reportScreen,
+      page: () => const ReportScreen(),
+      binding: HomeScreenBinding(),
       transition: Transition.rightToLeftWithFade,
       middlewares: [InternetCheckMiddleWare()],
     ),

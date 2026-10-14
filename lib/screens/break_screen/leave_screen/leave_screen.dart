@@ -1,17 +1,17 @@
 import 'dart:ui';
 import 'package:alpha_track/screens/break_screen/leave_screen/controller/leave_screen_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
 import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/widgets/app_appbar/app_appbar_auth.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
 import 'package:alpha_track/widgets/app_text_field/app_text_field.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 import 'package:intl/intl.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
 
 class LeaveScreen extends StatelessWidget {
   // Changed to StatelessWidget
@@ -22,85 +22,114 @@ class LeaveScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white200,
-      appBar: AuthAppBar(
-        title: AppString.leave,
-        showAction: false,
-        showLeading: true,
-        backgroundColor: AppColors.white200,
-      ),
-
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
-        child: Form(
-          key: controller.formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Gap(height: 25),
-              // Leave Type and Leave Consume Type Row
-              _buildDropdownField(
-                label: AppString.leaveType.tr,
-                items: controller.leaveTypes,
-                selectedValue: controller.selectedLeaveType,
-                onChanged: controller.updateLeaveType,
-              ),
-
-              Gap(height: 20),
-
-              // From Date and To Date Row
-              Row(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header: back + title.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
                 children: [
+                  const DsBackButton(),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildDateField(
-                      label: AppString.fromDate.tr,
-                      selectedDate: controller.fromDate,
-                      onDateSelected: controller.updateFromDate,
-                    ),
-                  ),
-                  Gap(width: 16),
-                  Expanded(
-                    child: _buildDateField(
-                      label: AppString.todate.tr,
-                      selectedDate: controller.toDate,
-                      onDateSelected: controller.updateToDate,
+                    child: Text(
+                      'leaveSchedule'.tr,
+                      style: AppTextStyles.headline,
                     ),
                   ),
                 ],
               ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Form(
+                  key: controller.formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      // Leave Type
+                      _buildDropdownField(
+                        label: AppString.leaveType.tr,
+                        items: controller.leaveTypes,
+                        selectedValue: controller.selectedLeaveType,
+                        onChanged: controller.updateLeaveType,
+                      ),
 
-              Gap(height: 20),
-              // Leave Duration Display
-              Obx(
-                () => Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.blue500),
-                  ),
-                  child: AppText(
-                    text:
-                        '${AppString.leaveDuration.tr}: ${controller.leaveDuration} ${AppString.days.tr}',
-                    color: AppColors.blue500,
-                    fontWeight: FontWeight.w500,
+                      const SizedBox(height: 20),
+
+                      // From Date and To Date Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDateField(
+                              label: AppString.fromDate.tr,
+                              selectedDate: controller.fromDate,
+                              onDateSelected: controller.updateFromDate,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildDateField(
+                              label: AppString.todate.tr,
+                              selectedDate: controller.toDate,
+                              onDateSelected: controller.updateToDate,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+                      // Leave Duration Display
+                      Obx(
+                        () => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: AppText(
+                            text:
+                                '${AppString.leaveDuration.tr}: ${controller.leaveDuration} ${AppString.days.tr}',
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Reason Field
+                      _buildReasonField(),
+                      const SizedBox(height: 32),
+                      // Submit Button
+                      Obx(
+                        () => PrimaryButton(
+                          label:
+                              '${AppString.applyFor.tr} ${controller.leaveDuration} ${AppString.dayLeave.tr}',
+                          isTranslate: false,
+                          // TEST MODE: skip backend submit; confirm and go back.
+                          // For production, restore: controller.submitLeaveApplication
+                          onTap: () {
+                            Get.back();
+                            Get.snackbar('leaveApplied'.tr,
+                                'leaveSubmittedTest'.tr,
+                                snackPosition: SnackPosition.BOTTOM);
+                          },
+                          isLoading: controller.isLoading.value,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
               ),
-              Gap(height: 20),
-              // Reason Field
-              _buildReasonField(),
-              Gap(height: 32),
-              // Submit Button
-              AppButton(
-                title:
-                    '${AppString.applyFor.tr} ${controller.leaveDuration} ${AppString.dayLeave.tr}',
-                onTap: controller.submitLeaveApplication,
-                titleColor: AppColors.blue500,
-                backgroundColor: AppColors.blue50,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -119,15 +148,15 @@ class LeaveScreen extends StatelessWidget {
           text: label,
           fontSize: AppSize.width(value: 14),
           fontWeight: FontWeight.w500,
-          color: AppColors.black300,
+          color: AppColors.textSecondary,
         ),
-        Gap(height: 08),
+        const SizedBox(height: 8),
         Obx(
           () => Container(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
+              border: Border.all(color: AppColors.stroke),
+              borderRadius: BorderRadius.circular(12),
+              color: AppColors.surface,
             ),
             child: DropdownButtonFormField<String>(
               value: selectedValue.value.isEmpty ? null : selectedValue.value,
@@ -201,22 +230,20 @@ class LeaveScreen extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
-        Gap(height: 8),
+        const SizedBox(height: 8),
         GestureDetector(
           onTap: () =>
               _showDatePicker(Get.context!, selectedDate, onDateSelected),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.black100),
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
+              border: Border.all(color: AppColors.stroke),
+              borderRadius: BorderRadius.circular(12),
+              color: AppColors.surface,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -224,10 +251,15 @@ class LeaveScreen extends StatelessWidget {
                 Obx(
                   () => Text(
                     DateFormat('dd.MM.yyyy').format(selectedDate.value),
-                    style: TextStyle(fontSize: 14, color: AppColors.black400),
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
-                Icon(Icons.keyboard_arrow_down, color: AppColors.black400),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: AppColors.textMuted,
+                ),
               ],
             ),
           ),
@@ -244,12 +276,12 @@ class LeaveScreen extends StatelessWidget {
           text: AppString.leaveReason.tr,
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: AppColors.black500,
+          color: AppColors.textPrimary,
         ),
-        Gap(height: AppSize.height(value: 08)),
+        const SizedBox(height: 8),
         CustomTextField(
-          backgroundColor: AppColors.white100,
-          borderColor: AppColors.black100,
+          backgroundColor: AppColors.surface,
+          borderColor: AppColors.stroke,
           hintText: AppString.typeHere.tr,
           maxLines: 5,
           height: AppSize.height(value: 48),
@@ -300,7 +332,7 @@ class LeaveScreen extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                     color: AppColors.black500,
                   ),
-                  Gap(height: AppSize.height(value: 08)),
+                  const SizedBox(height: 8),
                   SfDateRangePicker(
                     selectionMode: DateRangePickerSelectionMode.single,
                     view: DateRangePickerView.month,

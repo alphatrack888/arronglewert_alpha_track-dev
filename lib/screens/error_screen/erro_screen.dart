@@ -37,8 +37,8 @@ class ErrorScreen extends StatelessWidget {
                   () => controller.isInternetProblem.value
                       ? Padding(
                           padding: EdgeInsets.all(AppSize.width(value: 10)),
-                          child: const AppText(
-                            text: "Check your internet connection",
+                          child: AppText(
+                            text: 'checkInternet'.tr,
                           ),
                         )
                       : const SizedBox(),
@@ -46,7 +46,7 @@ class ErrorScreen extends StatelessWidget {
                 const Gap(height: 30),
 
                 AppButton(
-                  title: "Try again",
+                  title: 'tryAgain'.tr,
                   onTap: () async {
                     await Get.offAllNamed(AppRoute.splashScreen);
                   },

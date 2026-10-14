@@ -1,11 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- System pickers and app-specific files need no broad storage access. -->
+    <!-- System pickers and app-specific files need no broad storage access (CI release guard). -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
-
+    
     <!-- Optional: if you need audio -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -24,12 +24,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <!-- Additional permissions needed for PDF functionality -->
+    <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Required on Android 13+ (API 33+) to show notifications at all —
-         firebase_messaging's requestPermission() triggers this runtime
-         prompt automatically, but the permission still has to be declared
-         here or the prompt (and delivery) never happens. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -93,9 +91,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- FCM: a single default channel so multiple rapid pushes (e.g.
-             several leave requests in a row) group sensibly under one
-             channel instead of each spawning ungrouped notifications. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="alpha_track_default_channel" />

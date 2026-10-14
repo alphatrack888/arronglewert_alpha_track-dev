@@ -1,10 +1,9 @@
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:flutter/material.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class EnhancedAudioPlayer extends StatefulWidget {
   final String audioPath;
@@ -139,161 +138,121 @@ class _EnhancedAudioPlayerState extends State<EnhancedAudioPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    final String totalLabel = _totalDuration.inMilliseconds > 0
+        ? _formatDuration(_totalDuration)
+        : (widget.duration ?? '0:00');
+    final String timeLabel = _currentPosition.inMilliseconds > 0
+        ? _formatDuration(_currentPosition)
+        : totalLabel;
+
+    // Figma "recorded audio" playback pill: white rounded bar with a circular
+    // blue play/pause button, a tappable waveform track and a duration label.
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.blue50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.blue300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with audio icon and title
-          Row(
-            children: [
-              Icon(Icons.audiotrack, size: 20, color: AppColors.blue600),
-              const Gap(width: 8),
-              Expanded(
-                child: AppText(
-                  text: widget.audioTitle ?? 'Audio Recording',
-                  fontSize: AppSize.width(value: 16),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.blue600,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const Gap(height: 16),
-
-          // Audio controls container
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.blue300),
-            ),
-            child: Column(
-              children: [
-                // Progress slider
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: AppColors.blue500,
-                    inactiveTrackColor: AppColors.blue100,
-                    thumbColor: AppColors.blue500,
-                    overlayColor: AppColors.blue500.withValues(alpha: 0.2),
-                    trackHeight: 4.0,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 8.0,
-                    ),
-                  ),
-                  child: Slider(
-                    value: _playbackProgress.clamp(0.0, 1.0),
-                    onChanged: (value) {
-                      _seekTo(value);
-                    },
-                    min: 0.0,
-                    max: 1.0,
-                  ),
-                ),
-                // Time display
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      AppText(
-                        text: _formatDuration(_currentPosition),
-                        fontSize: AppSize.width(value: 12),
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                      AppText(
-                        text: _totalDuration.inMilliseconds > 0
-                            ? _formatDuration(_totalDuration)
-                            : widget.duration ?? '0:00',
-                        fontSize: AppSize.width(value: 12),
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ],
-                  ),
-                ),
-                // Control buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Stop button
-                    IconButton(
-                      onPressed: _isLoading ? null : _stopAudio,
-                      icon: Icon(
-                        Icons.stop,
-                        size: 32,
-                        color: _isLoading
-                            ? Colors.grey
-                            : (_isPlaying ? Colors.red : AppColors.blue500),
-                      ),
-                    ),
-                    const Gap(width: 06),
-                    // Play/Pause button
-                    GestureDetector(
-                      onTap: _isLoading ? null : _playAudio,
-                      child: Container(
-                        width: AppSize.width(value: 40),
-                        height: AppSize.height(value: 40),
-                        decoration: BoxDecoration(
-                          color: _isLoading ? Colors.grey : AppColors.blue500,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.blue.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: _isLoading
-                            ? Center(
-                                child: SizedBox(
-                                  width: AppSize.width(value: 24),
-                                  height: AppSize.height(value: 24),
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              )
-                            : Icon(
-                                _isPlaying ? Icons.pause : Icons.play_arrow,
-                                size: 32,
-                                color: Colors.white,
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-                // Status text
-                AppText(
-                  text: _isPlaying
-                      ? 'Playing...'
-                      : _currentPosition.inMilliseconds > 0
-                      ? 'Paused'
-                      : 'Tap to play audio',
-                  fontSize: AppSize.width(value: 14),
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.blue700,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.stroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: Row(
+        children: [
+          // Play / pause button (long-press to stop & rewind)
+          GestureDetector(
+            onTap: _isLoading ? null : _playAudio,
+            onLongPress: _isLoading ? null : _stopAudio,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _isLoading ? AppColors.textFaint : AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: _isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      _isPlaying ? LucideIcons.pause : LucideIcons.play,
+                      size: 22,
+                      color: AppColors.white50,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Waveform track (doubles as a seek bar)
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (details) {
+                final width = context.size?.width ?? 0;
+                if (width > 0) {
+                  _seekTo((details.localPosition.dx / width).clamp(0.0, 1.0));
+                }
+              },
+              child: SizedBox(
+                height: 32,
+                child: _Waveform(progress: _playbackProgress.clamp(0.0, 1.0)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(timeLabel, style: AppTextStyles.bodySemibold),
+        ],
+      ),
+    );
+  }
+}
+
+/// Static waveform bars used by the audio playback pill. The bars before
+/// [progress] use the active colour; the rest are muted.
+class _Waveform extends StatelessWidget {
+  const _Waveform({required this.progress});
+
+  final double progress;
+
+  static const List<double> _heights = [
+    0.5, 0.8, 0.4, 1.0, 0.6, 0.9, 0.5, 0.7, 1.0, 0.45,
+    0.85, 0.6, 0.95, 0.5, 0.7, 0.4, 0.8, 0.55, 0.9, 0.5,
+    0.65, 0.45, 0.8, 0.6, 0.5,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxHeight;
+        final activeCount = (progress * _heights.length).round();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(_heights.length, (i) {
+            final active = i < activeCount;
+            return Container(
+              width: 3,
+              height: (maxH * _heights[i]).clamp(4.0, maxH),
+              decoration: BoxDecoration(
+                color: active ? AppColors.primary : AppColors.stroke,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

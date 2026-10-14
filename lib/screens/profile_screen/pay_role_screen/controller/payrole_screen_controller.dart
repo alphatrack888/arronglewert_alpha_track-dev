@@ -4,6 +4,7 @@ import 'package:alpha_track/screens/profile_screen/pay_role_screen/models/payrol
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/pdf_viewer_screen.dart';
 import 'package:alpha_track/services/repository/profile_repository/profile_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
@@ -38,6 +39,12 @@ class PayroleScreenController extends GetxController {
   }
 
   Future<void> fetchPayroll() async {
+    // TEMPORARY demo mode — show sample payroll without a backend.
+    if (kDemoMode) {
+      payrollData.value = DemoData.payroll;
+      isLoading.value = false;
+      return;
+    }
     try {
       isLoading.value = true;
       final response = await profileRepository.fetchPayroll();
@@ -84,7 +91,7 @@ class PayroleScreenController extends GetxController {
     Get.to(
       () => PdfViewerScreen(
         pdfUrl: fullPdfUrl,
-        fileName: fileName.isNotEmpty ? fileName : 'PDF Document',
+        fileName: fileName.isNotEmpty ? fileName : 'pdfDocument'.tr,
       ),
     );
   }
@@ -158,7 +165,7 @@ class PayroleScreenController extends GetxController {
       if (response.statusCode == 200) {
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
-        Get.snackbar('Success', 'PDF downloaded successfully');
+        Get.snackbar('success'.tr, 'pdfDownloaded'.tr);
         appLog('PayroleController: Download completed successfully');
       } else {
         Get.snackbar('Error', 'Failed to download PDF: ${response.statusCode}');

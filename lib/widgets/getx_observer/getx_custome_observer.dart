@@ -75,7 +75,7 @@ class NavigationObserver extends NavigatorObserver {
     String stackInfo,
     String fullStack,
   ) {
-    print('$_bold[$action]$_reset $routeInfo | $stackInfo | $fullStack');
+    debugPrint('$_bold[$action]$_reset $routeInfo | $stackInfo | $fullStack');
   }
 
   // void _logControllersForRoute(String routeName) {

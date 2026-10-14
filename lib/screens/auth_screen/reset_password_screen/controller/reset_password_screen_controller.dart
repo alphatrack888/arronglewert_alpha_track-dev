@@ -23,7 +23,7 @@ class ResetPasswordScreenController extends GetxController {
         confirmPassword: confirmPassword.text.toString(),
       );
       if(result){
-        AppSnackBar.success("Password reset successfully");
+        AppSnackBar.success('passwordResetOk'.tr);
       }
     } catch (e) {
       appLog(e.toString());

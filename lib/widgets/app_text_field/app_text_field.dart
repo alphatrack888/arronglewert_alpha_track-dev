@@ -1,12 +1,19 @@
-import 'package:alpha_track/utils/app_size/app_size.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import '../../utils/app_colors/app_colors.dart';
 
+/// Standard text input — matches the Figma "Input_Standard" component
+/// (Inactive / Active / Filled states): white field, hairline stroke border,
+/// blue border on focus, 10px radius, optional label above.
+///
+/// Public API preserved so every existing screen keeps working unchanged;
+/// [label] is the only new (optional) field.
 class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
+  final String? label;
   final String? hintText;
   final String? Function(String?)? validator;
-  final Function(String?)? onValidate; // New: callback for real-time validation
+  final Function(String?)? onValidate;
   final double? height;
   final double? width;
   final Color? backgroundColor;
@@ -21,11 +28,14 @@ class CustomTextField extends StatefulWidget {
   final int? maxLines;
   final VoidCallback? onTapSuffix;
   final VoidCallback? onTap;
-  final Function(String)? onChanged; // Updated: proper typing
+  final Function(String)? onChanged;
+  final bool readOnly;
+  final Widget? suffixIcon;
 
   const CustomTextField({
     super.key,
     this.controller,
+    this.label,
     this.hintText,
     this.validator,
     this.onValidate,
@@ -44,6 +54,8 @@ class CustomTextField extends StatefulWidget {
     this.onTapSuffix,
     this.onTap,
     this.onChanged,
+    this.readOnly = false,
+    this.suffixIcon,
   });
 
   @override
@@ -53,13 +65,17 @@ class CustomTextField extends StatefulWidget {
 class _CustomTextFieldState extends State<CustomTextField> {
   late bool obscureText;
   String? errorText;
+  late final FocusNode _focusNode;
+  bool _focused = false;
 
   @override
   void initState() {
     super.initState();
     obscureText = widget.isPassword;
-
-    // Listen to controller changes for real-time validation
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (mounted) setState(() => _focused = _focusNode.hasFocus);
+    });
     if (widget.controller != null) {
       widget.controller!.addListener(_validateField);
     }
@@ -67,6 +83,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     if (widget.controller != null) {
       widget.controller!.removeListener(_validateField);
     }
@@ -76,113 +93,88 @@ class _CustomTextFieldState extends State<CustomTextField> {
   void _validateField() {
     if (widget.validator != null) {
       final error = widget.validator!(widget.controller!.text);
-      if (mounted) {
-        setState(() {
-          errorText = error;
-        });
-      }
-
-      // Callback to parent widget/controller
+      if (mounted) setState(() => errorText = error);
       widget.onValidate?.call(error);
     }
   }
 
-  double _calculateHeight() {
-    final lines = widget.maxLines ?? 1;
-    final baseHeight = widget.height ?? ResponsiveUtils.height(50);
-    final lineHeight = ResponsiveUtils.height(20);
-
-    return lines == 1 ? baseHeight : baseHeight + ((lines - 1) * lineHeight);
-  }
-
   @override
   Widget build(BuildContext context) {
-    ResponsiveUtils.initialize(context);
+    final radius = widget.borderRadius ?? 10;
+    final isMultiline = widget.maxLines != null && widget.maxLines! > 1;
+
+    Color borderColor;
+    if (errorText != null) {
+      borderColor = AppColors.danger;
+    } else if (_focused) {
+      borderColor = AppColors.primary;
+    } else {
+      borderColor = widget.borderColor ?? AppColors.stroke;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.label != null) ...[
+          Text(widget.label!, style: AppTextStyles.caption.copyWith(fontSize: 13)),
+          const SizedBox(height: 8),
+        ],
         Container(
-          height: widget.maxLines == null
-              ? widget.height ?? ResponsiveUtils.height(50)
-              : null,
+          height: isMultiline ? null : (widget.height ?? 52),
           width: widget.width ?? double.infinity,
-          constraints: widget.maxLines != null
-              ? BoxConstraints(
-                  minHeight: widget.height ?? ResponsiveUtils.height(50),
-                  maxHeight: _calculateHeight(),
-                )
-              : null,
           decoration: BoxDecoration(
-            color: widget.backgroundColor ?? AppColors.blue50,
-            borderRadius: BorderRadius.circular(widget.borderRadius ?? 10),
+            color: widget.backgroundColor ?? AppColors.surface,
+            borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color: errorText != null
-                  ? Colors.red
-                  : (widget.borderColor ?? AppColors.black200),
-              width: widget.borderSide?.width ?? 1.0,
+              color: borderColor,
+              width: _focused && errorText == null ? 1.5 : 1.0,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x3F868181),
-                blurRadius: 2,
-                offset: Offset(0, 2),
-                spreadRadius: 0,
-              ),
-            ],
           ),
+          alignment: isMultiline ? null : Alignment.center,
           child: TextFormField(
+            focusNode: _focusNode,
             onTap: widget.onTap,
+            readOnly: widget.readOnly,
             controller: widget.controller,
             validator: widget.validator,
             obscureText: obscureText,
             keyboardType: widget.keyboardType ?? TextInputType.text,
             maxLines: widget.maxLines ?? 1,
-            style: TextStyle(
-              color: widget.textColor ?? Colors.black,
-              fontSize: ResponsiveUtils.width(14),
+            style: AppTextStyles.body.copyWith(
+              color: widget.textColor ?? AppColors.textPrimary,
             ),
             onChanged: (value) {
               widget.onChanged?.call(value);
-              _validateField(); // Trigger validation on change
+              _validateField();
             },
             decoration: InputDecoration(
               isDense: true,
-              filled: true,
-              fillColor: Colors.transparent,
+              filled: false,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: ResponsiveUtils.width(16),
-                vertical: ResponsiveUtils.height(11),
+                horizontal: 16,
+                vertical: isMultiline ? 14 : 12,
               ),
               hintText: widget.hintText,
-              hintStyle: TextStyle(
-                color: widget.hintTextColor ?? AppColors.black200,
-                fontWeight: FontWeight.w500,
-                fontSize: ResponsiveUtils.width(14),
+              hintStyle: AppTextStyles.body.copyWith(
+                color: widget.hintTextColor ?? AppColors.textMuted,
               ),
               prefixIcon: widget.prefixIcon != null
-                  ? Icon(
-                      widget.prefixIcon,
-                      color: widget.hintTextColor ?? AppColors.black200,
-                      size: ResponsiveUtils.width(20),
-                    )
+                  ? Icon(widget.prefixIcon,
+                      color: AppColors.textMuted, size: 20)
                   : null,
               suffixIcon: widget.isPassword
                   ? GestureDetector(
-                      onTap:
-                          widget.onTapSuffix ??
-                          () {
-                            setState(() {
-                              obscureText = !obscureText;
-                            });
-                          },
+                      onTap: widget.onTapSuffix ??
+                          () => setState(() => obscureText = !obscureText),
                       child: Icon(
-                        obscureText ? Icons.visibility_off : Icons.visibility,
-                        color: widget.hintTextColor ?? AppColors.black200,
-                        size: ResponsiveUtils.width(20),
+                        obscureText
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        color: AppColors.textMuted,
+                        size: 20,
                       ),
                     )
-                  : null,
+                  : widget.suffixIcon,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
@@ -193,16 +185,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
         ),
         if (errorText != null)
           Padding(
-            padding: EdgeInsets.only(
-              top: ResponsiveUtils.height(4),
-              left: ResponsiveUtils.width(16),
-            ),
+            padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
               errorText!,
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: ResponsiveUtils.width(12),
-              ),
+              style: AppTextStyles.caption.copyWith(color: AppColors.danger),
             ),
           ),
       ],

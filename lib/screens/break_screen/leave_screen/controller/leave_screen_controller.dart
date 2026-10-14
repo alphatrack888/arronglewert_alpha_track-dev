@@ -1,7 +1,9 @@
 import 'package:alpha_track/screens/break_screen/break_screen/controller/break_screen_controller.dart';
+import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/services/repository/leave_management_repository/leave_management_repository.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -202,6 +204,79 @@ class LeaveScreenController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Apply leave from the Leave Schedule bottom sheet (which does not use the
+  /// Form/formKey path). Validates reason + dates, then in demo mode adds the
+  /// leave locally so it shows up on the calendar / Upcoming section, or in real
+  /// mode submits to the API. Returns true on success so the sheet can close.
+  Future<bool> applyLeaveFromSheet() async {
+    if (reason.value.trim().isEmpty) {
+      AppSnackBar.error('vLeaveReason'.tr);
+      return false;
+    }
+    if (leaveDuration < 1 || toDate.value.isBefore(fromDate.value)) {
+      AppSnackBar.error('vDateRange'.tr);
+      return false;
+    }
+
+    // Demo/review builds: no backend — add the leave to the local store so it
+    // appears immediately (pending) on the calendar and Upcoming section.
+    if (kDemoMode) {
+      _addDemoLeave();
+      AppSnackBar.success('leaveSubmitted'.tr);
+      _resetFormAfterSuccess();
+      return true;
+    }
+
+    try {
+      isLoading(true);
+      final companyId = _storageServices.getCompanyId();
+      if (companyId.isEmpty) {
+        AppSnackBar.error(AppString.companyIdNotFound.tr);
+        return false;
+      }
+      final success = await _leaveRepository.applyforLeave(
+        companyId: companyId,
+        fromDate: _formatDateForAPI(fromDate.value),
+        toDate: _formatDateForAPI(toDate.value),
+        reason: reason.value.trim(),
+        type: _getLeaveTypeForAPI(selectedLeaveType.value),
+      );
+      if (success) {
+        AppSnackBar.success(AppString.leaveApplicationSubmitted.tr);
+        _resetFormAfterSuccess();
+        await Get.find<BreakScreenController>().updateLeaveData();
+        return true;
+      }
+      AppSnackBar.error(AppString.leaveApplicationFailed.tr);
+      return false;
+    } catch (e) {
+      AppSnackBar.error(AppString.leaveApplicationError.tr);
+      return false;
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  /// Insert a pending leave into the in-memory leave data (demo mode only).
+  void _addDemoLeave() {
+    final breakCtrl = Get.find<BreakScreenController>();
+    final data = breakCtrl.leaveBalanceHistoryData.value?.data;
+    if (data == null) return;
+    (data.leavemanagements ??= <Leavemanagement>[]).add(
+      Leavemanagement(
+        id: 'demo-${fromDate.value.microsecondsSinceEpoch}',
+        type: _getLeaveTypeForAPI(selectedLeaveType.value),
+        status: 'pending',
+        from: DateTime(
+            fromDate.value.year, fromDate.value.month, fromDate.value.day),
+        to: DateTime(toDate.value.year, toDate.value.month, toDate.value.day),
+        totalDays: leaveDuration,
+        reason: reason.value.trim(),
+      ),
+    );
+    breakCtrl.leaveBalanceHistoryData.refresh();
   }
 
   //! Reset form to initial state after successful submission

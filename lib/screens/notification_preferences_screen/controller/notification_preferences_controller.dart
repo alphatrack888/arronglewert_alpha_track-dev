@@ -2,6 +2,7 @@ import 'package:alpha_track/screens/notification_preferences_screen/models/notif
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:get/get.dart';
 
@@ -11,16 +12,22 @@ class NotificationPreferencesController extends GetxController {
   var isLoading = true.obs;
   var isSaving = false.obs;
   var preferences = NotificationPreferences().obs;
+  var demoMode = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+    demoMode.value = kDemoMode;
     fetchPreferences();
   }
 
   Future<void> fetchPreferences() async {
     isLoading.value = true;
     try {
+      if (kDemoMode) {
+        preferences.value = NotificationPreferences();
+        return;
+      }
       final result = await _repository.getPreferences();
       if (result != null) {
         preferences.value = result;
@@ -70,6 +77,10 @@ class NotificationPreferencesController extends GetxController {
   }
 
   Future<bool> savePreferences() async {
+    if (kDemoMode) {
+      AppSnackBar.message(AppString.preferencesNotAvailableInDemo.tr);
+      return false;
+    }
     isSaving.value = true;
     try {
       final success = await _repository.updatePreferences(preferences.value);

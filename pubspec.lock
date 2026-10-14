@@ -289,22 +289,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
-  ffmpeg_kit_flutter_new:
-    dependency: "direct main"
-    description:
-      name: ffmpeg_kit_flutter_new
-      sha256: d127635f27e93a7f21f0a14ce0a1a148e80919c402dac4a2118d73bfb17ce841
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.1.0"
-  ffmpeg_kit_flutter_platform_interface:
-    dependency: transitive
-    description:
-      name: ffmpeg_kit_flutter_platform_interface
-      sha256: addf046ae44e190ad0101b2fde2ad909a3cd08a2a109f6106d2f7048b7abedee
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
   file:
     dependency: transitive
     description:
@@ -414,14 +398,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_lints:
-    dependency: "direct dev"
-    description:
-      name: flutter_lints
-      sha256: "3105dc8492f6183fb076ccf1f351ac3d60564bff92e20bfc4af9cc1651f4e7e1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.0.0"
   flutter_localizations:
     dependency: transitive
     description: flutter
@@ -725,14 +701,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
-  lints:
-    dependency: transitive
-    description:
-      name: lints
-      sha256: "12f842a479589fea194fe5c5a3095abc7be0c1f2ddfa9a0e76aed1dbd26a87df"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.1.0"
   loading_animation_widget:
     dependency: "direct main"
     description:
@@ -749,6 +717,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.0"
+  lucide_icons_flutter:
+    dependency: "direct main"
+    description:
+      name: lucide_icons_flutter
+      sha256: "7c5dc01a32a9905ae34e2d84224e92d6d0c42acf8926df9e01c35a1446bf1b69"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.14+2"
   matcher:
     dependency: transitive
     description:
@@ -1073,10 +1049,10 @@ packages:
     dependency: "direct main"
     description:
       name: share_plus
-      sha256: d7dc0630a923883c6328ca31b89aa682bacbf2f8304162d29f7c6aaff03a27a1
+      sha256: "223873d106614442ea6f20db5a038685cc5b32a2fba81cdecaefbbae0523f7fa"
       url: "https://pub.dev"
     source: hosted
-    version: "11.1.0"
+    version: "12.0.2"
   share_plus_platform_interface:
     dependency: transitive
     description:

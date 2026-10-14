@@ -1,11 +1,11 @@
+import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/onboarding_screen/controller/onboarding_screen_controller.dart';
+import 'package:alpha_track/screens/onboarding_screen/widgets/onboarding_widgets.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_images/app_images.dart';
-import 'package:alpha_track/utils/app_size/app_gap.dart';
-import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
-import 'package:alpha_track/widgets/app_button/app_button.dart';
-import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -15,95 +15,99 @@ class OnboardingScreenTwo extends StatelessWidget {
     OnboardingScreenController(),
   );
 
+  // Figma copy + illustration for the 3 feature pages (steps 2-4 of the carousel).
+  static final _pages = [
+    (
+      title: 'onb1Title'.tr,
+      subtitle:
+          'onb1Sub'.tr,
+      image: AppImages.onboardingTask,
+    ),
+    (
+      title: 'onb2Title'.tr,
+      subtitle:
+          'onb2Sub'.tr,
+      image: AppImages.onboardingNotes,
+    ),
+    (
+      title: 'onb3Title'.tr,
+      subtitle:
+          'onb3Sub'.tr,
+      image: AppImages.onboardingReport,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white100,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: PageView(
-                  controller: controller.pageController,
-                  onPageChanged: (index) {
-                    controller.updateCurrentPage(index);
-                  },
-                  children: [
-                    letsTrackFirstTrack(),
-                    trackYourTimeEffortlessly(),
-                    viewYourTimeinDetails(),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  vertical: AppSize.height(value: 30),
-                ),
-                child: Obx(
-                  () => Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      3,
-                      (index) => Container(
-                        margin: EdgeInsets.symmetric(horizontal: 5),
-                        height: controller.currentPage.value == index
-                            ? AppSize.height(value: 12)
-                            : AppSize.height(value: 12),
-                        width: controller.currentPage.value == index
-                            ? AppSize.width(value: 32)
-                            : AppSize.width(value: 12),
-                        decoration: BoxDecoration(
-                          color: controller.currentPage.value == index
-                              ? AppColors.blue500
-                              : AppColors.blue200,
-                          borderRadius: controller.currentPage.value == index
-                              ? BorderRadius.circular(20)
-                              : BorderRadius.circular(100),
-                        ),
-                      ),
+              const SizedBox(height: 8),
+              // Wordmark + Skip
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const OnboardingWordmark(),
+                  GestureDetector(
+                    onTap: () =>
+                        Get.toNamed(AppRoute.onboardingScreenFinal),
+                    child: Text(
+                      AppString.skip.tr,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(color: AppColors.textMuted),
                     ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: PageView.builder(
+                  controller: controller.pageController,
+                  onPageChanged: controller.updateCurrentPage,
+                  itemCount: _pages.length,
+                  itemBuilder: (_, i) => _OnboardingPage(
+                    title: _pages[i].title,
+                    subtitle: _pages[i].subtitle,
+                    image: _pages[i].image,
                   ),
                 ),
               ),
+              // Dots — 4 total (Welcome is the first dot, carousel is 2-4).
+              Obx(() => OnboardingDots(activeIndex: controller.currentPage.value + 1)),
+              const SizedBox(height: 28),
             ],
           ),
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-          left: AppSize.width(value: 28),
-          right: AppSize.width(value: 28),
-          bottom: AppSize.height(value: 50),
-        ),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Obx(
-              () => AppButton(
-                height: AppSize.height(value: 48),
-                width: AppSize.width(value: 140),
-                title: AppString.back,
-                titleColor: AppColors.blue500,
-                backgroundColor: AppColors.white50,
-                borderColor: AppColors.blue500,
-                onTap: controller.currentPage.value > 0
-                    ? () => controller.previousPage()
-                    : null,
+            // Back — circular outline button
+            GestureDetector(
+              onTap: () => controller.previousPage(),
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.stroke),
+                ),
+                child: const Icon(Icons.arrow_back,
+                    color: AppColors.primary, size: 22),
               ),
             ),
             Obx(
-              () => AppButton(
-                height: AppSize.height(value: 48),
-                width: AppSize.width(value: 140),
-                title: controller.currentPage.value < 2
+              () => PrimaryButton(
+                width: 150,
+                label: controller.currentPage.value < _pages.length - 1
                     ? AppString.next
-                    : AppString.getStarted,
-                titleColor: AppColors.white50,
-                backgroundColor: AppColors.blue500,
+                    : AppString.continuee,
                 onTap: () => controller.nextPage(),
               ),
             ),
@@ -114,91 +118,34 @@ class OnboardingScreenTwo extends StatelessWidget {
   }
 }
 
-Widget letsTrackFirstTrack() {
-  return Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Image.asset(
-        AppImages.onboarding1,
-        // height: AppSize.height(value: 340),
-        // width: AppSize.width(value: 320),
-      ),
-      Gap(height: AppSize.height(value: 35)),
-      AppText(
-        text: AppString.letsTrackyourFirstTask,
-        fontSize: 24,
-        fontWeight: FontWeight.w500,
-        color: AppColors.black400,
-      ),
-      Gap(height: AppSize.height(value: 05)),
-      AppText(
-        text: AppString.itsTimeToTryNew,
-        fontSize: 13,
-        fontWeight: FontWeight.w400,
-        color: AppColors.black300,
-        maxLines: 3,
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-      ),
-    ],
-  );
-}
+class _OnboardingPage extends StatelessWidget {
+  const _OnboardingPage({
+    required this.title,
+    required this.subtitle,
+    required this.image,
+  });
+  final String title;
+  final String subtitle;
+  final String image;
 
-Widget trackYourTimeEffortlessly() {
-  return Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Image.asset(AppImages.onboarding2),
-      Gap(height: AppSize.height(value: 33)),
-      AppText(
-        text: AppString.trackYourTimeEffortlessly,
-        fontSize: AppSize.width(value: 24),
-        fontWeight: FontWeight.w500,
-        color: AppColors.black400,
-      ),
-      Gap(height: AppSize.height(value: 03)),
-      AppText(
-        text: AppString.easilyStartandStop,
-        fontSize: AppSize.width(value: 13),
-        fontWeight: FontWeight.w400,
-        color: AppColors.black300,
-        maxLines: 3,
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-      ),
-    ],
-  );
-}
-
-Widget viewYourTimeinDetails() {
-  return Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Image.asset(
-        AppImages.onboarding3,
-        // height: AppSize.height(value: 340),
-        // width: AppSize.width(value: 320),
-      ),
-      Gap(height: AppSize.height(value: 35)),
-      AppText(
-        text: AppString.viewYourTimeinDetails,
-        fontSize: 24,
-        fontWeight: FontWeight.w500,
-        color: AppColors.black400,
-      ),
-      Gap(height: AppSize.height(value: 05)),
-      AppText(
-        text: AppString.easilyStartandStop,
-        fontSize: 13,
-        fontWeight: FontWeight.w400,
-        color: AppColors.black300,
-        maxLines: 3,
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-      ),
-    ],
-  );
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        OnboardingIllustration(asset: image),
+        const SizedBox(height: 36),
+        Text(title, textAlign: TextAlign.center, style: AppTextStyles.headline),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.subtitle.copyWith(fontSize: 14, height: 1.5),
+          ),
+        ),
+      ],
+    );
+  }
 }

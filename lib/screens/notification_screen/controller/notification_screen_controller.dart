@@ -1,20 +1,15 @@
-import 'dart:async';
-
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
-import 'package:alpha_track/services/connectivity_services/connectivity_service.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
-import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class NotificationScreenController extends GetxController
-    with WidgetsBindingObserver {
+class NotificationScreenController extends GetxController {
   final NotificationRepository _notificationRepository =
       NotificationRepository();
   final AppSocketAllOperation socketAllOperation =
@@ -28,112 +23,24 @@ class NotificationScreenController extends GetxController
   var currentPage = 1.obs;
   var totalPages = 1.obs;
   var hasMoreData = false.obs;
-  // Server-computed (Phase 12) — the single source of truth for the bell
-  // badge, never derived by counting !isRead over whatever page happens to
-  // be loaded locally.
-  var unreadCount = 0.obs;
 
   // Controllers
   final ScrollController scrollController = ScrollController();
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void onInit() {
     super.onInit();
-    WidgetsBinding.instance.addObserver(this);
     fetchNotifications();
     _setupScrollListener();
-    socketCalling();
-    _setupConnectivityListener();
+    registerNotificationSocketListeners();
   }
 
   @override
   void onClose() {
-    WidgetsBinding.instance.removeObserver(this);
     scrollController.dispose();
     // Clean up socket listeners when controller is disposed
     _cleanupSocketListeners();
-    _connectivitySubscription?.cancel();
     super.onClose();
-  }
-
-  // Phase 16 QA fix: this controller is a `fenix: true` app-wide singleton
-  // (see initial_bindings.dart) whose onInit only ever runs once, near app
-  // startup — its home-screen badge (home_screen.dart) reads the same
-  // cached `unreadCount` for the whole app lifetime. The live socket
-  // handler in socketCalling() only accounts for notifications that arrive
-  // while connected; anything that happened while the app was backgrounded
-  // (socket disconnected, no FCM foreground handler running) was never
-  // reflected until the user happened to manually open and pull-to-refresh
-  // the notifications screen. Resuming from background is exactly the
-  // moment that gap shows up as a stale badge/list, so it's the trigger to
-  // resync here, the same pattern HomeScreenController already uses for
-  // its own resume handling.
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      fetchNotifications(isRefresh: true);
-    }
-  }
-
-  /// Replays any mark-read/mark-all-read actions that were queued while
-  /// offline (see markAsRead/markAllAsRead) as soon as connectivity comes
-  /// back — this is the actual "sync when connectivity returns" half of the
-  /// offline edge case, not just "don't crash while offline".
-  void _setupConnectivityListener() {
-    try {
-      final connectivityService = Get.find<ConnectivityService>();
-      _connectivitySubscription = connectivityService.onConnectivityChanged.listen((results) {
-        if (!results.contains(ConnectivityResult.none)) {
-          _syncPendingOfflineActions();
-        }
-      });
-    } catch (e) {
-      appLog("Error setting up connectivity listener: $e");
-    }
-  }
-
-  Future<void> _syncPendingOfflineActions() async {
-    try {
-      final pendingAll = storageServices.getPendingMarkAllRead();
-      final pendingIds = storageServices.getPendingMarkReadIds();
-      if (!pendingAll && pendingIds.isEmpty) return;
-
-      bool anySynced = false;
-
-      if (pendingAll) {
-        final success = await _notificationRepository.markAllNotificationsRead();
-        if (success) {
-          await storageServices.setPendingMarkAllRead(false);
-          await storageServices.clearPendingMarkReadIds();
-          anySynced = true;
-        }
-      } else {
-        final stillPending = <String>[];
-        for (final id in pendingIds) {
-          final success = await _notificationRepository.markNotificationRead(id);
-          if (!success) stillPending.add(id);
-        }
-        if (stillPending.length != pendingIds.length) anySynced = true;
-        await storageServices.clearPendingMarkReadIds();
-        for (final id in stillPending) {
-          await storageServices.addPendingMarkReadId(id);
-        }
-      }
-
-      if (anySynced) {
-        appLog("Offline mark-read queue synced");
-        AppSnackBar.success(AppString.offlineChangesSynced.tr);
-        // The server is the source of truth for isRead/unreadCount — a
-        // fresh fetch after syncing avoids any local state drifting from
-        // what actually got persisted (some queued ids can fail to sync
-        // individually, e.g. a notification deleted server-side since).
-        await fetchNotifications(isRefresh: true);
-      }
-    } catch (e) {
-      appLog("Error syncing pending offline actions: $e");
-    }
   }
 
   // Setup scroll listener for pagination
@@ -147,20 +54,28 @@ class NotificationScreenController extends GetxController
       }
     });
   }
-  //! Socket Calling
-  void socketCalling() async {
-    try{
-      var userId = storageServices.getUserId();
-      if(userId.isNotEmpty){
-        socketAllOperation.readEvent(event: "notification::$userId", handler: _handleNotification);
-        socketAllOperation.readEvent(event: "newProject::$userId", handler: _handleNewProject);
-        socketAllOperation.readEvent(event: "updateProject::$userId", handler: _handleUpdateProject);
-        socketAllOperation.readEvent(event: "removeProject::$userId", handler: _handleDeleteProject);
-        socketAllOperation.readEvent(event: "note::$userId", handler: _handleDeleteNote);
-      }
+  String? _registeredSocketUserId;
 
-    } catch(e){
-      appLog("Error socketCalling: $e");
+  /// Registers notification + new-project inbox socket channels (Phase 2).
+  void registerNotificationSocketListeners() {
+    try {
+      final userId = storageServices.getUserId();
+      if (userId.isEmpty) return;
+      if (_registeredSocketUserId == userId) return;
+      _registeredSocketUserId = userId;
+
+      socketAllOperation.connectIfAuthenticated();
+      socketAllOperation.readEvent(
+        event: "notification::$userId",
+        handler: _handleNotification,
+      );
+      socketAllOperation.readEvent(
+        event: "newProject::$userId",
+        handler: _handleNewProject,
+      );
+      // Deferred: updatedProject::<authId>, note::<projectId> — see BACKEND_INTEGRATION_PLAN Phase 2.
+    } catch (e) {
+      appLog("Error registerNotificationSocketListeners: $e");
     }
   }
   //! Socket Event Handler - Real-time notification updates
@@ -190,8 +105,8 @@ class NotificationScreenController extends GetxController
         // Create a notification object for new project
         final projectNotification = _createProjectNotification(
           data, 
-          "New Project Created", 
-          "A new project has been created"
+          'newProjectCreated'.tr, 
+          'newProjectCreatedBody'.tr
         );
         if (projectNotification != null) {
           _addNewNotificationOptimized(projectNotification);
@@ -202,65 +117,16 @@ class NotificationScreenController extends GetxController
     }
   }
 
-  //! Socket Event Handler - Project update notifications
-  void _handleUpdateProject(dynamic data) {
-    appLog("Update Project received: $data");
-    try {
-      if (data != null) {
-        final projectNotification = _createProjectNotification(
-          data, 
-          "Project Updated", 
-          "A project has been updated"
-        );
-        if (projectNotification != null) {
-          _addNewNotificationOptimized(projectNotification);
-        }
-      }
-    } catch (e) {
-      appLog("Error handling project update: $e");
-    }
-  }
-
-  //! Socket Event Handler - Project deletion notifications
-  void _handleDeleteProject(dynamic data) {
-    appLog("Delete Project received: $data");
-    try {
-      if (data != null) {
-        final projectNotification = _createProjectNotification(
-          data, 
-          "Project Deleted", 
-          "A project has been deleted"
-        );
-        if (projectNotification != null) {
-          _addNewNotificationOptimized(projectNotification);
-        }
-      }
-    } catch (e) {
-      appLog("Error handling project deletion: $e");
-    }
-  }
-
-  //! Socket Event Handler - Note deletion notifications
-  void _handleDeleteNote(dynamic data) {
-    appLog("Delete Note received: $data");
-    try {
-      if (data != null) {
-        final noteNotification = _createNoteNotification(
-          data, 
-          "Note Deleted", 
-          "A note has been deleted"
-        );
-        if (noteNotification != null) {
-          _addNewNotificationOptimized(noteNotification);
-        }
-      }
-    } catch (e) {
-      appLog("Error handling note deletion: $e");
-    }
-  }
-
   // Fetch initial notifications
   Future<void> fetchNotifications({bool isRefresh = false}) async {
+    // TEMPORARY demo mode — show sample notifications without a backend.
+    if (kDemoMode) {
+      notifications.assignAll(DemoData.notifications.data?.data ?? []);
+      hasError.value = false;
+      isLoading.value = false;
+      hasMoreData.value = false;
+      return;
+    }
     try {
       if (isRefresh) {
         currentPage.value = 1;
@@ -277,7 +143,7 @@ class NotificationScreenController extends GetxController
       if (response.success == true && response.data != null) {
         final newNotifications = response.data!.data ?? [];
 
-        if (isRefresh) {
+        if (isRefresh || notifications.isEmpty) {
           notifications.assignAll(newNotifications);
         } else {
           notifications.addAll(newNotifications);
@@ -286,18 +152,17 @@ class NotificationScreenController extends GetxController
         if (response.data!.meta != null) {
           totalPages.value = response.data!.meta!.totalPages ?? 1;
           hasMoreData.value = currentPage.value < totalPages.value;
-          unreadCount.value = response.data!.meta!.unreadCount ?? unreadCount.value;
         }
         appLog(
           "Notifications loaded successfully: ${notifications.length} items",
         );
       } else {
         hasError.value = true;
-        errorMessage.value = response.message ?? 'Failed to load notifications';
+        errorMessage.value = response.message ?? 'failedLoadNotifications'.tr;
       }
     } catch (e) {
       hasError.value = true;
-      errorMessage.value = 'An error occurred while loading notifications';
+      errorMessage.value = 'errLoadNotifications'.tr;
       appLog("Error fetching notifications: $e");
     } finally {
       isLoading.value = false;
@@ -310,9 +175,6 @@ class NotificationScreenController extends GetxController
 
     try {
       currentPage.value++;
-      // Was previously called with no page argument at all — every "load
-      // more" silently refetched page 1 instead of advancing, a
-      // pre-existing bug caught while wiring real pagination through here.
       final response = await _notificationRepository.fetchAlltheNotificaton(
         page: currentPage.value,
       );
@@ -321,9 +183,6 @@ class NotificationScreenController extends GetxController
         final newNotifications = response.data!.data ?? [];
         notifications.addAll(newNotifications);
         hasMoreData.value = currentPage.value < totalPages.value;
-        if (response.data!.meta != null) {
-          unreadCount.value = response.data!.meta!.unreadCount ?? unreadCount.value;
-        }
       }
     } catch (e) {
       currentPage.value--; // Rollback page increment on error
@@ -331,75 +190,60 @@ class NotificationScreenController extends GetxController
     }
   }
 
-  /// Marks one notification read: optimistic local update always applied
-  /// first (instant UI feedback), then persisted to the backend. If the
-  /// device is offline (or the call otherwise fails), the action is queued
-  /// via StorageServices and replayed by _syncPendingOfflineActions once
-  /// connectivity returns — the local state isn't rolled back, since the
-  /// user's intent ("I read this") is still valid and shouldn't silently
-  /// disappear just because the network request failed.
+  // Refresh notifications
+  Future<void> refreshNotifications() async {
+    await fetchNotifications(isRefresh: true);
+  }
+
   Future<void> markAsRead(String? id) async {
     if (id == null) return;
-    final index = notifications.indexWhere((n) => n.id == id);
-    if (index == -1) return;
-    if (notifications[index].isRead == true) return; // already read, nothing to do
-
-    notifications[index].isRead = true;
-    notifications.refresh();
-    if (unreadCount.value > 0) unreadCount.value--;
-
-    bool isOnline = true;
-    try {
-      isOnline = Get.find<ConnectivityService>().isConnected;
-    } catch (e) {
-      appLog("Error checking connectivity in markAsRead: $e");
-    }
-
-    if (!isOnline) {
-      await storageServices.addPendingMarkReadId(id);
-      AppSnackBar.customMessage(AppString.markedReadWillSyncOffline.tr);
+    if (kDemoMode) {
+      final index = notifications.indexWhere((n) => n.id == id);
+      if (index != -1) {
+        notifications[index].isRead = true;
+        notifications.refresh();
+      }
       return;
     }
 
+    final index = notifications.indexWhere((n) => n.id == id);
+    if (index == -1) return;
+    if (notifications[index].isRead == true) return;
+
+    notifications[index].isRead = true;
+    notifications.refresh();
+
     final success = await _notificationRepository.markNotificationRead(id);
     if (!success) {
-      await storageServices.addPendingMarkReadId(id);
+      notifications[index].isRead = false;
+      notifications.refresh();
+      AppSnackBar.error('errLoadNotifications'.tr);
     }
   }
 
-  /// Same optimistic-then-persist-then-queue-on-failure shape as
-  /// [markAsRead], for all notifications at once.
   Future<void> markAllAsRead() async {
-    if (unreadCount.value == 0) return;
+    final hasUnread =
+        notifications.any((n) => n.isRead != true);
+    if (!hasUnread) return;
+
+    if (kDemoMode) {
+      for (final n in notifications) {
+        n.isRead = true;
+      }
+      notifications.refresh();
+      return;
+    }
 
     for (final n in notifications) {
       n.isRead = true;
     }
     notifications.refresh();
-    unreadCount.value = 0;
-
-    bool isOnline = true;
-    try {
-      isOnline = Get.find<ConnectivityService>().isConnected;
-    } catch (e) {
-      appLog("Error checking connectivity in markAllAsRead: $e");
-    }
-
-    if (!isOnline) {
-      await storageServices.setPendingMarkAllRead(true);
-      AppSnackBar.customMessage(AppString.markedReadWillSyncOffline.tr);
-      return;
-    }
 
     final success = await _notificationRepository.markAllNotificationsRead();
     if (!success) {
-      await storageServices.setPendingMarkAllRead(true);
+      await refreshNotifications();
+      AppSnackBar.error('errLoadNotifications'.tr);
     }
-  }
-
-  // Refresh notifications
-  Future<void> refreshNotifications() async {
-    await fetchNotifications(isRefresh: true);
   }
 
   // Format notification time
@@ -410,7 +254,7 @@ class NotificationScreenController extends GetxController
     final difference = now.difference(dateTime);
 
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return 'justNow'.tr;
     } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
@@ -453,16 +297,15 @@ class NotificationScreenController extends GetxController
       if (existingIndex == -1) {
         // Add to the beginning of the list for newest-first display
         notifications.insert(0, newNotification);
-
+        
         // Maintain a reasonable list size for performance (optional)
         if (notifications.length > 100) {
           notifications.removeRange(100, notifications.length);
         }
-
+        
         // Trigger UI update
         notifications.refresh();
-        if (newNotification.isRead != true) unreadCount.value++;
-
+        
         appLog("New notification added: ${newNotification.title}");
       } else {
         // Update existing notification if needed
@@ -492,41 +335,19 @@ class NotificationScreenController extends GetxController
     }
   }
 
-  /// Creates a note notification from socket data
-  Datum? _createNoteNotification(dynamic data, String title, String body) {
-    try {
-      return Datum(
-        id: data['_id'] ?? data['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: title,
-        body: body,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        // Add other fields as needed based on your data structure
-      );
-    } catch (e) {
-      appLog("Error creating note notification: $e");
-      return null;
-    }
-  }
-
   /// Shows a visual indicator for new notifications (optional)
   void _showNewNotificationIndicator(Datum notification) {
     try {
-      // Shared with PushNotificationService's foreground FCM handler — the
-      // backend fires both a socket event and a push for the same event,
-      // so whichever arrives first here claims it and the other is
-      // suppressed, instead of showing two banners for one notification.
       if (!PushNotificationService.claimForDisplay(notification.id)) {
-        appLog("Socket notification indicator suppressed — already shown via push: ${notification.id}");
         return;
       }
       if (Get.isSnackbarOpen == false) {
         Get.snackbar(
-          notification.title ?? 'New Notification',
-          notification.body ?? 'You have a new notification',
+          notification.title ?? 'newNotification'.tr,
+          notification.body ?? 'newNotificationBody'.tr,
           duration: const Duration(seconds: 3),
           snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.blue.withValues(alpha: 0.8),
+          backgroundColor: Colors.blue.withOpacity(0.8),
           colorText: Colors.white,
           margin: const EdgeInsets.all(10),
           borderRadius: 8,
@@ -558,17 +379,12 @@ class NotificationScreenController extends GetxController
   /// Cleanup socket listeners to prevent memory leaks
    void _cleanupSocketListeners() {
      try {
-       var userId = storageServices.getUserId();
+       final userId = _registeredSocketUserId ?? storageServices.getUserId();
        if (userId.isNotEmpty) {
-         // Remove all socket event listeners for this user
-         socketAllOperation.appRootSocket?.off("notification::$userId");
-         socketAllOperation.appRootSocket?.off("newProject::$userId");
-         socketAllOperation.appRootSocket?.off("updateProject::$userId");
-         socketAllOperation.appRootSocket?.off("removeProject::$userId");
-         socketAllOperation.appRootSocket?.off("note::$userId");
-         
-         appLog("Socket listeners cleaned up for user: $userId");
+         socketAllOperation.removeHandlersForEvent("notification::$userId");
+         appLog("Notification socket listener removed for user: $userId");
        }
+       _registeredSocketUserId = null;
      } catch (e) {
        appLog("Error cleaning up socket listeners: $e");
      }
@@ -580,7 +396,7 @@ class NotificationScreenController extends GetxController
        socketAllOperation.reconnect();
        // Re-establish listeners after reconnection
        Future.delayed(const Duration(seconds: 1), () {
-         socketCalling();
+         registerNotificationSocketListeners();
        });
      } catch (e) {
        appLog("Error reconnecting socket: $e");

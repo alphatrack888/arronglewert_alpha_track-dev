@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:alpha_track/core/constant/app_storage_key.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +31,7 @@ class StorageServices {
     try {
       _prefs = await SharedPreferences.getInstance();
       _isInitialized = true;
-      print('SharedPreferences initialized successfully');
+      debugPrint('SharedPreferences initialized successfully');
     } catch (prefsError) {
       errorLog('SharedPreferences initialization failed', prefsError);
       rethrow;
@@ -106,7 +107,7 @@ class StorageServices {
     try {
       final token = _safeRead<String>(AppStorageKey.instance.token) ?? "";
       if (token.isEmpty) {
-        print("WARNING: getAccessToken returned empty string");
+        debugPrint("WARNING: getAccessToken returned empty string");
       }
       return token;
     } catch (e) {
@@ -150,7 +151,6 @@ class StorageServices {
     }
   }
 
-  // The FCM token last successfully registered with the backend (Phase 11).
   Future<void> setRegisteredDeviceToken(String value) async {
     try {
       await _safeWrite(AppStorageKey.instance.registeredDeviceToken, value);
@@ -161,57 +161,11 @@ class StorageServices {
 
   String getRegisteredDeviceToken() {
     try {
-      return _safeRead<String>(AppStorageKey.instance.registeredDeviceToken) ?? "";
+      return _safeRead<String>(AppStorageKey.instance.registeredDeviceToken) ??
+          "";
     } catch (e) {
       errorLog("get registered device token", e);
       return "";
-    }
-  }
-
-  // Offline mark-read queue (Phase 12).
-  List<String> getPendingMarkReadIds() {
-    try {
-      return _prefs?.getStringList(AppStorageKey.instance.pendingMarkReadIds) ?? [];
-    } catch (e) {
-      errorLog("get pending mark-read ids", e);
-      return [];
-    }
-  }
-
-  Future<void> addPendingMarkReadId(String id) async {
-    try {
-      final current = getPendingMarkReadIds();
-      if (!current.contains(id)) {
-        current.add(id);
-        await _safeWrite(AppStorageKey.instance.pendingMarkReadIds, current);
-      }
-    } catch (e) {
-      errorLog("add pending mark-read id", e);
-    }
-  }
-
-  Future<void> clearPendingMarkReadIds() async {
-    try {
-      await _safeWrite(AppStorageKey.instance.pendingMarkReadIds, <String>[]);
-    } catch (e) {
-      errorLog("clear pending mark-read ids", e);
-    }
-  }
-
-  Future<void> setPendingMarkAllRead(bool value) async {
-    try {
-      await _safeWrite(AppStorageKey.instance.pendingMarkAllRead, value);
-    } catch (e) {
-      errorLog("set pending mark-all-read", e);
-    }
-  }
-
-  bool getPendingMarkAllRead() {
-    try {
-      return _safeRead<bool>(AppStorageKey.instance.pendingMarkAllRead) ?? false;
-    } catch (e) {
-      errorLog("get pending mark-all-read", e);
-      return false;
     }
   }
 

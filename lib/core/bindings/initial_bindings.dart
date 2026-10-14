@@ -1,5 +1,6 @@
 import 'package:alpha_track/screens/auth_screen/forgot_password_screen/controller/forgot_password_controller.dart';
 import 'package:alpha_track/screens/auth_screen/login_screen/controller/login_screen_controller.dart';
+import 'package:alpha_track/screens/auth_screen/signup_screen/controller/signup_screen_controller.dart';
 import 'package:alpha_track/screens/auth_screen/otp_verificaiton_screen/controller/otp_verification_screen_controller.dart';
 import 'package:alpha_track/screens/auth_screen/reset_password_screen/controller/reset_password_screen_controller.dart';
 import 'package:alpha_track/screens/bottom_navigation/controller/bottom_navigation_screen_controller.dart';
@@ -47,6 +48,12 @@ class InitialBinding extends Bindings {
     Get.lazyPut<LoginScreenController>(() {
       appLog('Registering LoginScreenController');
       return LoginScreenController();
+    }, fenix: true);
+
+    //! Signup Screen Controller
+    Get.lazyPut<SignupScreenController>(() {
+      appLog('Registering SignupScreenController');
+      return SignupScreenController();
     }, fenix: true);
 
     //! OTP Verification Screen Controller

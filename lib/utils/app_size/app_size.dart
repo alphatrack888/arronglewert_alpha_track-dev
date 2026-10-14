@@ -2,7 +2,25 @@ import 'package:flutter/material.dart';
 
 class AppSize {
   AppSize._();
-  static late Size size;
+
+  static Size? _size;
+
+  /// Screen size cached from MediaQuery at app start (splash/error screens).
+  static set size(Size value) => _size = value;
+
+  /// Reads the cached size, or falls back to the real platform window if it
+  /// hasn't been set yet — e.g. a deep-link / web reload landing straight on a
+  /// screen that skips splash. Previously `late`, which threw
+  /// LateInitializationError (blank screen) on that path.
+  static Size get size {
+    final cached = _size;
+    if (cached != null) return cached;
+    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+    if (view != null) {
+      return view.physicalSize / view.devicePixelRatio;
+    }
+    return const Size(_xdWidth, _xdHeight);
+  }
 
   static const double _xdHeight = 882;
   static const double _xdWidth = 375;

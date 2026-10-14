@@ -53,7 +53,7 @@ class AppText extends StatelessWidget {
         textAlign: textAlign,
         maxLines: maxLines,
         overflow: overflow,
-        style: const TextStyle(fontFamily: 'Roboto', height: 1.5).copyWith(
+        style: const TextStyle(fontFamily: 'Hanken Grotesk', height: 1.5).copyWith(
           fontSize: fontSize,
           fontWeight: fontWeight,
           color: color,

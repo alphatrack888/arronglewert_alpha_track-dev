@@ -29,8 +29,6 @@ class NotificationRepository {
     }
   }
 
-  /// Returns true on success — callers use this (not an exception) to
-  /// decide whether to queue the action for offline retry.
   Future<bool> markNotificationRead(String id) async {
     try {
       final response = await apiServices.apiPatchServices(
@@ -61,7 +59,9 @@ class NotificationRepository {
         ApiUrls.notificationPreferences,
       );
       if (response == null || response['data'] == null) return null;
-      return NotificationPreferences.fromJson(response['data']);
+      return NotificationPreferences.fromJson(
+        response['data'] as Map<String, dynamic>,
+      );
     } catch (e) {
       appLog("getPreferences error: $e");
       return null;

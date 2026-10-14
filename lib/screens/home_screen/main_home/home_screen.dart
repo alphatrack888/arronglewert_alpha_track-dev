@@ -1,14 +1,19 @@
 import 'dart:ui';
 import 'package:alpha_track/core/app_route/app_route.dart';
-import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
+import 'package:alpha_track/screens/bottom_navigation/controller/bottom_navigation_screen_controller.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/controller/profile_controller.dart';
-import 'package:alpha_track/widgets/app_images/app_images.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_buttons.dart';
+import 'package:alpha_track/widgets/ds/ds_card.dart';
+import 'package:alpha_track/widgets/ds/ds_dialog.dart';
+import 'package:alpha_track/widgets/ds/ds_project_tile.dart';
+import 'package:alpha_track/widgets/ds/ds_running_project_card.dart';
+import 'package:alpha_track/widgets/ds/ds_section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:syncfusion_flutter_datepicker/datepicker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../utils/app_colors/app_colors.dart';
 import '../../../utils/app_icons/app_icons.dart';
@@ -27,744 +32,41 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Use Get.find to get the existing controller instance
   final HomeScreenController controller = Get.find<HomeScreenController>();
   final ProfileController profileController = Get.find<ProfileController>();
 
   @override
   void initState() {
     super.initState();
-    // Load projects when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadProjectList();
+      controller.initializeReportData();
     });
   }
 
-  void showTimeContineuDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            contentPadding: EdgeInsets.zero,
-            content: Container(
-              width: 300,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: AppColors.white100,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Location update indicator
-                  Obx(() {
-                    return controller.isLocationLoading
-                        ? Column(
-                            children: [
-                              LoadingAnimationWidget.beat(
-                                size: 50,
-                                color: AppColors.blue500,
-                              ),
-                              Gap(height: AppSize.height(value: 10)),
-                              AppText(
-                                text: 'Updating location...',
-                                fontSize: 14,
-                                color: AppColors.black400,
-                              ),
-                              Gap(height: AppSize.height(value: 10)),
-                            ],
-                          )
-                        : SizedBox.shrink();
-                  }),
-
-                  Gap(height: AppSize.height(value: 20)),
-                  Obx(() {
-                    int hours = (controller.elapsed.inMilliseconds / 3600000)
-                        .floor();
-                    return AppText(
-                      text:
-                          'You have been working for $hours hour${hours > 1 ? 's' : ''}. Do you want to continue or take a break?',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.black500,
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                    );
-                  }),
-                  Gap(height: AppSize.height(value: 20)),
-
-                  // Show current location (optional)
-                  Obx(() {
-                    return Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: AppColors.blue500,
-                          ),
-                          Gap(width: AppSize.width(value: 8)),
-                          Expanded(
-                            child: AppText(
-                              text: controller.formattedLocation,
-                              fontSize: 12,
-                              color: AppColors.black400,
-                              maxLines: 2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-
-                  Gap(height: AppSize.height(value: 20)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      AppButton(
-                        height: AppSize.height(value: 48),
-                        width: AppSize.width(value: 100),
-                        title: "Break",
-                        titleColor: AppColors.red,
-                        borderColor: AppColors.red,
-                        backgroundColor: AppColors.white100,
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          controller.onBreakPressed();
-                        },
-                      ),
-                      AppButton(
-                        height: AppSize.height(value: 48),
-                        width: AppSize.width(value: 100),
-                        title: "Continue",
-                        titleColor: AppColors.white100,
-                        backgroundColor: AppColors.blue500,
-                        onTap: () async {
-                          Navigator.of(context).pop();
-                          await controller.onContinuePressed();
-                        },
-                      ),
-                    ],
-                  ),
-                  Gap(height: AppSize.height(value: 20)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
+  // ---- small formatting helpers (presentation only) -------------------------
+  String _fmtHours(double? h) {
+    final v = h ?? 0;
+    final hh = v.floor();
+    final mm = ((v - hh) * 60).round();
+    return '${hh}h ${mm}m';
   }
 
-  Widget buildTodayContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Center(
-          child: Container(
-            height: AppSize.height(value: 220),
-            width: AppSize.width(value: 220),
-            decoration: BoxDecoration(
-              color: AppColors.blue50,
-              shape: BoxShape.circle,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Obx(
-                  () => AppText(
-                    text: controller.formattedTime,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black500,
-                  ),
-                ),
-                Gap(height: AppSize.height(value: 20)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Obx(
-                      () => AppButton(
-                        height: AppSize.height(value: 48),
-                        width: AppSize.width(value: 95),
-                        fontSize: AppSize.width(value: 13),
-                        title:
-                            controller.isRunning ||
-                                controller.elapsed.inSeconds > 0
-                            ? "Reset"
-                            : AppString.start.tr,
-                        titleColor: AppColors.white200,
-                        backgroundColor:
-                            controller.isRunning ||
-                                controller.elapsed.inSeconds > 0
-                            ? AppColors.red
-                            : AppColors.blue500,
-                        onTap: () {
-                          controller.toggleStartReset();
-                        },
-                      ),
-                    ),
-                    Gap(width: AppSize.width(value: 10)),
-                    Obx(
-                      () => GestureDetector(
-                        onTap: () {
-                          controller.togglePauseResume();
-                        },
-                        child: Container(
-                          height: AppSize.height(value: 50),
-                          width: AppSize.width(value: 50),
-                          decoration: BoxDecoration(
-                            color: AppColors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: controller.isPaused
-                                ? SvgPicture.asset(AppIcons.resumeIcons)
-                                : SvgPicture.asset(AppIcons.pauseIcon),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        Gap(height: AppSize.height(value: 23)),
-        AppText(
-          text: AppString.myallProject.tr,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.black500,
-        ),
-        Gap(height: AppSize.height(value: 10)),
-
-        // Fixed project list implementation
-        Obx(() {
-          if (controller.isProjectLoading) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: LoadingAnimationWidget.beat(
-                  size: 50,
-                  color: AppColors.blue500,
-                ),
-              ),
-            );
-          }
-
-          final projects = controller.allProjectData.value?.data?.data;
-
-          if (projects == null || projects.isEmpty) {
-            return Container(
-              padding: EdgeInsets.all(20),
-              child: AppText(
-                text: 'No projects available',
-                fontSize: 16,
-                color: AppColors.black400,
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: projects.map((project) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      controller.setCurrentProjectId(
-                        project.id ?? '',
-                        projectTitle: project.title ?? 'Untitled Project',
-                      );
-                    },
-                    child: Container(
-                      margin: EdgeInsets.only(bottom: 10),
-                      padding: EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: controller.isProjectSelected(project.id ?? '')
-                              ? AppColors.blue500
-                              : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              SvgPicture.asset(
-                                AppIcons.projectgray,
-                                height: AppSize.height(value: 20),
-                                width: AppSize.width(value: 20),
-                              ),
-                              Gap(width: AppSize.width(value: 10)),
-                              AppText(
-                                text: project.title ?? 'Untitled Project',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.black400,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                          Gap(height: 5),
-                          Row(
-                            children: [
-                              SvgPicture.asset(
-                                AppIcons.clockGray,
-                                height: AppSize.height(value: 20),
-                                width: AppSize.width(value: 20),
-                              ),
-                              Gap(width: AppSize.width(value: 10)),
-                              AppText(
-                                text: '${project.projectTime ?? 0} hours',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.black400,
-                              ),
-                              Spacer(),
-                              AppButton(
-                                title: "Details",
-                                backgroundColor: AppColors.blue500,
-                                titleColor: AppColors.white100,
-                                width: AppSize.width(value: 100),
-                                height: AppSize.height(value: 40),
-                                onTap: () => controller.gototheDetailsPage(),
-                              ),
-                            ],
-                          ),
-                          if (project.company?.name != null) ...[
-                            Gap(height: 5),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.business,
-                                  size: 20,
-                                  color: AppColors.black400,
-                                ),
-                                Gap(width: AppSize.width(value: 10)),
-                                AppText(
-                                  text: project.company!.name!,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.black400,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  Gap(height: AppSize.height(value: 10)),
-                ],
-              );
-            }).toList(),
-          );
-        }),
-      ],
-    );
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return '${'goodMorning'.tr},';
+    if (hour < 17) return '${'goodAfternoon'.tr},';
+    return '${'goodEvening'.tr},';
   }
 
-  Widget buildReportContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // SyncFusion DatePicker
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.blue50,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withAlpha(51),
-                blurRadius: 5.0,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: SfDateRangePicker(
-            selectionMode: DateRangePickerSelectionMode.single,
-            view: DateRangePickerView.month,
-            startRangeSelectionColor: AppColors.black500,
-            endRangeSelectionColor: AppColors.black500,
-            rangeSelectionColor: AppColors.white800,
-            backgroundColor: Colors.transparent,
-            selectionShape: DateRangePickerSelectionShape.rectangle,
-            headerStyle: const DateRangePickerHeaderStyle(
-              backgroundColor: AppColors.white100,
-              textStyle: TextStyle(
-                color: AppColors.black500,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            onSelectionChanged: (DateRangePickerSelectionChangedArgs args) {
-              if (args.value != null) {
-                controller.updateSelectedDate(args.value);
-              }
-            },
-          ),
-        ),
-
-        Gap(height: AppSize.height(value: 25)),
-
-        // Loading indicator for report data
-        Obx(() {
-          if (controller.reportLoadingState.value == LoadingState.loading) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: LoadingAnimationWidget.beat(
-                  size: 50,
-                  color: AppColors.blue500,
-                ),
-              ),
-            );
-          }
-          return SizedBox.shrink();
-        }),
-
-        AppText(
-          text: AppString.totalHours.tr,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.black500,
-          height: 1.5,
-        ),
-        Gap(height: AppSize.height(value: 5)),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Ensure the Row respects the parent's width
-            final availableWidth = constraints.maxWidth;
-            final containerWidth =
-                (availableWidth - AppSize.width(value: 10)) / 2; // Subtract gap
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                  width: containerWidth, // Use calculated width
-                  decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        text: AppString.today.tr,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.black400,
-                        height: 1.5,
-                      ),
-                      SizedBox(height: 8), // Replace Spacer with fixed height
-                      Obx(() {
-                        final todayHours =
-                            controller.workingHoursSummary.value?.data?.today ??
-                            0.0;
-                        return AppText(
-                          text: '${todayHours.toStringAsFixed(1)}h',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.black600,
-                          height: 1.5,
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                  width: containerWidth, 
-                  decoration: BoxDecoration(
-                    color: AppColors.blue50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        text: AppString.thisWeek.tr,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.black400,
-                        height: 1.5,
-                      ),
-                      SizedBox(height: 8), 
-                      Obx(() {
-                        final weekHours =
-                            controller
-                                .workingHoursSummary
-                                .value
-                                ?.data
-                                ?.thisWeek ??
-                            0.0;
-                        return AppText(
-                          text: '${weekHours.toStringAsFixed(1)}h',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.black600,
-                          height: 1.5,
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-        Gap(height: AppSize.height(value: 10)),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.blue50,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                text: AppString.thisMonth.tr,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.black400,
-                height: 1.5,
-              ),
-              SizedBox(height: 8), 
-              Obx(() {
-                final monthHours =
-                    controller.workingHoursSummary.value?.data?.thisMonth ??
-                    0.0;
-                return AppText(
-                  text: '${monthHours.toStringAsFixed(1)}h',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black600,
-                  height: 1.5,
-                );
-              }),
-            ],
-          ),
-        ),
-        Gap(height: AppSize.height(value: 20)),
-        AppText(
-          text: AppString.breakhours.tr,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.black500,
-          height: 1.5,
-        ),
-        Gap(height: AppSize.height(value: 10)),
-        Container(
-          width: double.infinity,
-          height: 200,
-          padding: EdgeInsets.all(16.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withAlpha(130),
-                spreadRadius: 2,
-                blurRadius: 5,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Obx(() {
-            final chartData = controller.getBarChartData();
-            final maxValue = chartData.reduce((a, b) => a > b ? a : b);
-            final chartMaxY = maxValue > 0 ? (maxValue + 1).ceilToDouble() : 6;
-
-            return BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceEvenly,
-                maxY: chartMaxY.toDouble(),
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                      String weekDay;
-                      switch (group.x.toInt()) {
-                        case 0:
-                          weekDay = 'Saturday'.tr;
-                          break;
-                        case 1:
-                          weekDay = 'Sunday'.tr;
-                          break;
-                        case 2:
-                          weekDay = 'Monday'.tr;
-                          break;
-                        case 3:
-                          weekDay = 'Tuesday'.tr;
-                          break;
-                        case 4:
-                          weekDay = 'Wednesday'.tr;
-                          break;
-                        case 5:
-                          weekDay = 'Thursday'.tr;
-                          break;
-                        case 6:
-                          weekDay = 'Friday'.tr;    
-                          break;
-                        default:
-                          weekDay = '';
-                      }
-                      return BarTooltipItem(
-                        '$weekDay\n${rod.toY.toStringAsFixed(1)}h',
-                        TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        const style = TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 11,
-                        );
-                        String text;
-                        switch (value.toInt()) {
-                          case 0:
-                            text = 'Sat'.tr;
-                            break;
-                          case 1:
-                            text = 'Sun'.tr;
-                            break;
-                          case 2:
-                            text = 'Mon'.tr;
-                            break;
-                          case 3:
-                            text = 'Tue'.tr;
-                            break;
-                          case 4:
-                            text = 'Wed'.tr;
-                            break;
-                          case 5:
-                            text = 'Thu'.tr;
-                            break;
-                          case 6:
-                            text = 'Fri'.tr;  
-                            break;
-                          default:
-                            text = '';
-                            break;
-                        }
-                        return SideTitleWidget(
-                          space: 4,
-                          meta: meta,
-                          child: Text(text, style: style),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      interval: 1,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        if (value == 0) return Container();
-                        return SideTitleWidget(
-                          space: 4,
-                          meta: meta,
-                          child: Text(
-                            '${value.toInt()}h',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(
-                  show: true,
-                  drawHorizontalLine: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 1,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey.withValues(alpha: 0.2),
-                      strokeWidth: 1,
-                      dashArray: [3, 3],
-                    );
-                  },
-                ),
-                barGroups: List.generate(7, (index) {
-                  final value = chartData[index];
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: value,
-                        color: value > 0
-                            ? AppColors.blue500
-                            : Colors.grey.withValues(alpha: 0.3),
-                        width: 24,
-                        borderRadius: BorderRadius.circular(6),
-                        backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: chartMaxY.toDouble(),
-                          color: Colors.grey.withValues(alpha: 0.1),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-              ),
-            );
-          }),
-        ),
-        Gap(height: AppSize.height(value: 40)),
-      ],
-    );
+  String get _todayLabel {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final now = DateTime.now();
+    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
 
   @override
@@ -774,147 +76,658 @@ class _HomeScreenState extends State<HomeScreen> {
     };
 
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 70,
-        backgroundColor: AppColors.white200,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(100)),
-            child: Obx(
-              () => AppImage(
-                width: 40,
-                height: 40,
-                url: profileController.profileData.value?.data?.profile,
-              ),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            controller.loadProjectList();
+            await controller.refreshData();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 18),
+                Obx(() {
+                  if (controller.isOnBreak) return _buildBreakView();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTimerCard(),
+                      const SizedBox(height: 16),
+                      controller.isRunning
+                          ? _buildSessionActions()
+                          : _buildStatCards(),
+                      const SizedBox(height: 24),
+                      DsSectionHeader(
+                        title: 'recentProjects'.tr,
+                        actionLabel: 'seeAll'.tr,
+                        isTranslate: false,
+                        onAction: () =>
+                            Get.find<BottomNavScreenController>()
+                                .onItemTapped(1),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildRecentProjects(),
+                    ],
+                  );
+                }),
+              ],
             ),
           ),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppText(
-              text: AppString.hello.tr,
-              fontSize: AppSize.width(value: 18),
-              fontWeight: FontWeight.w500,
-              color: AppColors.black500,
-            ),
-            Obx(
-              () => AppText(
-                text: profileController.fullName.tr,
-                fontSize: AppSize.width(value: 15),
-                fontWeight: FontWeight.w500,
-                color: AppColors.black500,
-              ),
-            ),
-          ],
+      ),
+    );
+  }
+
+  // ---- header ---------------------------------------------------------------
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        // Profile avatar removed — it had no functionality behind it.
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_greeting, style: AppTextStyles.subtitle),
+              Obx(() {
+                final name = profileController.fullName;
+                return Text(
+                  name.isNotEmpty ? name : 'greetingFallback'.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.title,
+                );
+              }),
+            ],
+          ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
+        _circleIconButton(
+          child: SvgPicture.asset(AppIcons.notificationIcons, width: 20, height: 20),
+          onTap: () => Get.toNamed(AppRoute.notificationScreen),
+        ),
+        const SizedBox(width: 10),
+        _circleIconButton(
+          child: const Icon(LucideIcons.barChart3,
+              size: 20, color: AppColors.textSecondary),
+          onTap: () => Get.toNamed(AppRoute.reportScreen),
+        ),
+      ],
+    );
+  }
+
+  Widget _circleIconButton({required Widget child, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: child,
+      ),
+    );
+  }
+
+  // ---- timer card (idle / running) -----------------------------------------
+  Widget _buildTimerCard() {
+    final running = controller.isRunning;
+    final today = controller.workingHoursSummary.value?.data?.today ?? 0.0;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: running
+            ? AppColors.runningCardGradient
+            : AppColors.timerCardGradient,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('TODAY',
+                  style: AppTextStyles.eyebrow.copyWith(
+                      color: AppColors.white50.withValues(alpha: 0.85),
+                      letterSpacing: 1)),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.white50.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(LucideIcons.calendar,
+                      size: 12, color: AppColors.white50.withValues(alpha: 0.9)),
+                  const SizedBox(width: 6),
+                  Text(_todayLabel,
+                      style: AppTextStyles.caption.copyWith(color: AppColors.white50)),
+                ]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(_fmtHours(today),
+              style: AppTextStyles.timer.copyWith(color: AppColors.white50)),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('dailyGoal'.tr,
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white50)),
+              Text('${_fmtHours(today)} / 8h',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white50)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: (today / 8).clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: AppColors.white50.withValues(alpha: 0.25),
+              valueColor: const AlwaysStoppedAnimation(AppColors.white50),
+            ),
+          ),
+          const SizedBox(height: 16),
+          running ? _runningProjectRow() : _startButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _startButton() {
+    return PrimaryButton(
+      label: AppString.start,
+      svgIcon: null,
+      icon: LucideIcons.play,
+      color: AppColors.white50.withValues(alpha: 0.22),
+      textColor: AppColors.white50,
+      onTap: () => controller.toggleStartReset(),
+    );
+  }
+
+  Widget _runningProjectRow() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.white50.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: const BoxDecoration(
+                color: AppColors.success, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(controller.currentProjectTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodySemibold.copyWith(color: AppColors.white50)),
+          ),
+          Obx(() => Text(controller.formattedTime,
+              style: AppTextStyles.bodySemibold.copyWith(color: AppColors.white50))),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => controller.togglePauseResume(),
             child: Container(
-              padding: EdgeInsets.all(08),
+              width: 38, height: 38,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.blue50,
+                color: AppColors.white50,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: IconButton(
-                onPressed: () {
-                  Get.toNamed(AppRoute.notificationScreen);
-                },
-                icon: Obx(() {
-                  // NotificationScreenController is registered with
-                  // fenix:true in InitialBinding, so Get.find here either
-                  // reuses the existing instance (if the user has already
-                  // opened the notification screen this session) or
-                  // creates it fresh — either way this always reflects the
-                  // real unread count, not just while that screen is open.
-                  final unread = Get.find<NotificationScreenController>().unreadCount.value;
-                  return Badge(
-                    isLabelVisible: unread > 0,
-                    label: Text(unread > 9 ? '9+' : '$unread'),
-                    child: SvgPicture.asset(
-                      AppIcons.notificationIcons,
-                      width: 24,
-                      height: 24,
-                    ),
-                  );
-                }),
-              ),
+              child: Obx(() => Icon(
+                  controller.isPaused ? LucideIcons.play : LucideIcons.pause,
+                  color: AppColors.primary, size: 22)),
             ),
           ),
         ],
       ),
-      backgroundColor: AppColors.white200,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: AppSize.width(value: 20)),
+    );
+  }
+
+  // ---- session actions (running) -------------------------------------------
+  Widget _buildSessionActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: SecondaryButton(
+            label: 'takeABreak'.tr,
+            isTranslate: false,
+            icon: LucideIcons.coffee,
+            color: AppColors.warning,
+            onTap: () => controller.pause(),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SecondaryButton(
+            label: 'stopSession'.tr,
+            isTranslate: false,
+            icon: LucideIcons.square,
+            color: AppColors.danger,
+            onTap: () => controller.stop(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Project row inside the ON BREAK card: status dot + project/company + resume.
+  Widget _breakProjectRow() {
+    final white = AppColors.white50;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          // Same 8x8 status dot as the running (blue) card's project pill —
+          // previously this was a 10px dot inside a 36px halo, so the two
+          // cards' "dot" items looked nothing alike.
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: white, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(controller.currentProjectTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        AppTextStyles.bodySemibold.copyWith(color: white)),
+                const SizedBox(height: 2),
+                Text(controller.currentProjectCompany,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption
+                        .copyWith(color: white.withValues(alpha: 0.8))),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => controller.resume(),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(LucideIcons.play, color: white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- break view (on break) ------------------------------------------------
+  Widget _buildBreakView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ON BREAK card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: AppColors.breakCardGradient,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('onBreak'.tr,
+                      style: AppTextStyles.eyebrow.copyWith(
+                          color: AppColors.white50.withValues(alpha: 0.9),
+                          letterSpacing: 1)),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.white50.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      controller.breakStartedLabel,
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.white50),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Obx(() => Text(controller.formattedBreakTime,
+                  style: AppTextStyles.timer.copyWith(color: AppColors.white50))),
+              const SizedBox(height: 18),
+              _breakProjectRow(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Break reminder (hidden once snoozed via 'remindIn15'.tr)
+        Obx(() => controller.reminderVisible.value
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('breakReminder'.tr, style: AppTextStyles.eyebrow),
+                  const SizedBox(height: 12),
+                  DsCard(
+                    color: AppColors.warningSoft,
+                    border: false,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.warning,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(LucideIcons.triangleAlert,
+                              size: 18, color: AppColors.white50),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  'onBreakFor'.trParams({'min': '${controller.breakMinutes}'}),
+                                  style: AppTextStyles.bodySemibold),
+                              const SizedBox(height: 2),
+                              Text('comeBackToWork'.tr,
+                                  style: AppTextStyles.subtitle),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SecondaryButton(
+                                      label: 'remindIn15'.tr,
+                                      isTranslate: false,
+                                      height: 38,
+                                      color: AppColors.warning,
+                                      onTap: () => controller.snoozeReminder(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  PrimaryButton(
+                                    label: 'Dismiss',
+                                    isTranslate: false,
+                                    width: 100,
+                                    height: 38,
+                                    color: AppColors.danger,
+                                    onTap: () => controller.resume(),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              )
+            : const SizedBox.shrink()),
+        Text('todaysBreaks'.tr, style: AppTextStyles.eyebrow),
+        const SizedBox(height: 12),
+        Obx(() => _breakItem(AppColors.danger, 'currentBreak'.tr, 'inProgress'.tr,
+            controller.formattedBreakTime)),
+        _breakItem(const Color(0xFFE9856B), 'Lunch', '12:30 – 13:05', '35m'),
+        _breakItem(const Color(0xFFE9B98C), 'Coffee', '10:15 – 10:23', '8m'),
+      ],
+    );
+  }
+
+  Widget _breakItem(Color dot, String title, String subtitle, String trailing) {
+    return DsCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+                color: dot.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(LucideIcons.coffee, size: 15, color: dot),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.bodySemibold),
+                const SizedBox(height: 2),
+                Text(subtitle, style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          Text(trailing, style: AppTextStyles.bodySemibold),
+        ],
+      ),
+    );
+  }
+
+  // ---- stat cards (idle) ----------------------------------------------------
+  Widget _buildStatCards() {
+    return Obx(() {
+      final s = controller.workingHoursSummary.value?.data;
+      final week = s?.thisWeek ?? 0.0;
+      final month = s?.thisMonth ?? 0.0;
+      return Row(
+        children: [
+          _statCard('thisWeek'.tr, _fmtHours(week)),
+          const SizedBox(width: 12),
+          _statCard('thisMonth'.tr, _fmtHours(month)),
+          const SizedBox(width: 12),
+          _statCard('avgPerDay'.tr, _fmtHours(week / 7)),
+        ],
+      );
+    });
+  }
+
+  Widget _statCard(String label, String value) {
+    return Expanded(
+      child: DsCard(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Gap(height: AppSize.height(value: 25)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Spacer(),
-                Obx(
-                  () => AppButton(
-                    height: AppSize.height(value: 35),
-                    width: AppSize.width(value: 82),
-                    fontSize: AppSize.width(value: 12),
-                    title: AppString.today.tr,
-                    titleColor: controller.isTodaySelected.value
-                        ? AppColors.white200
-                        : AppColors.blue500,
-                    backgroundColor: controller.isTodaySelected.value
-                        ? AppColors.blue500
-                        : AppColors.white200,
-                    borderColor: controller.isTodaySelected.value
-                        ? AppColors.blue500
-                        : AppColors.blue500,
-                    onTap: () => controller.selectToday(),
-                  ),
-                ),
-                Gap(width: AppSize.width(value: 10)),
-                Obx(
-                  () => AppButton(
-                    height: AppSize.height(value: 35),
-                    width: AppSize.width(value: 82),
-                    // Was labeled "Report" — confusing alongside the real
-                    // generated PDF reports added under Profile > Reports
-                    // (Phase 13), since this toggle only ever shows
-                    // working-hours/break-hours charts.
-                    title: AppString.overview.tr,
-                    fontSize: AppSize.width(value: 12),
-                    titleColor: controller.isTodaySelected.value
-                        ? AppColors.blue500
-                        : AppColors.white200,
-                    backgroundColor: controller.isTodaySelected.value
-                        ? AppColors.white200
-                        : AppColors.blue500,
-                    borderColor: controller.isTodaySelected.value
-                        ? AppColors.blue500
-                        : AppColors.blue500,
-                    onTap: () {
-                      controller.selectReport();
-                    },
-                  ),
-                ),
-              ],
-            ),
-            Gap(height: AppSize.height(value: 25)),
-            // Wrap content inside Obx to reactively rebuild when isTodaySelected changes
-            Obx(() {
-              if (controller.isTodaySelected.value) {
-                return buildTodayContent();
-              } else {
-                return buildReportContent();
-              }
-            }),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption),
+            const SizedBox(height: 8),
+            Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.titleSmall),
           ],
         ),
       ),
+    );
+  }
+
+  // ---- recent projects ------------------------------------------------------
+  Widget _buildRecentProjects() {
+    return Obx(() {
+      if (controller.isProjectLoading) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: LoadingAnimationWidget.beat(
+                size: 40, color: AppColors.primary),
+          ),
+        );
+      }
+      final projects = controller.allProjectData.value?.data?.data;
+      if (projects == null || projects.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Text('noProjectsAvailable'.tr, style: AppTextStyles.subtitle),
+          ),
+        );
+      }
+      return Column(
+        children: projects.map((project) {
+          final title = project.title ?? 'untitledProject'.tr;
+          final company = project.company?.name ?? 'Active';
+          final isThis = controller.currentProjectId == (project.id ?? '');
+          final running = isThis && controller.isRunning;
+          final paused = isThis && controller.isPaused;
+          // The project being tracked shows the expanded running card.
+          if (running || paused) {
+            return DsRunningProjectCard(
+              title: title,
+              company: company,
+              today: _fmtMins(project.projectTime),
+              thisWeek: _fmtMins(project.duration),
+              billable: '\$0',
+              paused: paused,
+              onStop: () => controller.stop(),
+              onToggle: () => controller.togglePauseResume(),
+              onTap: () {
+                controller.setCurrentProjectId(project.id ?? '',
+                    projectTitle: title);
+                controller.gototheDetailsPage();
+              },
+            );
+          }
+          return DsProjectTile(
+            title: title,
+            subtitle: company,
+            trailingText: '${project.projectTime ?? 0}h',
+            trailingSub: 'today1'.tr,
+            onTap: () {
+              controller.setCurrentProjectId(project.id ?? '',
+                  projectTitle: title);
+              controller.gototheDetailsPage();
+            },
+            onAction: () {
+              controller.setCurrentProjectId(project.id ?? '',
+                  projectTitle: title);
+              controller.toggleStartReset();
+            },
+          );
+        }).toList(),
+      );
+    });
+  }
+
+  String _fmtMins(int? m) =>
+      (m == null || m <= 0) ? '0h 0m' : '${m ~/ 60}h ${m % 60}m';
+
+  // ---------------------------------------------------------------------------
+  // Hourly "continue or break" dialog — wiring preserved from the original.
+  // ---------------------------------------------------------------------------
+  void showTimeContineuDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return DsDialog(
+          title: 'timeForBreakQ'.tr,
+          tone: DsDialogTone.info,
+          icon: LucideIcons.clock,
+          barrierDismissible: false,
+          cancelLabel: 'Break',
+          confirmLabel: 'Continue',
+          onCancel: () {
+            controller.onBreakPressed();
+          },
+          onConfirm: () async {
+            await controller.onContinuePressed();
+          },
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Obx(() {
+                return controller.isLocationLoading
+                    ? Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Column(
+                          children: [
+                            LoadingAnimationWidget.beat(
+                                size: 40, color: AppColors.primary),
+                            const SizedBox(height: 8),
+                            Text('updatingLocation'.tr,
+                                style: AppTextStyles.caption),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink();
+              }),
+              Obx(() {
+                final hours =
+                    (controller.elapsed.inMilliseconds / 3600000).floor();
+                return Text(
+                  'workingForHours'.trParams({'hours': '$hours ${hours > 1 ? 'hourPlural'.tr : 'hourSingular'.tr}'}),
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.subtitle.copyWith(height: 1.45),
+                );
+              }),
+              const SizedBox(height: 16),
+              Obx(() {
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.mapPin,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          controller.formattedLocation,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 }
