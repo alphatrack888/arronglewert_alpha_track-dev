@@ -29,7 +29,7 @@
 
 ### Checklist
 
-- [ ] **0.1** Confirm `kDemoMode` is **off** in release builds without `--dart-define=DEMO_MODE=true` ([`lib/utils/demo_data/demo_data.dart`](lib/utils/demo_data/demo_data.dart)). _(Steps: [PHASE_0_RELEASE_VERIFICATION.md](PHASE_0_RELEASE_VERIFICATION.md).)_
+- [x] **0.1** Confirm `kDemoMode` is **off** in release builds without `--dart-define=DEMO_MODE=true` ([`lib/utils/demo_data/demo_data.dart`](lib/utils/demo_data/demo_data.dart)); debug default off after P0 ([PRODUCTION_PHASED_PLAN.md](PRODUCTION_PHASED_PLAN.md)). _(Device smoke: [PHASE_0_RELEASE_VERIFICATION.md](PHASE_0_RELEASE_VERIFICATION.md).)_
 - [x] **0.2** Remove or API-wire **Project Details → Notes** tab: stop initializing from `DemoData.projectNotes` ([`project_details_screen.dart`](lib/screens/home_screen/project_details/project_details_screen.dart)); use [`note_repository`](lib/services/repository/note_repository/note_repository.dart) like other note flows.
 - [x] **0.3** Audit all `DemoData` / `kDemoMode` call sites; document any remaining release paths (grep `DemoData`, `kDemoMode`). _(See [DEMO_MODE_AUDIT.md](DEMO_MODE_AUDIT.md).)_
 - [x] **0.4** Remove or gate debug-only token logging ([`api.dart`](lib/services/api/api.dart) — JWT substring removed; splash logs presence only).

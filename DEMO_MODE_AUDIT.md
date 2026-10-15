@@ -3,8 +3,8 @@
 `kDemoMode` is defined in [`lib/utils/demo_data/demo_data.dart`](lib/utils/demo_data/demo_data.dart):
 
 - **Release** (no `--dart-define=DEMO_MODE=true`): `kDemoMode == false` → real login and API paths.
-- **Debug**: demo on by default (`_demoReviewEnabled = true`).
-- **Reviewer builds**: `flutter build ... --dart-define=DEMO_MODE=true` forces demo in release.
+- **Debug** (default): `kDemoMode == false` → same as production auth (`_demoReviewEnabled = false`).
+- **Explicit demo**: `flutter run` or `flutter build ... --dart-define=DEMO_MODE=true` → demo data + orange **DEMO** banner ([`demo_mode_banner.dart`](lib/widgets/demo_mode_banner.dart)).
 
 ## Call sites (grep baseline 2026-10-14)
 

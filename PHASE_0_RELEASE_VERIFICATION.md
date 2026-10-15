@@ -16,6 +16,8 @@ flutter build apk --release
 
 Install the APK on a device with **no** existing session (or clear app data).
 
+**After P0 (2026-10-15):** `flutter run` without flags should also require login (debug no longer enables demo by default). UI-only demo: `flutter run --dart-define=DEMO_MODE=true`.
+
 | Check | Expected | Result | Notes |
 |-------|----------|--------|-------|
 | Cold start | Onboarding or login (not main app without credentials) | | |

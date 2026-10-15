@@ -5,6 +5,7 @@ import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/widgets/app_device_utils/app_device_utils.dart';
+import 'package:alpha_track/widgets/demo_mode_banner.dart';
 import 'package:alpha_track/widgets/getx_observer/getx_custome_observer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -129,6 +130,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       navigatorObservers: [NavigationObserver()],
       useInheritedMediaQuery: true,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => wrapWithDemoModeBanner(child),
       defaultTransition: Transition.fadeIn,
       transitionDuration: const Duration(milliseconds: 200),
       initialRoute: AppRoute.splashScreen,

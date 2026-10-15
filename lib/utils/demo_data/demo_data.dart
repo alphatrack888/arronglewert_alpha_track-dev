@@ -28,19 +28,15 @@ import 'package:alpha_track/screens/profile_screen/profile_screen_main/models/pr
 /// When [kDemoMode] is true, the app shows sample content WITHOUT a backend
 /// or login, so every redesigned screen can be reviewed populated.
 ///
-/// Demo mode is FORCE-DISABLED in release builds (via [kReleaseMode]) so demo
-/// data can never ship to production — no manual flag flip needed before a
-/// release. To use the real backend in debug too, set [_demoReviewEnabled] to
-/// false (or delete this file + its usages).
+/// Debug and release default to **real login** ([_demoReviewEnabled] is false).
+/// Demo is ON only when compiled with:
+///   flutter run --dart-define=DEMO_MODE=true
+///   flutter build apk --release --dart-define=DEMO_MODE=true  (reviewer only)
 ///
-/// EXCEPTION — reviewer/TestFlight builds: compile with
-///   flutter build ipa --dart-define=DEMO_MODE=true
-/// to force demo mode ON even in a release build, so a TestFlight tester or
-/// Apple reviewer can see the app populated WITHOUT a backend account. A normal
-/// release build (no flag) is unaffected and still requires real login.
+/// Production CI must never pass DEMO_MODE (see MOBILE_CI_CD.md).
 /// =====================================================================
 const bool _demoOverride = bool.fromEnvironment('DEMO_MODE');
-const bool _demoReviewEnabled = true;
+const bool _demoReviewEnabled = false;
 const bool kDemoMode = _demoOverride || (!kReleaseMode && _demoReviewEnabled);
 
 class DemoData {

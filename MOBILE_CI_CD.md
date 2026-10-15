@@ -5,6 +5,10 @@ Production iOS bundle ID: `com.marc.alphatrack`.
 The client has confirmed both store records and signing setup. Implementation
 proceeds on that basis; there is no additional identity-verification prerequisite.
 
+## Pilot / production testing on device
+
+Use a **release** APK or AAB from **Mobile release** (or `flutter build apk --release` without `DEMO_MODE`). Do **not** validate pilot behavior with `flutter run` or a debug APK unless you intentionally pass `--dart-define=DEMO_MODE=true` for UI review. See [PRODUCTION_PHASED_PLAN.md](PRODUCTION_PHASED_PLAN.md) P0.
+
 ## Android development and tag releases
 
 Work on `dev` and open a PR into `main`. Pushes to either branch and PRs into
