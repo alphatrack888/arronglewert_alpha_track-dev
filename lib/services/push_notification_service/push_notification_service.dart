@@ -6,6 +6,7 @@ import 'package:alpha_track/services/api/api_services.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
+import 'package:alpha_track/services/push_notification_service/device_register_paths.dart';
 import 'package:alpha_track/utils/notification_routing/notification_routing.dart';
 import 'package:alpha_track/utils/notification_routing/pending_notification_route.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -167,7 +168,10 @@ class PushNotificationService {
 
     try {
       await _apiServices.apiDeleteServices(
-        url: "${ApiUrls.deviceDeregisterBase}$token",
+        url: DeviceRegisterPaths.deregisterUrl(
+          ApiUrls.deviceDeregisterBase,
+          token,
+        ),
       );
     } catch (e) {
       errorLog("deregisterCurrentToken", e);

@@ -161,9 +161,9 @@ Follow **Phase 2** in [BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRATION_PLAN.md)
 
 ### Tasks
 
-- [ ] Firebase `google-services.json` for `com.marcgelwertz.alphatrack` (local + `ANDROID_GOOGLE_SERVICES_JSON_BASE64` on CI)
-- [ ] Follow **3.1–3.5** in integration plan
-- [ ] Logout calls deregister (already wired from profile; verify after P1 storage clear)
+- [x] Firebase `google-services.json` for `com.marcgelwertz.alphatrack` (local + `ANDROID_GOOGLE_SERVICES_JSON_BASE64` on CI) _(P5 audit 2026-10-16.)_
+- [x] Follow **3.1–3.4** in integration plan; **3.5** device — [PHASE_P5_FCM_DEVICE.md](PHASE_P5_FCM_DEVICE.md) on **`v1.0.8+`**
+- [x] Logout calls deregister before `storageClear` _(verified; P5.1 deregister URL encode)_
 
 ### Exit criteria
 

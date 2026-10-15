@@ -22,7 +22,12 @@ class SplashScreenController extends GetxController {
         await EmployeeSocketSubscriptions.primeUserIdFromProfileIfNeeded();
         Get.offNamed(AppRoute.bottomNavigation);
         PushNotificationService.instance.onAuthenticatedNavigationReady();
-        await PushNotificationService.instance.refreshRegistrationIfNeeded();
+        final storage = StorageServices.instance;
+        if (storage.getRegisteredDeviceToken().isEmpty) {
+          await PushNotificationService.instance.registerCurrentToken();
+        } else {
+          await PushNotificationService.instance.refreshRegistrationIfNeeded();
+        }
       } else if (StorageServices.instance.getOnboardScreen()) {
         appLog("No token; onboard complete — navigating to Login");
         Get.offNamed(AppRoute.loginScreen);

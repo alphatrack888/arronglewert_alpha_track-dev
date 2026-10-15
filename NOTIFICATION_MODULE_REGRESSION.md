@@ -26,7 +26,7 @@ Record **Pass / Fail / N/A**, device model, app version (`pubspec.yaml`), tester
 | Notes / leave / gallery / payroll | Smoke: primary flows unchanged | | |
 | Notifications REST | List, pagination, mark one/all read | Pending device | Automated: `notification_inbox_pagination_test.dart` (2026-10-16). Manual: [PHASE_P3_NOTIFICATIONS_REST.md](PHASE_P3_NOTIFICATIONS_REST.md); target **`v1.0.6+`** |
 | Socket | Live inbox insert; snackbar dedupe with push | Pending device | Code: resume reconnect + `socket_channel_names_test.dart` (2026-10-16). Manual: [PHASE_P4_SOCKET_DEVICE.md](PHASE_P4_SOCKET_DEVICE.md); **`v1.0.7+`** |
-| Push | Foreground, background, killed-state tap routing | | |
+| Push | Foreground, background, killed-state tap routing | Pending device | `device_register_url_test.dart` (2026-10-16). Manual: [PHASE_P5_FCM_DEVICE.md](PHASE_P5_FCM_DEVICE.md); **`v1.0.8+`** |
 | Preferences | GET/PATCH, push off/on, category toggle | | |
 
 ## 4.4 — Client sign-off

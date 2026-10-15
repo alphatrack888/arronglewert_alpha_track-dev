@@ -129,11 +129,11 @@
 
 ### Checklist
 
-- [ ] **3.1** Add Firebase to app: `firebase_core`, `firebase_messaging`; Android `google-services` plugin; iOS `GoogleService-Info.plist` for **`com.marcgelwertz.alphatrack`**.
-- [ ] **3.2** Port [`PushNotificationService`](../arronglewert_alpha_track-dev/lib/services/push_notification_service/push_notification_service.dart) + routing/dedupe as needed ([`notification_routing`](../arronglewert_alpha_track-dev/lib/utils/notification_routing/)).
-- [ ] **3.3** Call `initialize()` from [`main.dart`](lib/main.dart); `registerCurrentToken()` after login; deregister on logout ([`profile_screen`](lib/screens/profile_screen/profile_screen_main/profile_screen.dart)).
-- [ ] **3.4** Add `POST_NOTIFICATIONS` to Android manifest when targeting current SDK.
-- [ ] **3.5** Manual test: login → register device → send test notification from backend/admin → push received on device **with app killed**.
+- [x] **3.1** Add Firebase to app: `firebase_core`, `firebase_messaging`; Android `google-services` plugin; iOS `GoogleService-Info.plist` for **`com.marcgelwertz.alphatrack`**. _(Android verified P5 2026-10-16; iOS deferred.)_
+- [x] **3.2** Port [`PushNotificationService`](../arronglewert_alpha_track-dev/lib/services/push_notification_service/push_notification_service.dart) + routing/dedupe as needed ([`notification_routing`](../arronglewert_alpha_track-dev/lib/utils/notification_routing/)). _(Verified P5.)_
+- [x] **3.3** Call `initialize()` from [`main.dart`](lib/main.dart); `registerCurrentToken()` after login; deregister on logout ([`profile_screen`](lib/screens/profile_screen/profile_screen_main/profile_screen.dart)). _(P5.1: splash registers when stored device token empty.)_
+- [x] **3.4** Add `POST_NOTIFICATIONS` to Android manifest when targeting current SDK. _(Verified.)_
+- [ ] **3.5** Manual test: login → register device → send test notification from backend/admin → push received on device **with app killed**. _( [PHASE_P5_FCM_DEVICE.md](PHASE_P5_FCM_DEVICE.md); build **`v1.0.8+`**.)_
 
 ### Exit criteria
 
