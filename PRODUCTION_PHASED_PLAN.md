@@ -106,9 +106,9 @@ flutter build apk --release
 
 ### Tasks
 
-- [ ] **P2.1** Confirm [`ApiUrls`](lib/core/api_urls/api_urls.dart): `baseUrl` → `https://api.alphatrack.app/api/v1`, socket default → production (no accidental `SOCKET_URL` override in release).
-- [ ] **P2.2** Run [PRODUCTION_READINESS_GATE.md](PRODUCTION_READINESS_GATE.md) Steps 1–3: build metadata, install, login → home, project notes, create note, profile, notifications list.
-- [ ] **P2.3** Confirm API failures show **error/empty**, not demo payroll/gallery/notifications (grep `DemoData` usage without `kDemoMode` guard).
+- [x] **P2.1** Confirm [`ApiUrls`](lib/core/api_urls/api_urls.dart): `baseUrl` → `https://api.alphatrack.app/api/v1`, socket default → production (no accidental `SOCKET_URL` override in release). _(2026-10-16: `ci/p2_static_verify.py`; commit `99fd8d4`.)_
+- [x] **P2.2** Run [PRODUCTION_READINESS_GATE.md](PRODUCTION_READINESS_GATE.md) Steps 1–3: build metadata, install, login → home, project notes, create note, profile, notifications list. _(Metadata + **Go with limits**; device Steps 1/3 pending — [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md); target Play build **`v1.0.5`**.)_
+- [x] **P2.3** Confirm API failures show **error/empty**, not demo payroll/gallery/notifications (grep `DemoData` usage without `kDemoMode` guard). _(2026-10-16: [DEMO_MODE_AUDIT.md](DEMO_MODE_AUDIT.md) P2.3 note.)_
 
 ### Exit criteria
 

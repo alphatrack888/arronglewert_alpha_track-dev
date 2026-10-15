@@ -15,17 +15,20 @@ Single entry point for **Android internal pilot** go/no-go against `https://api.
 | Field | Value |
 |-------|-------|
 | App version (`pubspec.yaml`) | 1.0.0+17 |
+| Release tag (P2 target) | **`v1.0.5`** on `main` (includes P0/P1; `v1.0.4` = `61eaadd` without them) |
 | Application ID | `com.marcgelwertz.alphatrack` |
-| Git commit | _(fill: `git rev-parse HEAD`)_ |
-| APK built | _(fill date/time)_ |
-| Build command | `cd alpha_track_app && flutter build apk --release` |
-| `DEMO_MODE` | **must be unset** for pilot gate |
-| Device model / OS | |
-| Tester (developer) | |
-| Tester (client) | |
-| Session date | |
+| Git commit | `99fd8d44030aeea134211910c67f6073662c6e9d` (`fix(P1): full session clear on logout`) |
+| APK built | Mobile release workflow → Play **internal testing** (see tag `v1.0.5`) |
+| Build command | `.github/workflows/mobile-release.yml` — `flutter build appbundle --release` (no dart-defines) |
+| `DEMO_MODE` | **unset** (verified: `ci/p2_static_verify.py`) |
+| Device model / OS | _(fill during [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) session)_ |
+| Tester (developer) | _(fill)_ |
+| Tester (client) | _(fill)_ |
+| Session date | _(fill)_ |
 
-**APK path (after build):** `build/app/outputs/flutter-apk/app-release.apk`
+**Install:** Play internal or CI artifact — not local debug. Runbook: [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md).
+
+**Automated pre-check (2026-10-16):** `python3 ci/p2_static_verify.py` pass; `flutter analyze` (15 infos/warnings, no errors); `flutter test` 13/13 pass; production host reachable (`https://api.alphatrack.app/` HTTP 200).
 
 **Prerequisites:** `android/app/google-services.json` present locally; employee prod account; admin/second actor for push trigger tests; clean install or cleared app data for Step 1.
 
@@ -36,12 +39,13 @@ Single entry point for **Android internal pilot** go/no-go against `https://api.
 | Decision | Selected |
 |----------|----------|
 | **Go** — internal Android pilot | [ ] |
-| **Go with limits** (document below) | [ ] |
+| **Go with limits** (document below) | [x] |
 | **No-Go** (blockers below) | [ ] |
 
 **Blockers / limits (if any):**
 
-- 
+- **P2 automated scope complete** (P2.1 static, P2.3 `DemoData` audit, CI pre-checks). **Steps 1–3 device evidence** still required per [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) before upgrading to full **Go** for Phase 0 pilot.
+- **Known limits (non-blockers):** onboarding “Continue as Guest” may bypass auth; Android backup may restore prefs on reinstall (P1.4).
 
 ---
 
@@ -52,8 +56,8 @@ Single entry point for **Android internal pilot** go/no-go against `https://api.
 
 | Check | Expected | Result | Evidence |
 |-------|----------|--------|----------|
-| Cold start | Onboarding or login | | |
-| No token | Cannot reach home without login | | |
+| Cold start | Onboarding or login | Pending device | [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) §Step 1 |
+| No token | Cannot reach home without login | Pending device | Same |
 
 ---
 
@@ -63,9 +67,9 @@ During login and first home load (Logcat: filter paths / app logs; **no JWT** in
 
 | Check | Expected | Result | Evidence |
 |-------|----------|--------|----------|
-| REST | `api.alphatrack.app` | | |
-| Socket | Production host (no accidental `SOCKET_URL` override) | | |
-| Logs | No JWT substrings | | |
+| REST | `api.alphatrack.app` | Pass (static + test traffic) | `ApiUrls.baseUrl`; widget tests hit `https://api.alphatrack.app/api/v1/...` |
+| Socket | Production host (no accidental `SOCKET_URL` override) | Pass (static) | `socketUrl` default `liveDomain`; CI build has no `SOCKET_URL` define |
+| Logs | No JWT substrings | Pending device | Confirm on login/home in Logcat |
 
 ---
 
@@ -73,11 +77,11 @@ During login and first home load (Logcat: filter paths / app logs; **no JWT** in
 
 | Screen / flow | Expected | Result | Evidence |
 |---------------|----------|--------|----------|
-| Login → home | Real projects | | |
-| Project details → Notes | API notes or empty (not demo lawn copy) | | |
-| Create note | API save; list refreshes | | |
-| Profile | API-backed profile | | |
-| Notifications list | API-backed (not demo inbox in release) | | |
+| Login → home | Real projects | Pending device | [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) §Step 3 |
+| Project details → Notes | API notes or empty (not demo lawn copy) | Pending device | P2.3: `loadProjectNotes` clears on API error when `!kDemoMode` |
+| Create note | API save; list refreshes | Pending device | |
+| Profile | API-backed profile | Pending device | |
+| Notifications list | API-backed (not demo inbox in release) | Pending device | P2.3: all `DemoData` behind `kDemoMode` (audit 2026-10-16) |
 
 ---
 
@@ -135,6 +139,7 @@ Full table: [NOTIFICATION_MODULE_REGRESSION.md §4.3](NOTIFICATION_MODULE_REGRES
 
 ```bash
 cd alpha_track_app
+python3 ci/p2_static_verify.py
 flutter pub get
 flutter analyze --no-fatal-infos --no-fatal-warnings
 flutter test

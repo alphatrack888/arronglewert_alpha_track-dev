@@ -33,13 +33,13 @@
 - [x] **0.2** Remove or API-wire **Project Details → Notes** tab: stop initializing from `DemoData.projectNotes` ([`project_details_screen.dart`](lib/screens/home_screen/project_details/project_details_screen.dart)); use [`note_repository`](lib/services/repository/note_repository/note_repository.dart) like other note flows.
 - [x] **0.3** Audit all `DemoData` / `kDemoMode` call sites; document any remaining release paths (grep `DemoData`, `kDemoMode`). _(See [DEMO_MODE_AUDIT.md](DEMO_MODE_AUDIT.md).)_
 - [x] **0.4** Remove or gate debug-only token logging ([`api.dart`](lib/services/api/api.dart) — JWT substring removed; splash logs presence only).
-- [ ] **0.5** Verify `ApiUrls.baseUrl` and `socketUrl` default to production (`liveDomain`) in release configuration ([`api_urls.dart`](lib/core/api_urls/api_urls.dart)). _(Source verified; device smoke in [PHASE_0_RELEASE_VERIFICATION.md](PHASE_0_RELEASE_VERIFICATION.md).)_
+- [x] **0.5** Verify `ApiUrls.baseUrl` and `socketUrl` default to production (`liveDomain`) in release configuration ([`api_urls.dart`](lib/core/api_urls/api_urls.dart)). _(2026-10-16: `ci/p2_static_verify.py`; REST host in tests. Device socket/JWT log check: [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) Step 2.)_
 
 ### Exit criteria
 
 - Release APK (`flutter build apk --release`, no `DEMO_MODE`) requires login and shows **only API-backed** data on smoke-tested screens (home, profile, notifications list, project list).
 - No `DemoData` surfaces on those screens when API returns errors (show error/empty, not fabricated payroll/gallery/notifications).
-- **Sign-off:** Developer + client on one release build smoke test.
+- **Sign-off:** Developer + client on one release build smoke test. _(Partial P2: **Go with limits** in [PRODUCTION_READINESS_GATE.md](PRODUCTION_READINESS_GATE.md) until device Steps 1–3 complete.)_
 
 ---
 

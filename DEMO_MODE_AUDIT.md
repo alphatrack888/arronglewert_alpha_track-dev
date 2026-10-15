@@ -35,3 +35,5 @@
 ## Verification
 
 See [`PHASE_0_RELEASE_VERIFICATION.md`](PHASE_0_RELEASE_VERIFICATION.md) for release build commands and smoke checklist.
+
+**P2.3 (2026-10-16):** Re-grepped `lib/` — every `DemoData` use is inside `if (kDemoMode)` or only in `demo_data.dart`. Release API failure paths clear or error (e.g. `project_details_screen_controller.loadProjectNotes` → `projectNotes.clear()` + error state). Build target: `99fd8d4` / Play internal **`v1.0.5+`**.
