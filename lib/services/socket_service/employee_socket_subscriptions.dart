@@ -2,9 +2,9 @@ import 'package:alpha_track/screens/home_screen/main_home/controller/home_screen
 import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
 import 'package:alpha_track/services/repository/profile_repository/profile_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
-import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:get/get.dart';
 
 /// Connect socket and re-register channel listeners after profile persists user id.
@@ -31,6 +31,17 @@ class EmployeeSocketSubscriptions {
     } catch (e) {
       appLog('primeUserIdFromProfileIfNeeded: $e');
     }
+  }
+
+  /// Reconnect socket and re-register listeners after app returns to foreground.
+  static void onAppResumed() {
+    if (kDemoMode) return;
+
+    final token = StorageServices.instance.getAccessToken();
+    if (token.isEmpty) return;
+
+    AppSocketAllOperation.instance.connectIfAuthenticated();
+    onUserIdReady();
   }
 
   static void onUserIdReady() {

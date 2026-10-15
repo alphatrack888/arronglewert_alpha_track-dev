@@ -88,14 +88,15 @@
 
 ### Checklist
 
-- [ ] **2.1** Update [`socket_service.dart`](lib/services/socket_service/socket_service.dart): `setAuth({'token': accessToken})` (or query token) using [`StorageServices.getAccessToken()`](lib/services/storage_services/storage_services.dart); reconnect on token refresh/login.
-- [ ] **2.2** Confirm `socketUrl` host matches API (default `liveDomain`); document `SOCKET_URL` dart-define for local backend.
-- [ ] **2.3** Fix event subscriptions in [`notification_screen_controller.dart`](lib/screens/notification_screen/controller/notification_screen_controller.dart):
-  - `updatedProject::$authId` — resolve whether app stores **user profile id** vs **authId**; align with JWT payload and `setUserId` usage.
-  - `removedProject::$userId`
-  - `note::$projectId` — subscribe per active project or global note handler keyed by project membership.
-- [ ] **2.4** Initialize socket after login (or on app resume with valid token), disconnect on logout.
-- [ ] **2.5** Manual test: with app open on Notifications, trigger backend notification → list updates without pull-to-refresh.
+- [x] **2.1** Update [`socket_service.dart`](lib/services/socket_service/socket_service.dart): `setAuth({'token': accessToken})` (or query token) using [`StorageServices.getAccessToken()`](lib/services/storage_services/storage_services.dart); reconnect on token refresh/login. _(Verified P4 2026-10-16.)_
+- [x] **2.2** Confirm `socketUrl` host matches API (default `liveDomain`); document `SOCKET_URL` dart-define for local backend. _(P2.1 / `api_urls.dart`.)_
+- [x] **2.3** Fix event subscriptions in [`notification_screen_controller.dart`](lib/screens/notification_screen/controller/notification_screen_controller.dart):
+  - `updatedProject::$authId` — **deferred** (admin channel; see deferrals table).
+  - `removedProject::$userId` — home via [`SocketChannelNames`](lib/services/socket_service/socket_channel_names.dart).
+  - `note::$projectId` — **deferred**; notes via REST.
+  - `notification::` / `newProject::` — profile `_id` aligns with JWT `authId` / backend `to` field.
+- [x] **2.4** Initialize socket after login (or on app resume with valid token), disconnect on logout. _(P4: `EmployeeSocketSubscriptions.onAppResumed()` in `main.dart`.)_
+- [ ] **2.5** Manual test: with app open on Notifications, trigger backend notification → list updates without pull-to-refresh. _( [PHASE_P4_SOCKET_DEVICE.md](PHASE_P4_SOCKET_DEVICE.md); build **`v1.0.7+`**.)_
 
 ### Exit criteria
 

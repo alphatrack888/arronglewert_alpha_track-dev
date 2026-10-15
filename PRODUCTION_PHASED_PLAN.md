@@ -143,6 +143,10 @@ Follow checklist **1.1–1.5** in [BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRAT
 
 Follow **Phase 2** in [BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRATION_PLAN.md).
 
+- [x] JWT connect, channel names (`socket_channel_names.dart`), login/splash/logout lifecycle _(2026-10-16)_.
+- [x] App **resume** reconnect (`EmployeeSocketSubscriptions.onAppResumed`).
+- [ ] Device sign-off: [PHASE_P4_SOCKET_DEVICE.md](PHASE_P4_SOCKET_DEVICE.md) on Play **`v1.0.7+`**.
+
 ### Exit criteria
 
 - Socket connects after login; known events update UI without full refresh.

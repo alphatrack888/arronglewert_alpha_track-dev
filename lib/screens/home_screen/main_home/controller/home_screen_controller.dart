@@ -25,6 +25,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../services/repository/project_repository/project_repository.dart';
+import 'package:alpha_track/services/socket_service/socket_channel_names.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
 
 enum TimerState { stopped, running, paused }
@@ -104,11 +105,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
     _socket.connectIfAuthenticated();
     _socket.readEvent(
-      event: "newProject::$userId",
+      event: SocketChannelNames.newProjectChannel(userId),
       handler: _handleProjectListSocketEvent,
     );
     _socket.readEvent(
-      event: "removedProject::$userId",
+      event: SocketChannelNames.removedProjectChannel(userId),
       handler: _handleProjectListSocketEvent,
     );
   }

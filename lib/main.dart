@@ -1,6 +1,7 @@
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/core/bindings/initial_bindings.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
+import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -115,6 +116,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       PushNotificationService.instance.refreshRegistrationIfNeeded();
+      EmployeeSocketSubscriptions.onAppResumed();
     }
   }
 

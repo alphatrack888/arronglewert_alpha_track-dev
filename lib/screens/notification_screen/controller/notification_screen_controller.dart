@@ -2,6 +2,7 @@ import 'package:alpha_track/screens/notification_screen/models/notification_scre
 import 'package:alpha_track/screens/notification_screen/notification_inbox_pagination.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
+import 'package:alpha_track/services/socket_service/socket_channel_names.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -71,12 +72,16 @@ class NotificationScreenController extends GetxController {
       _registeredSocketUserId = userId;
 
       socketAllOperation.connectIfAuthenticated();
+      appLog(
+        'Socket subscribe channels: ${SocketChannelNames.notificationChannel(userId)}, '
+        '${SocketChannelNames.newProjectChannel(userId)} (userId=$userId)',
+      );
       socketAllOperation.readEvent(
-        event: "notification::$userId",
+        event: SocketChannelNames.notificationChannel(userId),
         handler: _handleNotification,
       );
       socketAllOperation.readEvent(
-        event: "newProject::$userId",
+        event: SocketChannelNames.newProjectChannel(userId),
         handler: _handleNewProject,
       );
       // Deferred: updatedProject::<authId>, note::<projectId> — see BACKEND_INTEGRATION_PLAN Phase 2.
@@ -388,7 +393,12 @@ class NotificationScreenController extends GetxController {
      try {
        final userId = _registeredSocketUserId ?? storageServices.getUserId();
        if (userId.isNotEmpty) {
-         socketAllOperation.removeHandlersForEvent("notification::$userId");
+         socketAllOperation.removeHandlersForEvent(
+           SocketChannelNames.notificationChannel(userId),
+         );
+         socketAllOperation.removeHandlersForEvent(
+           SocketChannelNames.newProjectChannel(userId),
+         );
          appLog("Notification socket listener removed for user: $userId");
        }
        _registeredSocketUserId = null;
