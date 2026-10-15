@@ -158,9 +158,9 @@
 ### Checklist
 
 - [x] **4.1** Add `ApiUrls.notificationPreferences`; port preferences screen from legacy if product requires push category toggles.
-- [ ] **4.2** Verify server push skip when `pushEnabled: false` — UI reflects server state after fetch. _(Run steps in [NOTIFICATION_MODULE_REGRESSION.md](NOTIFICATION_MODULE_REGRESSION.md).)_
-- [ ] **4.3** Regression matrix: login, timer, projects, notes, leave, gallery, payroll, notifications (REST + socket + push). _(Template: [NOTIFICATION_MODULE_REGRESSION.md](NOTIFICATION_MODULE_REGRESSION.md).)_
-- [ ] **4.4** Client sign-off: “Employee app meets notification expectations for internal/production rollout.” _(Template in same doc.)_
+- [ ] **4.2** Verify server push skip when `pushEnabled: false` — UI reflects server state after fetch. _(Device: [PHASE_P6_REGRESSION_SESSION.md](PHASE_P6_REGRESSION_SESSION.md) + [NOTIFICATION_MODULE_REGRESSION.md](NOTIFICATION_MODULE_REGRESSION.md) §4.2; **v1.0.9+** for post-save GET re-fetch.)_
+- [ ] **4.3** Regression matrix: login, timer, projects, notes, leave, gallery, payroll, notifications (REST + socket + push). _(Session guide: [PHASE_P6_REGRESSION_SESSION.md](PHASE_P6_REGRESSION_SESSION.md); matrix pending device.)_
+- [ ] **4.4** Client sign-off: “Employee app meets notification expectations for internal/production rollout.” _(Pending §4.2–4.3 pass on Play **v1.0.8+**.)_
 
 ### Exit criteria
 

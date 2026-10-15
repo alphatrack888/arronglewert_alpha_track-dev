@@ -85,6 +85,7 @@ class NotificationPreferencesController extends GetxController {
     try {
       final success = await _repository.updatePreferences(preferences.value);
       if (success) {
+        await fetchPreferences();
         AppSnackBar.success(AppString.preferencesSaved.tr);
       } else {
         AppSnackBar.error(AppString.preferencesSaveFailed.tr);

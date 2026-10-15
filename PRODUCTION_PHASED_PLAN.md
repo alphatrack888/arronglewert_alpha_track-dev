@@ -177,8 +177,9 @@ Follow **Phase 2** in [BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRATION_PLAN.md)
 
 ### Tasks
 
-- [ ] Run [NOTIFICATION_MODULE_REGRESSION.md](NOTIFICATION_MODULE_REGRESSION.md)
-- [ ] **4.2–4.4** in integration plan (preferences + client sign-off)
+- [x] Runbook + static audit: [PHASE_P6_REGRESSION_SESSION.md](PHASE_P6_REGRESSION_SESSION.md) (2026-10-16); P6.1 post-save `fetchPreferences` on PATCH success.
+- [ ] Device session on Play **v1.0.9+** (or v1.0.8 baseline): fill [NOTIFICATION_MODULE_REGRESSION.md](NOTIFICATION_MODULE_REGRESSION.md) **4.2–4.4** and gate Steps **4–6**.
+- [ ] **4.2–4.4** integration sign-off ([BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRATION_PLAN.md)) after device pass.
 
 ### Exit criteria
 

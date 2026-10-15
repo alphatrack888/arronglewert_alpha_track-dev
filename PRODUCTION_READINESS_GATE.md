@@ -91,11 +91,11 @@ Full table: [NOTIFICATION_MODULE_REGRESSION.md §4.2](NOTIFICATION_MODULE_REGRES
 
 | Step | Expected | Result | Evidence |
 |------|----------|--------|----------|
-| Login | Device register succeeds | | |
-| Open preferences | GET matches UI after reopen | | |
-| Push off + Save | No FCM on trigger; in-app OK | | |
-| Push on + Save | FCM on trigger | | |
-| Category off (e.g. project) | No push for that category | | |
+| Login | Device register succeeds | Pending device | [PHASE_P6_REGRESSION_SESSION.md](PHASE_P6_REGRESSION_SESSION.md) |
+| Open preferences | GET matches UI after reopen | Pending device | v1.0.9+ re-fetch after save |
+| Push off + Save | No FCM on trigger; in-app OK | Pending device | §4.2 |
+| Push on + Save | FCM on trigger | Pending device | |
+| Category off (e.g. project) | No push for that category | Pending device | |
 
 ---
 
@@ -105,13 +105,13 @@ Full table: [NOTIFICATION_MODULE_REGRESSION.md §4.3](NOTIFICATION_MODULE_REGRES
 
 | Area | Result | Notes |
 |------|--------|-------|
-| Auth | | |
-| Timer / projects | | |
-| Notes / leave / gallery / payroll | | |
-| Notifications REST | | |
-| Socket | | |
-| Push | | |
-| Preferences | | |
+| Auth | Pending device | |
+| Timer / projects | Pending device | |
+| Notes / leave / gallery / payroll | Pending device | |
+| Notifications REST | Pending device | [PHASE_P3_NOTIFICATIONS_REST.md](PHASE_P3_NOTIFICATIONS_REST.md) |
+| Socket | Pending device | [PHASE_P4_SOCKET_DEVICE.md](PHASE_P4_SOCKET_DEVICE.md) |
+| Push | Pending device | [PHASE_P5_FCM_DEVICE.md](PHASE_P5_FCM_DEVICE.md) |
+| Preferences | Pending device | [PHASE_P6_REGRESSION_SESSION.md](PHASE_P6_REGRESSION_SESSION.md) §4.2 |
 
 ---
 
@@ -129,9 +129,9 @@ Full table: [NOTIFICATION_MODULE_REGRESSION.md §4.3](NOTIFICATION_MODULE_REGRES
 | Field | Value |
 |-------|-------|
 | Build version | 1.0.0+17 |
-| Developer sign-off (name, date) | |
-| Client sign-off (name, date) | |
-| Approval reference (email/ticket) | |
+| Developer sign-off (name, date) | _(pending P6 session)_ |
+| Client sign-off (name, date) | _(pending P6 session)_ |
+| Approval reference (email/ticket) | _(pending §4.4)_ |
 
 ---
 
