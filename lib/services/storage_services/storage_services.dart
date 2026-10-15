@@ -75,6 +75,16 @@ class StorageServices {
     }
   }
 
+  Future<void> _safeRemove(String key) async {
+    try {
+      if (_prefs != null && _isInitialized) {
+        await _prefs!.remove(key);
+      }
+    } catch (e) {
+      errorLog('Safe remove error for key: $key', e);
+    }
+  }
+
   bool get isInitialized => _isInitialized;
 
   // Location storage keys
@@ -368,14 +378,27 @@ class StorageServices {
     }
   }
 
-  Future<void> storageClear() async {
+  /// Clears auth/session prefs only. Preserves onboard, language, and other UX prefs.
+  Future<void> clearSession() async {
     try {
-      await _safeWrite(AppStorageKey.instance.token, "");
-      await setLanguage("english");
+      final keys = AppStorageKey.instance;
+      await _safeRemove(keys.token);
+      await _safeRemove(keys.refreshToken);
+      await _safeRemove(keys.userId);
+      await _safeRemove(keys.userData);
+      await _safeRemove(keys.userRole);
+      await _safeRemove(keys.companyId);
+      await _safeRemove(keys.registeredDeviceToken);
+      await _safeRemove(keys.forgotToken);
+      await _safeRemove(keys.reviewToken);
       await clearLocationData();
     } catch (e) {
-      errorLog("logout", e);
+      errorLog("clearSession", e);
     }
+  }
+
+  Future<void> storageClear() async {
+    await clearSession();
   }
 
   // Generic data methods

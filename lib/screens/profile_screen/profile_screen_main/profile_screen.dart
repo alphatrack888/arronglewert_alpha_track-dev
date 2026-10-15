@@ -233,6 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await PushNotificationService.instance.deregisterCurrentToken();
       AppSocketAllOperation.instance.disconnectAndClear();
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().profileData.value = null;
+      }
       await StorageServices.instance.storageClear();
       Get.offAllNamed(AppRoute.splashScreen);
       AppSnackBar.success('loggedOut'.tr);

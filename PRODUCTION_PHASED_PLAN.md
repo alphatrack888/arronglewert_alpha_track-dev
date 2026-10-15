@@ -79,10 +79,12 @@ flutter build apk --release
 
 ### Tasks
 
-- [ ] **P1.1** Extend [`storageClear()`](lib/services/storage_services/storage_services.dart) (or dedicated `clearSession()`) to wipe all auth-related keys in [`AppStorageKey`](lib/core/constant/app_storage_key.dart): access + refresh tokens, `userId`, `userData`, `companyId`, `registeredDeviceToken`, `forgotToken`, etc.
-- [ ] **P1.2** Keep **language** (or other non-auth prefs) behavior explicit — either preserve user language on logout or document reset to default.
-- [ ] **P1.3** After logout, splash must route to onboarding/login (already true when `kDemoMode` is false and access token empty).
-- [ ] **P1.4** (Optional) Review `android:allowBackup` — if reinstall restores tokens, document or restrict backup for sensitive prefs.
+- [x] **P1.1** `clearSession()` wipes auth keys in [`AppStorageKey`](lib/core/constant/app_storage_key.dart); `storageClear()` delegates to it.
+- [x] **P1.2** **Language preserved** on logout (removed forced reset to english).
+- [x] **P1.3** Splash: no token + onboard complete → **login**; else onboarding. `setOnboardScreen` on final onboarding + successful login.
+- [x] **P1.4** Documented: `allowBackup=true` may restore prefs on reinstall; verify logout on same install first.
+
+**P1 code sign-off:** 2026-10-16 — profile cleared in memory on logout. Device smoke: _pending tester_.
 
 ### Verify
 

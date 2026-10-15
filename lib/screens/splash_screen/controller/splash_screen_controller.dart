@@ -23,8 +23,11 @@ class SplashScreenController extends GetxController {
         Get.offNamed(AppRoute.bottomNavigation);
         PushNotificationService.instance.onAuthenticatedNavigationReady();
         await PushNotificationService.instance.refreshRegistrationIfNeeded();
+      } else if (StorageServices.instance.getOnboardScreen()) {
+        appLog("No token; onboard complete — navigating to Login");
+        Get.offNamed(AppRoute.loginScreen);
       } else {
-        appLog("No token found, navigating to Login Screen");
+        appLog("No token; first launch — navigating to Onboarding");
         Get.offNamed(AppRoute.onboardingScreen);
       }
     });

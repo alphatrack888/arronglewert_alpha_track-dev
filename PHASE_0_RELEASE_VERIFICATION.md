@@ -22,6 +22,7 @@ Install the APK on a device with **no** existing session (or clear app data).
 |-------|----------|--------|-------|
 | Cold start | Onboarding or login (not main app without credentials) | | |
 | No token | Cannot reach home without logging in | | |
+| Logout (returning user) | Splash → **login** (not onboarding); language unchanged | | After P1 |
 
 Optional reviewer build (demo allowed):
 

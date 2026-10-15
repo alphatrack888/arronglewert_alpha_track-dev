@@ -1,4 +1,5 @@
 import 'package:alpha_track/core/app_route/app_route.dart';
+import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_images/app_images.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
@@ -47,13 +48,19 @@ class OnboardingScreenFinal extends StatelessWidget {
               //! Login Button — unchanged destination
               PrimaryButton(
                 label: AppString.login,
-                onTap: () => Get.toNamed(AppRoute.loginScreen),
+                onTap: () async {
+                  await StorageServices.instance.setOnboardScreen();
+                  Get.toNamed(AppRoute.loginScreen);
+                },
               ),
               const SizedBox(height: 14),
               //! Create Account
               SecondaryButton(
                 label: AppString.signUp,
-                onTap: () => Get.toNamed(AppRoute.signupScreen),
+                onTap: () async {
+                  await StorageServices.instance.setOnboardScreen();
+                  Get.toNamed(AppRoute.signupScreen);
+                },
               ),
               const SizedBox(height: 18),
               //! Continue as Guest — enters the app without an account

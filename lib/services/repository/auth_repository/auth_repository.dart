@@ -218,6 +218,7 @@ class AuthRepository {
 
   //! Handle Successful login
   Future<void> _handleSuccessfulLogin(Map<String, dynamic> data) async {
+    await storageServices.setOnboardScreen();
     appLog(data);
     final String accessToken = data["accessToken"];
     appLog("accessToken from login api $accessToken");
