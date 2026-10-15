@@ -1,4 +1,5 @@
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
+import 'package:alpha_track/screens/notification_screen/notification_inbox_pagination.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
@@ -46,11 +47,16 @@ class NotificationScreenController extends GetxController {
   // Setup scroll listener for pagination
   void _setupScrollListener() {
     scrollController.addListener(() {
-      if (scrollController.position.pixels ==
-          scrollController.position.maxScrollExtent) {
-        if (hasMoreData.value && !isLoading.value) {
-          loadMoreNotifications();
-        }
+      if (!scrollController.hasClients) return;
+      final position = scrollController.position;
+      if (!NotificationInboxPagination.shouldLoadMore(
+        pixels: position.pixels,
+        maxScrollExtent: position.maxScrollExtent,
+      )) {
+        return;
+      }
+      if (hasMoreData.value && !isLoading.value) {
+        loadMoreNotifications();
       }
     });
   }
@@ -142,12 +148,13 @@ class NotificationScreenController extends GetxController {
 
       if (response.success == true && response.data != null) {
         final newNotifications = response.data!.data ?? [];
-
-        if (isRefresh || notifications.isEmpty) {
-          notifications.assignAll(newNotifications);
-        } else {
-          notifications.addAll(newNotifications);
-        }
+        final merged = NotificationInboxPagination.mergePageIntoList(
+          existing: notifications.toList(),
+          pageItems: newNotifications,
+          page: currentPage.value,
+          isRefresh: isRefresh,
+        );
+        notifications.assignAll(merged);
         // Update pagination info
         if (response.data!.meta != null) {
           totalPages.value = response.data!.meta!.totalPages ?? 1;

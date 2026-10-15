@@ -57,11 +57,11 @@
 
 ### Checklist
 
-- [ ] **1.1** Extend [`ApiUrls`](lib/core/api_urls/api_urls.dart): `notificationMarkReadBase`, `notificationMarkAllRead` (mirror legacy [`api_urls.dart`](../arronglewert_alpha_track-dev/lib/core/api_urls/api_urls.dart)).
-- [ ] **1.2** Extend [`NotificationRepository`](lib/services/repository/notification_repository/notification_repository.dart): `fetchNotifications({page, limit})`, `markRead(id)`, `markAllRead()`.
-- [ ] **1.3** Wire [`NotificationScreenController`](lib/screens/notification_screen/controller/notification_screen_controller.dart): pass `page`/`limit` on fetch and load-more; stop duplicating page 1 on scroll.
-- [ ] **1.4** Wire [`notification_screen.dart`](lib/screens/notification_screen/notification_screen.dart) “mark read” actions to **PATCH**, not local-only `isRead = true`.
-- [ ] **1.5** Manual test against production (or staging): mark one read → refresh → still read; mark all → all read.
+- [x] **1.1** Extend [`ApiUrls`](lib/core/api_urls/api_urls.dart): `notificationMarkReadBase`, `notificationMarkAllRead` (mirror legacy [`api_urls.dart`](../arronglewert_alpha_track-dev/lib/core/api_urls/api_urls.dart)). _(Verified P3 2026-10-16.)_
+- [x] **1.2** Extend [`NotificationRepository`](lib/services/repository/notification_repository/notification_repository.dart): `fetchNotifications({page, limit})`, `markRead(id)`, `markAllRead()`. _(Verified P3.)_
+- [x] **1.3** Wire [`NotificationScreenController`](lib/screens/notification_screen/controller/notification_screen_controller.dart): pass `page`/`limit` on fetch and load-more; stop duplicating page 1 on scroll. _(P3: merge helper, 200px scroll threshold, retry refresh.)_
+- [x] **1.4** Wire [`notification_screen.dart`](lib/screens/notification_screen/notification_screen.dart) “mark read” actions to **PATCH**, not local-only `isRead = true`. _(Verified; optimistic rollback on failure.)_
+- [ ] **1.5** Manual test against production (or staging): mark one read → refresh → still read; mark all → all read. _(Runbook: [PHASE_P3_NOTIFICATIONS_REST.md](PHASE_P3_NOTIFICATIONS_REST.md); build **`v1.0.6+`**.)_
 
 ### Exit criteria
 

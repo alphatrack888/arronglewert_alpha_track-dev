@@ -125,9 +125,9 @@ flutter build apk --release
 
 Follow checklist **1.1–1.5** in [BACKEND_INTEGRATION_PLAN.md](BACKEND_INTEGRATION_PLAN.md):
 
-- [ ] API URLs for mark read / mark all read
-- [ ] Repository + controller pagination and PATCH wiring
-- [ ] UI mark-read calls server, not local-only
+- [x] API URLs for mark read / mark all read _(pre-existing; verified P3 audit)_
+- [x] Repository + controller pagination and PATCH wiring _(P3: `notification_inbox_pagination.dart`, scroll threshold, page-1 merge fix)_
+- [x] UI mark-read calls server, not local-only _(retry uses `isRefresh: true`; device: [PHASE_P3_NOTIFICATIONS_REST.md](PHASE_P3_NOTIFICATIONS_REST.md))_
 
 ### Exit criteria
 

@@ -436,7 +436,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             child: PrimaryButton(
               label: AppString.retry.tr,
               isTranslate: false,
-              onTap: controller.fetchNotifications,
+              onTap: () => controller.fetchNotifications(isRefresh: true),
             ),
           ),
         ),
