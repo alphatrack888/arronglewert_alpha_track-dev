@@ -21,6 +21,12 @@ class BreakPreferenceService extends GetxService {
 
   String get _storageKey => AppStorageKey.instance.automaticBreakEnabled;
 
+  String get _userSetKey => AppStorageKey.instance.automaticBreakUserSet;
+
+  /// Profile `manualBreak` is applied on fetch unless the user changed the toggle.
+  static bool shouldApplyProfileManualBreak(bool userHasChangedPreference) =>
+      !userHasChangedPreference;
+
   /// Maps profile.manualBreak to automatic-break-enabled (inverse).
   static bool automaticFromManualBreak(bool? manualBreak) {
     if (manualBreak == null) return defaultAutomaticBreakEnabled;
@@ -39,16 +45,22 @@ class BreakPreferenceService extends GetxService {
     }
   }
 
+  /// Applies server `manualBreak` until the user changes Break Settings once.
   void syncFromProfile(ProfileModelData? data) {
     if (data == null) return;
+    if (!shouldApplyProfileManualBreak(_userHasChangedPreference())) return;
+
     final automatic = automaticFromManualBreak(data.manualBreak);
     _applyLocal(automatic);
     _storage.saveData(_storageKey, automatic);
   }
 
+  bool _userHasChangedPreference() => _storage.getData(_userSetKey) == true;
+
   Future<void> setAutomaticBreakEnabled(bool value) async {
     _applyLocal(value);
     await _storage.saveData(_storageKey, value);
+    await _storage.saveData(_userSetKey, true);
 
     if (kDemoMode) return;
     if (_storage.getAccessToken().isEmpty) return;

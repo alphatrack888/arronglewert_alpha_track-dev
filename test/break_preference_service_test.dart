@@ -21,4 +21,9 @@ void main() {
     expect(BreakPreferenceService.manualBreakFromAutomatic(true), false);
     expect(BreakPreferenceService.manualBreakFromAutomatic(false), true);
   });
+
+  test('profile manualBreak applies until user changes break settings', () {
+    expect(BreakPreferenceService.shouldApplyProfileManualBreak(false), true);
+    expect(BreakPreferenceService.shouldApplyProfileManualBreak(true), false);
+  });
 }

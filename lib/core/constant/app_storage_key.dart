@@ -16,4 +16,6 @@ class AppStorageKey {
   String userId = "userId";
   String registeredDeviceToken = "registeredDeviceToken";
   String automaticBreakEnabled = "automaticBreakEnabled";
+  /// True after the user changes Break Settings (not set by profile seed).
+  String automaticBreakUserSet = "automaticBreakUserSet";
 }

@@ -388,6 +388,8 @@ class StorageServices {
       await _safeRemove(keys.userData);
       await _safeRemove(keys.userRole);
       await _safeRemove(keys.companyId);
+      await _safeRemove(keys.automaticBreakEnabled);
+      await _safeRemove(keys.automaticBreakUserSet);
       await _safeRemove(keys.registeredDeviceToken);
       await _safeRemove(keys.forgotToken);
       await _safeRemove(keys.reviewToken);
