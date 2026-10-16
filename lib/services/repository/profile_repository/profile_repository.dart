@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:alpha_track/core/api_urls/api_urls.dart';
-import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_model.dart';
+import 'package:alpha_track/screens/profile_screen/gallery_screen/gallery_api_contract.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_upload_result.dart';
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/models/payrole_model.dart';
 import 'package:dio/dio.dart';
@@ -124,20 +125,25 @@ class ProfileRepository {
   //! Upload Gallery Image (POST /gallery/ — multipart field `images`, Cloudinary on server)
   Future<GalleryUploadResult> uploadGalleryImage({required File image}) async {
     try {
-      if (!await image.exists()) {
-        debugPrint('Gallery upload error: image file does not exist');
-        return const GalleryUploadResult(success: false);
+      final fileName = image.path.split('/').last;
+      final mime = _getMimeType(fileName);
+      final bytes = await image.readAsBytes();
+      if (bytes.isEmpty) {
+        debugPrint('Gallery upload error: image file is empty');
+        return const GalleryUploadResult(
+          success: false,
+          message: 'galleryImageUnreadable',
+        );
       }
 
-      final fileName = image.path.split('/').last;
       final formData = FormData();
       formData.files.add(
         MapEntry(
           'images',
-          await MultipartFile.fromFile(
-            image.path,
+          MultipartFile.fromBytes(
+            bytes,
             filename: fileName,
-            contentType: DioMediaType.parse(_getMimeType(fileName)),
+            contentType: DioMediaType.parse(mime),
           ),
         ),
       );
@@ -147,28 +153,27 @@ class ProfileRepository {
         data: formData,
       );
       final data = response.data;
-      if (response.statusCode != null &&
-          response.statusCode! >= 200 &&
-          response.statusCode! < 300 &&
-          data is Map &&
-          data['success'] == true) {
-        return GalleryUploadResult(
-          success: true,
-          message: data['message']?.toString(),
-        );
+      final status = response.statusCode;
+      if (kDebugMode) {
+        appLog('Gallery upload response: status=$status');
       }
-      final serverMessage =
-          data is Map ? data['message']?.toString() : null;
-      debugPrint(
-        'Gallery upload failed: status=${response.statusCode} message=$serverMessage',
+      final parsed = parseGalleryUploadResponse(data, status);
+      return GalleryUploadResult(
+        success: parsed.success,
+        message: parsed.message,
+        createdItems: parsed.createdItems,
       );
-      return GalleryUploadResult(success: false, message: serverMessage);
     } on DioException catch (e) {
-      final data = e.response?.data;
-      final serverMessage =
-          data is Map ? data['message']?.toString() : null;
-      debugPrint('Gallery upload error: $e message=$serverMessage');
-      return GalleryUploadResult(success: false, message: serverMessage);
+      final status = e.response?.statusCode;
+      if (kDebugMode) {
+        appLog('Gallery upload DioException: status=$status');
+      }
+      final parsed = parseGalleryUploadResponse(e.response?.data, status);
+      debugPrint('Gallery upload error: $e message=${parsed.message}');
+      return GalleryUploadResult(
+        success: false,
+        message: parsed.message,
+      );
     } catch (e) {
       debugPrint('Gallery upload error: $e');
       return const GalleryUploadResult(success: false);
@@ -191,15 +196,26 @@ class ProfileRepository {
   }
 
   //! Get Gallery Image
-  Future<GalleryModel> fetchGallery() async {
+  Future<GalleryFetchOutcome> fetchGallery() async {
     try {
-      final response = await apiServices.apiGetServices(ApiUrls.gallery);
-      if (response != null) {
-        return GalleryModel.fromJson(response);
+      final response = await apiServices.api.sendRequest.get(ApiUrls.gallery);
+      final status = response.statusCode;
+      if (status != null && status >= 200 && status < 300) {
+        return parseGalleryListResponse(response.data);
       }
-      return GalleryModel();
+      debugPrint('Gallery fetch failed: status=$status');
+      return const GalleryFetchOutcome(ok: false);
+    } on DioException catch (e) {
+      debugPrint('Gallery fetch DioException: ${e.response?.statusCode}');
+      return GalleryFetchOutcome(
+        ok: false,
+        serverMessage: e.response?.data is Map
+            ? (e.response?.data as Map)['message']?.toString()
+            : null,
+      );
     } catch (e) {
-      return GalleryModel();
+      debugPrint('Gallery fetch error: $e');
+      return const GalleryFetchOutcome(ok: false);
     }
   }
 

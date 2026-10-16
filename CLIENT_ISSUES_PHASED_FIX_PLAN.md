@@ -112,7 +112,9 @@
 
 - Profile → Gallery → add photo → delete → gone after refresh / relaunch.
 
-**Follow-up (gallery permissions):** Phase 4.1 picker-first was superseded by standard Android runtime permissions (`READ_MEDIA_IMAGES` + legacy storage `maxSdkVersion="32"`, SDK-split `Permission.photos` / `Permission.storage`). See [GALLERY_PERMISSIONS.md](GALLERY_PERMISSIONS.md).
+**Follow-up (gallery permissions):** Restored **Photo Picker first** on API 33+ (no broad `READ_MEDIA_IMAGES`, no pre-pick `Permission.photos`), bytes-based upload, `retrieveLostData`, and inline upload banners. See [GALLERY_PERMISSIONS.md](GALLERY_PERMISSIONS.md).
+
+**Bulletproof gallery (contract + UX):** `gallery_api_contract.dart` + unit tests lock GET/POST JSON parsing; `fetchGallery` returns explicit outcomes (no silent empty list on failure); upload merges POST `data` into the grid before GET refresh; backend lists sort `createdAt` desc; `gallery.route.test.ts` covers employee GET and company 403.
 
 ---
 

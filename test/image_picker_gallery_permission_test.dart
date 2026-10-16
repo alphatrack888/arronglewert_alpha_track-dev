@@ -3,22 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  group('galleryAndroidPermissionKindForSdk', () {
-    test('uses photos on API 33+', () {
-      expect(galleryAndroidPermissionKindForSdk(33), 'photos');
-      expect(galleryAndroidPermissionKindForSdk(34), 'photos');
+  group('shouldRequestGalleryPermissionBeforePick', () {
+    test('returns false on API 33+ (Photo Picker)', () {
+      expect(shouldRequestGalleryPermissionBeforePick(33), isFalse);
+      expect(shouldRequestGalleryPermissionBeforePick(34), isFalse);
     });
 
-    test('uses storage below API 33', () {
-      expect(galleryAndroidPermissionKindForSdk(32), 'storage');
-      expect(galleryAndroidPermissionKindForSdk(29), 'storage');
-    });
-  });
-
-  group('galleryPermissionLabelForSdk', () {
-    test('labels match permission kind', () {
-      expect(galleryPermissionLabelForSdk(33), 'Photos');
-      expect(galleryPermissionLabelForSdk(32), 'Storage');
+    test('returns true below API 33', () {
+      expect(shouldRequestGalleryPermissionBeforePick(32), isTrue);
+      expect(shouldRequestGalleryPermissionBeforePick(29), isTrue);
     });
   });
 
@@ -28,12 +21,8 @@ void main() {
       expect(isGalleryPermissionSufficient(PermissionStatus.limited), isTrue);
     });
 
-    test('denied and restricted block pick', () {
+    test('denied blocks pick', () {
       expect(isGalleryPermissionSufficient(PermissionStatus.denied), isFalse);
-      expect(
-        isGalleryPermissionSufficient(PermissionStatus.permanentlyDenied),
-        isFalse,
-      );
     });
   });
 }

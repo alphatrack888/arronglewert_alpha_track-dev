@@ -281,6 +281,14 @@ class AppTranslation extends Translations {
       'uploadingImage': 'Please wait while we upload your image...',
       'imageUploaded': 'Image uploaded successfully!',
       'failedUploadImage': 'Failed to upload image',
+      'galleryImageUnreadable':
+          'Could not read the selected image. Try another photo or grant access.',
+      'galleryUploadRefreshFailed':
+          'Upload may have succeeded, but the gallery could not be refreshed. Pull to refresh.',
+      'galleryUploadEmployeeOnly':
+          'Gallery upload is only available for employee accounts.',
+      'galleryUploadAuthRequired':
+          'Session expired. Please sign in again and retry.',
       'imageDeleted': 'Image deleted successfully!',
       'failedDeleteImage': 'Failed to delete image',
       'imageDownloadSoon': 'Image download — coming soon',
@@ -925,6 +933,14 @@ class AppTranslation extends Translations {
       'uploadingImage': 'Bitte warten, Ihr Bild wird hochgeladen...',
       'imageUploaded': 'Bild erfolgreich hochgeladen!',
       'failedUploadImage': 'Bild konnte nicht hochgeladen werden',
+      'galleryImageUnreadable':
+          'Das ausgewählte Bild konnte nicht gelesen werden.',
+      'galleryUploadRefreshFailed':
+          'Upload möglicherweise erfolgreich — Galerie konnte nicht aktualisiert werden.',
+      'galleryUploadEmployeeOnly':
+          'Galerie-Upload ist nur für Mitarbeiterkonten verfügbar.',
+      'galleryUploadAuthRequired':
+          'Sitzung abgelaufen. Bitte erneut anmelden.',
       'imageDeleted': 'Bild erfolgreich gelöscht!',
       'failedDeleteImage': 'Bild konnte nicht gelöscht werden',
       'imageDownloadSoon': 'Bild-Download – demnächst',
@@ -1561,6 +1577,13 @@ class AppTranslation extends Translations {
       'uploadingImage': 'يرجى الانتظار أثناء رفع الصورة...',
       'imageUploaded': 'تم رفع الصورة بنجاح!',
       'failedUploadImage': 'فشل رفع الصورة',
+      'galleryImageUnreadable': 'تعذر قراءة الصورة المحددة.',
+      'galleryUploadRefreshFailed':
+          'ربما تم الرفع، لكن تعذر تحديث المعرض.',
+      'galleryUploadEmployeeOnly':
+          'رفع المعرض متاح لحسابات الموظفين فقط.',
+      'galleryUploadAuthRequired':
+          'انتهت الجلسة. يرجى تسجيل الدخول والمحاولة مرة أخرى.',
       'imageDeleted': 'تم حذف الصورة بنجاح!',
       'failedDeleteImage': 'فشل حذف الصورة',
       'imageDownloadSoon': 'تنزيل الصورة — قريباً',
@@ -2188,6 +2211,13 @@ class AppTranslation extends Translations {
       'uploadingImage': 'Așteaptă, imaginea se încarcă...',
       'imageUploaded': 'Imagine încărcată cu succes!',
       'failedUploadImage': 'Încărcarea imaginii a eșuat',
+      'galleryImageUnreadable': 'Imaginea selectată nu a putut fi citită.',
+      'galleryUploadRefreshFailed':
+          'Încărcarea poate fi reușită, dar galeria nu s-a actualizat.',
+      'galleryUploadEmployeeOnly':
+          'Încărcarea în galerie este doar pentru conturi de angajat.',
+      'galleryUploadAuthRequired':
+          'Sesiunea a expirat. Conectează-te din nou și reîncearcă.',
       'imageDeleted': 'Imagine ștearsă cu succes!',
       'failedDeleteImage': 'Ștergerea imaginii a eșuat',
       'imageDownloadSoon': 'Descărcare imagine — în curând',

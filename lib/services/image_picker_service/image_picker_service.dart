@@ -4,6 +4,7 @@ import 'package:alpha_track/widgets/ds/ds_dialog.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
@@ -11,13 +12,9 @@ import 'package:get/get.dart';
 /// SDK level at which Android uses [Permission.photos] instead of [Permission.storage].
 const int androidGalleryPhotosPermissionMinSdk = 33;
 
-/// Maps Android API level to the gallery permission used before opening the picker.
-String galleryAndroidPermissionKindForSdk(int sdkInt) =>
-    sdkInt >= androidGalleryPhotosPermissionMinSdk ? 'photos' : 'storage';
-
-/// User-visible label for permission dialogs (API 33+ uses Photos).
-String galleryPermissionLabelForSdk(int sdkInt) =>
-    sdkInt >= androidGalleryPhotosPermissionMinSdk ? 'Photos' : 'Storage';
+/// Photo Picker on API 33+ needs no runtime storage/photos permission before pick.
+bool shouldRequestGalleryPermissionBeforePick(int sdkInt) =>
+    sdkInt < androidGalleryPhotosPermissionMinSdk;
 
 /// Whether [permission_handler] status allows opening the gallery picker.
 bool isGalleryPermissionSufficient(PermissionStatus status) =>
@@ -33,6 +30,29 @@ class _GalleryPermissionRequestResult {
   final bool canPick;
   final bool permanentlyDenied;
   final String permissionLabel;
+}
+
+/// Copies picker output into app temp storage (needed for Android limited photo access).
+Future<File?> materializePickedImageFile(XFile picked) async {
+  try {
+    final bytes = await picked.readAsBytes();
+    if (bytes.isEmpty) {
+      log('❌ Picked image has no readable bytes');
+      return null;
+    }
+    final rawName =
+        picked.name.isNotEmpty ? picked.name : picked.path.split('/').last;
+    final safeName = rawName.contains('.') ? rawName : '$rawName.jpg';
+    final dir = await getTemporaryDirectory();
+    final file = File(
+      '${dir.path}/gallery_${DateTime.now().millisecondsSinceEpoch}_$safeName',
+    );
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  } catch (e) {
+    log('❌ Failed to materialize picked image: $e');
+    return null;
+  }
 }
 
 class ImagePickerService {
@@ -64,18 +84,19 @@ class ImagePickerService {
         );
 
         if (pickedFile != null) {
-          final file = File(pickedFile.path);
-          if (await file.exists()) {
-            log('✅ Camera image captured: ${pickedFile.path}');
+          final file = await materializePickedImageFile(pickedFile);
+          if (file != null) {
+            log('✅ Camera image ready for upload: ${file.path}');
             return file;
-          } else {
-            log('❌ Camera image file does not exist: ${pickedFile.path}');
-            if (context.mounted) {
-              _showErrorDialog(context, 'Camera Error',
-                  'Captured image file is invalid or missing.');
-            }
-            return null;
           }
+          if (context.mounted) {
+            _showErrorDialog(
+              context,
+              'Camera Error',
+              'galleryImageUnreadable'.tr,
+            );
+          }
+          return null;
         } else {
           log('❌ No image captured from camera');
           return null;
@@ -122,18 +143,19 @@ class ImagePickerService {
       );
 
       if (pickedFile != null) {
-        final file = File(pickedFile.path);
-        if (await file.exists()) {
-          log('✅ Gallery image selected: ${pickedFile.path}');
+        final file = await materializePickedImageFile(pickedFile);
+        if (file != null) {
+          log('✅ Gallery image ready for upload: ${file.path}');
           return file;
-        } else {
-          log('❌ Gallery image file does not exist: ${pickedFile.path}');
-          if (context.mounted) {
-            _showErrorDialog(context, 'Gallery Error',
-                'Selected image file is invalid or missing.');
-          }
-          return null;
         }
+        if (context.mounted) {
+          _showErrorDialog(
+            context,
+            'Gallery Error',
+            'galleryImageUnreadable'.tr,
+          );
+        }
+        return null;
       } else {
         log('❌ No image selected from gallery');
         return null;
@@ -264,21 +286,19 @@ class ImagePickerService {
 
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       final sdkVersion = androidInfo.version.sdkInt;
-      final label = galleryPermissionLabelForSdk(sdkVersion);
       log('📱 Android SDK Version: $sdkVersion');
 
-      final Permission permission;
-      if (galleryAndroidPermissionKindForSdk(sdkVersion) == 'photos') {
-        permission = Permission.photos;
-      } else {
-        permission = Permission.storage;
+      if (!shouldRequestGalleryPermissionBeforePick(sdkVersion)) {
+        log('✅ API 33+: using system Photo Picker without broad photos permission');
+        return const _GalleryPermissionRequestResult(canPick: true);
       }
 
-      final status = await permission.request();
-      log('📱 Gallery permission ($label): $status');
+      const label = 'Storage';
+      final status = await Permission.storage.request();
+      log('📱 Gallery storage permission: $status');
 
-      if (isGalleryPermissionSufficient(status)) {
-        return _GalleryPermissionRequestResult(
+      if (status.isGranted) {
+        return const _GalleryPermissionRequestResult(
           canPick: true,
           permissionLabel: label,
         );
@@ -339,12 +359,11 @@ class ImagePickerService {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       log('📱 Android Version: ${androidInfo.version.release} (SDK: ${androidInfo.version.sdkInt})');
 
-      if (androidInfo.version.sdkInt >= androidGalleryPhotosPermissionMinSdk) {
-        final photosStatus = await Permission.photos.status;
-        log('📱 Photos Permission: $photosStatus');
-      } else {
+      if (shouldRequestGalleryPermissionBeforePick(androidInfo.version.sdkInt)) {
         final storageStatus = await Permission.storage.status;
         log('📱 Storage Permission: $storageStatus');
+      } else {
+        log('📱 Gallery: Photo Picker path (no broad photos permission)');
       }
     }
 

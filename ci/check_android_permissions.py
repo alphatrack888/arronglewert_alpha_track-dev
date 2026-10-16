@@ -7,7 +7,9 @@ ANDROID_NAME = "{http://schemas.android.com/apk/res/android}name"
 FORBIDDEN = {
     "android.permission." + permission
     for permission in (
+        "READ_MEDIA_IMAGES",
         "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "MANAGE_EXTERNAL_STORAGE",
     )
@@ -36,9 +38,6 @@ def check_release_manifests(build_dir):
 if __name__ == "__main__":
     try:
         count = check_release_manifests(sys.argv[1] if len(sys.argv) > 1 else "build")
-        print(
-            f"Verified {count} packaged release manifest(s): "
-            "gallery images/storage allowed; video/write/manage forbidden."
-        )
+        print(f"Verified {count} packaged release manifest(s): no broad photo/storage access.")
     except (ValueError, ET.ParseError) as error:
         sys.exit(str(error))

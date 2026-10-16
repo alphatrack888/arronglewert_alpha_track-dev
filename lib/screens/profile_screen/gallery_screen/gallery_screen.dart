@@ -29,6 +29,7 @@ class GalleryScreen extends StatelessWidget {
             child: Column(
               children: [
                 Obx(() => _buildHeader(controller)),
+                Obx(() => _buildUploadBanner(controller)),
                 Expanded(
                   child: Obx(() {
                     if (controller.isLoading.value) {
@@ -103,7 +104,18 @@ class GalleryScreen extends StatelessWidget {
           const DsBackButton(),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(AppString.gallery.tr, style: AppTextStyles.headline),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(AppString.gallery.tr, style: AppTextStyles.headline),
+                if (!controller.isLoading.value)
+                  Text(
+                    '${controller.totalImages} ${AppString.images.tr}'
+                        .toUpperCase(),
+                    style: AppTextStyles.eyebrow,
+                  ),
+              ],
+            ),
           ),
           Opacity(
             opacity: actionsEnabled ? 1 : 0.4,
@@ -113,6 +125,45 @@ class GalleryScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildUploadBanner(GalleryScreenController controller) {
+    final message = controller.uploadBannerMessage.value;
+    if (message == null || message.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final isError = controller.uploadBannerIsError.value;
+    final color = isError ? AppColors.danger : AppColors.success;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Material(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                isError ? LucideIcons.circleAlert : LucideIcons.circleCheck,
+                size: 20,
+                color: color,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: AppTextStyles.bodyMedium.copyWith(color: color),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => controller.uploadBannerMessage.value = null,
+                child: Icon(LucideIcons.x, size: 18, color: color),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

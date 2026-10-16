@@ -12,6 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'core/app_translation/app_translation.dart';
@@ -19,6 +21,8 @@ import 'core/app_translation/app_translation.dart';
 void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  configureAndroidPhotoPicker();
 
   // Lock device orientation first
   DeviceUtils.lockDevicePortrait();
@@ -49,6 +53,14 @@ Future<void> initializePushNotifications() async {
     appLog(
       'Push notification initialization failed (continuing without push): $e',
     );
+  }
+}
+
+void configureAndroidPhotoPicker() {
+  final impl = ImagePickerPlatform.instance;
+  if (impl is ImagePickerAndroid) {
+    impl.useAndroidPhotoPicker = true;
+    appLog('Android Photo Picker enabled for image_picker');
   }
 }
 

@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:alpha_track/screens/profile_screen/gallery_screen/gallery_api_contract.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_model.dart';
+import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_upload_result.dart';
 import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:alpha_track/services/repository/profile_repository/profile_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -15,45 +18,97 @@ class GalleryScreenController extends GetxController {
 
   // Observable variables
   RxList<Datum> galleryImages = <Datum>[].obs;
+  final RxInt galleryTotalCount = 0.obs;
   RxBool isLoading = false.obs;
   RxBool isUploading = false.obs;
-  Rx<GalleryModel?> galleryModel = Rx<GalleryModel?>(null);
+  final RxBool lastGalleryFetchOk = true.obs;
+
+  /// Inline banner after upload (snackbars can be missed under the overlay).
+  final RxnString uploadBannerMessage = RxnString();
+  final RxBool uploadBannerIsError = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+    recoverLostPickerImage();
     fetchGalleryImages();
   }
 
+  /// Android may kill the app while the system picker is open; recover the pick.
+  Future<void> recoverLostPickerImage() async {
+    try {
+      final response = await ImagePicker().retrieveLostData();
+      if (response.isEmpty) {
+        return;
+      }
+      if (response.exception != null) {
+        errorLog('retrieveLostData', response.exception!);
+        _showUploadFailure('failedPickImage'.tr);
+        return;
+      }
+      final lost = response.file;
+      if (lost == null) {
+        return;
+      }
+      final file = await materializePickedImageFile(lost);
+      if (file != null) {
+        await uploadImage(file);
+      } else {
+        _showUploadFailure('galleryImageUnreadable'.tr);
+      }
+    } catch (e) {
+      errorLog('recoverLostPickerImage', e);
+    }
+  }
+
   /// Fetch gallery images from API
-  Future<void> fetchGalleryImages({bool showLoading = true}) async {
-    // TEMPORARY demo mode — show sample gallery images without a backend.
+  Future<bool> fetchGalleryImages({
+    bool showLoading = true,
+    bool quiet = false,
+  }) async {
     if (kDemoMode) {
-      galleryModel.value = DemoData.gallery;
       galleryImages.value = DemoData.gallery.data ?? [];
+      galleryTotalCount.value = galleryImages.length;
+      lastGalleryFetchOk.value = true;
       isLoading.value = false;
-      return;
+      return true;
     }
     try {
       if (showLoading) {
         isLoading.value = true;
       }
-      final response = await _profileRepository.fetchGallery();
+      final outcome = await _profileRepository.fetchGallery();
 
-      if (response.success == true && response.data != null) {
-        galleryModel.value = response;
-        galleryImages.value = response.data!;
-        appLog("Gallery images fetched successfully");
-      } else {
-        errorLog(
-          'failedFetchGallery'.tr,
-          response.message ?? "Unknown error",
+      if (outcome.ok) {
+        _applyGalleryFetchOutcome(outcome);
+        lastGalleryFetchOk.value = true;
+        appLog(
+          'Gallery images fetched: ${outcome.items.length}, total=${outcome.totalCount}',
         );
-        AppSnackBar.error( 'failedFetchGallery'.tr);
+        return true;
       }
+
+      lastGalleryFetchOk.value = false;
+      errorLog(
+        'failedFetchGallery'.tr,
+        outcome.serverMessage ?? 'Unknown error',
+      );
+      final message = outcome.serverMessage?.isNotEmpty == true
+          ? outcome.serverMessage!
+          : outcome.errorKey.tr;
+      if (!quiet) {
+        AppSnackBar.error(message);
+        _setUploadBanner(message, isError: true);
+      }
+      return false;
     } catch (e) {
-      errorLog("Exception in fetchGalleryImages", e);
-      AppSnackBar.error( 'failedFetchGallery'.tr);
+      lastGalleryFetchOk.value = false;
+      errorLog('Exception in fetchGalleryImages', e);
+      if (!quiet) {
+        AppSnackBar.error('failedFetchGallery'.tr);
+        _setUploadBanner('failedFetchGallery'.tr, isError: true);
+      }
+      return false;
     } finally {
       isLoading.value = false;
     }
@@ -61,107 +116,146 @@ class GalleryScreenController extends GetxController {
 
   bool get _canStartUpload => !isUploading.value;
 
-  /// Show image picker using existing service
+  Future<void> _pickAndUpload(Future<File?> Function() pick) async {
+    if (!_canStartUpload) return;
+    try {
+      final file = await pick();
+      if (file != null) {
+        await uploadImage(file);
+      }
+    } catch (e) {
+      errorLog('pickAndUpload', e);
+    }
+  }
+
   Future<void> showImagePicker() async {
-    if (!_canStartUpload) return;
-    try {
-      // Use your existing ImagePickerService
-      final File? pickedImage = await _imagePickerService.pickImage(
-        Get.context!,
-      );
-
-      if (pickedImage != null) {
-        await uploadImage(pickedImage);
-      }
-    } catch (e) {
-      errorLog("Exception in showImagePicker", e);
-      AppSnackBar.error( 'failedPickImage'.tr);
-    }
+    await _pickAndUpload(
+      () => _imagePickerService.pickImage(Get.context!),
+    );
   }
 
-  /// Pick image from camera directly
   Future<void> pickFromCamera() async {
-    if (!_canStartUpload) return;
-    try {
-      final File? image = await _imagePickerService.pickFromCamera(
-        Get.context!,
-      );
-      if (image != null) {
-        await uploadImage(image);
-      }
-    } catch (e) {
-      errorLog("Exception in pickFromCamera", e);
-      AppSnackBar.error( 'failedTakePhoto'.tr);
-    }
+    await _pickAndUpload(
+      () => _imagePickerService.pickFromCamera(Get.context!),
+    );
   }
 
-  /// Pick image from gallery directly
   Future<void> pickFromGallery() async {
-    if (!_canStartUpload) return;
-    try {
-      final File? image = await _imagePickerService.pickFromGallery(
-        Get.context!,
-      );
-      if (image != null) {
-        await uploadImage(image);
-      }
-    } catch (e) {
-      errorLog("Exception in pickFromGallery", e);
-      AppSnackBar.error( 'failedPickImage'.tr);
-    }
+    await _pickAndUpload(
+      () => _imagePickerService.pickFromGallery(Get.context!),
+    );
   }
 
-  /// Upload image to gallery
   Future<void> uploadImage(File imageFile) async {
-    // Demo/review builds: no backend — add a new gallery tile so the upload
-    // visibly succeeds instead of erroring. AppImage renders network URLs (not
-    // local file paths), so use a picsum tile seeded by the picked file, in
-    // keeping with the demo gallery.
     if (kDemoMode) {
       final seed = imageFile.path.hashCode.abs() % 1000;
       galleryImages.insert(
         0,
-        Datum(id: 'demo-$seed', image: 'https://picsum.photos/seed/$seed/600/600'),
+        Datum(
+          id: 'demo-$seed',
+          image: 'https://picsum.photos/seed/$seed/600/600',
+        ),
       );
+      galleryTotalCount.value += 1;
       AppSnackBar.success('imageAdded'.tr);
       return;
     }
+
+    GalleryUploadResult result;
     try {
       isUploading.value = true;
-
-      final result = await _profileRepository.uploadGalleryImage(
-        image: imageFile,
-      );
-
-      if (result.success) {
-        AppSnackBar.success(
-          result.message?.isNotEmpty == true
-              ? result.message!
-              : 'imageUploaded'.tr,
-        );
-        await fetchGalleryImages(showLoading: false);
-      } else {
-        AppSnackBar.error(
-          result.message?.isNotEmpty == true
-              ? result.message!
-              : 'failedUploadImage'.tr,
-        );
-      }
+      uploadBannerMessage.value = null;
+      result = await _profileRepository.uploadGalleryImage(image: imageFile);
     } catch (e) {
-      errorLog("Exception in uploadImage", e);
-      AppSnackBar.error('failedUploadImage'.tr);
+      errorLog('Exception in uploadImage', e);
+      result = const GalleryUploadResult(success: false);
     } finally {
       isUploading.value = false;
     }
+
+    final message = _uploadResultMessage(result);
+    if (result.success) {
+      final beforeCount = galleryImages.length;
+      galleryImages.value = mergeGalleryItems(
+        existing: galleryImages,
+        created: result.createdItems,
+      );
+      final added = galleryImages.length - beforeCount;
+      if (added > 0) {
+        galleryTotalCount.value += added;
+      }
+      _setUploadBanner(message, isError: false);
+      _notifyUploadAfterOverlay(message, isError: false);
+      final refreshed = await _refreshGalleryAfterUpload();
+      if (!refreshed) {
+        _showUploadFailure('galleryUploadRefreshFailed'.tr);
+      }
+    } else {
+      _showUploadFailure(message);
+    }
   }
 
-  /// Delete image from gallery (if API supports it).
-  ///
-  /// Confirmation is handled by the UI layer (the gallery options sheet uses
-  /// [DsDialog.confirm] before calling this), so this just performs the delete.
+  String _uploadResultMessage(GalleryUploadResult result) {
+    const translationKeys = {
+      'galleryImageUnreadable',
+      'galleryUploadEmployeeOnly',
+      'galleryUploadAuthRequired',
+    };
+    if (translationKeys.contains(result.message)) {
+      return result.message!.tr;
+    }
+    if (result.message?.isNotEmpty == true) {
+      return result.message!;
+    }
+    return result.success ? 'imageUploaded'.tr : 'failedUploadImage'.tr;
+  }
+
+  void _showUploadFailure(String message) {
+    _setUploadBanner(message, isError: true);
+    _notifyUploadAfterOverlay(message, isError: true);
+  }
+
+  void _setUploadBanner(String message, {required bool isError}) {
+    uploadBannerMessage.value = message;
+    uploadBannerIsError.value = isError;
+    Future.delayed(const Duration(seconds: 6), () {
+      if (uploadBannerMessage.value == message) {
+        uploadBannerMessage.value = null;
+      }
+    });
+  }
+
+  void _notifyUploadAfterOverlay(String message, {required bool isError}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isError) {
+        AppSnackBar.error(message, duration: const Duration(seconds: 4));
+      } else {
+        AppSnackBar.success(message, duration: const Duration(seconds: 4));
+      }
+    });
+  }
+
+  Future<bool> _refreshGalleryAfterUpload() async {
+    if (kDemoMode) return true;
+    try {
+      final outcome = await _profileRepository.fetchGallery();
+      if (outcome.ok) {
+        _applyGalleryFetchOutcome(outcome);
+        lastGalleryFetchOk.value = true;
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> deleteImage(String imageId) async {
     if (kDemoMode || imageId.startsWith('demo')) {
       galleryImages.removeWhere((image) => image.id == imageId);
+      if (galleryTotalCount.value > 0) {
+        galleryTotalCount.value -= 1;
+      }
       AppSnackBar.success('imageDeleted'.tr);
       return;
     }
@@ -172,27 +266,32 @@ class GalleryScreenController extends GetxController {
 
       if (success) {
         galleryImages.removeWhere((image) => image.id == imageId);
+        if (galleryTotalCount.value > 0) {
+          galleryTotalCount.value -= 1;
+        }
         AppSnackBar.success('imageDeleted'.tr);
       } else {
         AppSnackBar.error('failedDeleteImage'.tr);
         await fetchGalleryImages();
       }
     } catch (e) {
-      errorLog("Exception in deleteImage", e);
+      errorLog('Exception in deleteImage', e);
       AppSnackBar.error('failedDeleteImage'.tr);
       await fetchGalleryImages();
     }
   }
 
-  /// Refresh gallery
   Future<void> refreshGallery() async {
     await fetchGalleryImages();
   }
 
+  void _applyGalleryFetchOutcome(GalleryFetchOutcome outcome) {
+    galleryImages.value = outcome.items;
+    galleryTotalCount.value = outcome.totalCount ?? outcome.items.length;
+  }
 
-  /// Get total images count
-  int get totalImages => galleryImages.length;
+  int get totalImages => galleryTotalCount.value;
 
-  /// Check if gallery is empty
-  bool get isGalleryEmpty => galleryImages.isEmpty && !isLoading.value;
+  bool get isGalleryEmpty =>
+      galleryImages.isEmpty && !isLoading.value && lastGalleryFetchOk.value;
 }

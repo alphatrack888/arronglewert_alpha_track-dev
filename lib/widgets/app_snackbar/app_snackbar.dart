@@ -66,12 +66,17 @@ class AppSnackBar {
     );
   }
 
-  static error(String parameterValue, {SnackPosition? snackPosition}) {
+  static error(
+    String parameterValue, {
+    SnackPosition? snackPosition,
+    Duration? duration,
+  }) {
     _show(
       text: parameterValue,
       accent: AppColors.danger,
       icon: LucideIcons.circleAlert,
       snackPosition: snackPosition,
+      duration: duration,
     );
   }
 
