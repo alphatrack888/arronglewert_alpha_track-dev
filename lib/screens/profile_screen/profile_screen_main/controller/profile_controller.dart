@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/models/profile_model.dart';
+import 'package:alpha_track/services/break_preference/break_preference_service.dart';
 import 'package:alpha_track/services/repository/profile_repository/profile_repository.dart';
 import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
+import 'package:alpha_track/services/storage_services/company_id_persistence.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:get/get.dart';
@@ -48,6 +50,11 @@ class ProfileController extends GetxController {
         profileData.value = response;
         // Set user id in storage
         await storageServie.setUserId(response.data?.id ?? '');
+        await persistCompanyIdIfMissing(response.data?.company?.id);
+        if (Get.isRegistered<BreakPreferenceService>()) {
+          Get.find<BreakPreferenceService>()
+              .syncFromProfile(response.data);
+        }
         appLog("User id: ${storageServie.getUserId()}");
         EmployeeSocketSubscriptions.onUserIdReady();
         // Reset the flag after a short delay to allow the UI to update

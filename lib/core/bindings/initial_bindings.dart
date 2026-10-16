@@ -8,6 +8,7 @@ import 'package:alpha_track/screens/notes_screen/note_screen/controller/notes_sc
 import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
 import 'package:alpha_track/screens/splash_screen/controller/splash_screen_controller.dart';
 import 'package:alpha_track/services/connectivity_services/connectivity_service.dart';
+import 'package:alpha_track/services/break_preference/break_preference_service.dart';
 import 'package:alpha_track/services/repository/auth_repository/auth_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/widgets/app_text_field/controller/app_text_field_controller.dart';
@@ -36,6 +37,13 @@ class InitialBinding extends Bindings {
     Get.lazyPut<AuthRepository>(() {
       appLog('Registering AuthRepository');
       return AuthRepository();
+    }, fenix: true);
+
+    Get.lazyPut<BreakPreferenceService>(() {
+      appLog('Registering BreakPreferenceService');
+      final service = BreakPreferenceService();
+      service.loadFromLocal();
+      return service;
     }, fenix: true);
 
     //! Splash Screen Controller

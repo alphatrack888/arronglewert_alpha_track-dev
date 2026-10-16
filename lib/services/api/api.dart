@@ -1,4 +1,6 @@
 import 'package:alpha_track/core/api_urls/api_urls.dart';
+import 'package:alpha_track/services/auth/session_unauthorized.dart';
+import 'package:alpha_track/services/auth/token_refresh_coordinator.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
@@ -9,14 +11,9 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 class AppApi {
   final Dio _dio = Dio();
 
-  AppApi._privateConstructor();
-
-  static final AppApi _instance = AppApi._privateConstructor();
-
-  static AppApi get instance => _instance;
   var storageServices = StorageServices.instance;
 
-  AppApi() {
+  AppApi._internal() {
     _dio.options.baseUrl = ApiUrls.baseUrl;
     _dio.options.sendTimeout = const Duration(seconds: 30);
     _dio.options.connectTimeout = const Duration(seconds: 30);
@@ -61,8 +58,28 @@ class AppApi {
 
           try {
             if (error.response?.statusCode == 401) {
-              storageServices.storageClear();
-              // Get.offAllNamed(AppRoutes.instance.loginScreen);
+              final options = error.requestOptions;
+              if (!shouldRetryAfterRefresh(options) ||
+                  storageServices.getRefreshToken().isEmpty) {
+                await SessionUnauthorized.handle();
+                return handler.next(error);
+              }
+
+              final refreshed =
+                  await TokenRefreshCoordinator.instance.tryRefresh();
+              if (refreshed) {
+                final newToken = storageServices.getAccessToken();
+                options.headers['Authorization'] = 'Bearer $newToken';
+                options.extra['authRetried'] = true;
+                try {
+                  final response = await _dio.fetch(options);
+                  return handler.resolve(response);
+                } on DioException catch (retryError) {
+                  return handler.next(retryError);
+                }
+              }
+
+              await SessionUnauthorized.handle();
               return handler.next(error);
             }
           } catch (e) {
@@ -85,6 +102,10 @@ class AppApi {
         ),
     });
   }
+
+  static final AppApi instance = AppApi._internal();
+
+  factory AppApi() => instance;
 
   Dio get sendRequest => _dio;
 }

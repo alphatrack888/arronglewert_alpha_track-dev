@@ -6,6 +6,7 @@ import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart'
 import 'package:alpha_track/screens/home_screen/models/single_project_model.dart';
 import 'package:alpha_track/screens/home_screen/models/today_breaks_periods_model.dart';
 import 'package:alpha_track/screens/home_screen/models/working_hours_summary_model.dart';
+import 'package:alpha_track/services/break_preference/break_preference_service.dart';
 import 'package:alpha_track/services/location_services/location_services.dart';
 import 'package:alpha_track/services/repository/report_repository/report_repository.dart';
 import 'package:alpha_track/services/repository/time_tracker_repository/time_tracker_repository.dart';
@@ -925,6 +926,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   //! ==================== TIMER INTERNAL METHODS ====================
 
+  bool _isAutomaticBreakEnabled() {
+    if (!Get.isRegistered<BreakPreferenceService>()) {
+      return BreakPreferenceService.defaultAutomaticBreakEnabled;
+    }
+    return Get.find<BreakPreferenceService>().automaticBreakEnabled;
+  }
+
   void _startTimer() {
     // Cancel any existing timer to prevent multiple timers
     _timer?.cancel();
@@ -936,6 +944,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       int currentHour = (_elapsedMilliseconds.value / 3600000).floor();
       if (currentHour > _lastDialogHour.value && currentHour > 0) {
         _lastDialogHour.value = currentHour;
+        if (!_isAutomaticBreakEnabled()) {
+          appLog('Auto-pause skipped at hour $currentHour (automatic break off)');
+          return;
+        }
         appLog('Auto-pause triggered at hour: $currentHour');
 
         // Auto-pause and show dialog

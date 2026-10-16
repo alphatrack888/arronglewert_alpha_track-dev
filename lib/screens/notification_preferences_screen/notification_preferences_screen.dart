@@ -165,7 +165,7 @@ class NotificationPreferencesScreen extends StatelessWidget {
                   () => PrimaryButton(
                     label: AppString.saveChanges.tr,
                     isLoading: controller.isSaving.value,
-                    onTap: () => controller.savePreferences(),
+                    onTap: () => controller.savePreferences(showSuccessSnackbar: true),
                   ),
                 ),
               ],

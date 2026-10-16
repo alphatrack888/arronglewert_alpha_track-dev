@@ -29,7 +29,7 @@
 
 | Area | Behavior |
 |------|----------|
-| [`language_screen.dart`](lib/screens/profile_screen/language_screen/language_screen.dart) | Local notification toggles; not wired to `/notification-preferences` |
+| [`language_screen.dart`](lib/screens/profile_screen/language_screen/language_screen.dart) | Links to notification preferences screen (server prefs via Settings or Preferences) |
 | [`project_notes_screen`](lib/screens/home_screen/projects_notes/) | Local chat-style UI; not the primary employee notes path |
 
 ## Verification

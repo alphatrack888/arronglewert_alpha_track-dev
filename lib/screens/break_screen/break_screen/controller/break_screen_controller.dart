@@ -1,5 +1,7 @@
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_mdoel.dart';
+import 'package:alpha_track/services/storage_services/company_id_persistence.dart';
+import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:get/get.dart';
@@ -35,6 +37,11 @@ class BreakScreenController extends GetxController {
     }
     try {
       isLoading(true);
+      if (!shouldFetchLeaveBalance(StorageServices.instance.getCompanyId())) {
+        leaveBalanceData.value = null;
+        isLoading(false);
+        return;
+      }
       final response = await leaveManagementRepository
           .fetchAlltheLeaveBalance();
       leaveBalanceData.value = response;

@@ -147,17 +147,27 @@ class GalleryScreenController extends GetxController {
   /// Confirmation is handled by the UI layer (the gallery options sheet uses
   /// [DsDialog.confirm] before calling this), so this just performs the delete.
   Future<void> deleteImage(String imageId) async {
-    try {
-      // Remove from local list immediately for better UX
+    if (kDemoMode || imageId.startsWith('demo')) {
       galleryImages.removeWhere((image) => image.id == imageId);
-
-      // Here you would call API to delete from server
-      // await _profileRepository.deleteGalleryImage(imageId);
-
       AppSnackBar.success('imageDeleted'.tr);
+      return;
+    }
+
+    try {
+      final success =
+          await _profileRepository.deleteGalleryImages([imageId]);
+
+      if (success) {
+        galleryImages.removeWhere((image) => image.id == imageId);
+        AppSnackBar.success('imageDeleted'.tr);
+      } else {
+        AppSnackBar.error('failedDeleteImage'.tr);
+        await fetchGalleryImages();
+      }
     } catch (e) {
       errorLog("Exception in deleteImage", e);
       AppSnackBar.error('failedDeleteImage'.tr);
+      await fetchGalleryImages();
     }
   }
 

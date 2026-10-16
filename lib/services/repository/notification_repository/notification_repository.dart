@@ -74,7 +74,7 @@ class NotificationRepository {
         url: ApiUrls.notificationPreferences,
         body: preferences.toJson(),
       );
-      return response != null;
+      return response != null && response['success'] == true;
     } catch (e) {
       appLog("updatePreferences error: $e");
       return false;

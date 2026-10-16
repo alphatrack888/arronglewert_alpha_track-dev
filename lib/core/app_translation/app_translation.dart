@@ -165,6 +165,7 @@ class AppTranslation extends Translations {
       'automaticBreakSub':
           'Receive notifications when it\'s time to take a break, ensuring you never miss a rest period.',
       'noLeaveHistory': 'No leave history',
+      'noBreakHistory': 'No completed breaks in the last 7 days',
       'shortBreak': 'Short break',
       'lunch': 'Lunch',
       'coffee': 'Coffee',
@@ -448,7 +449,7 @@ class AppTranslation extends Translations {
       'typeNote': 'Type Note',
       'typeHere': 'Type Here',
       'breakSettings': 'Break Settings',
-      'automaticBreak': '',
+      'automaticBreak': 'Automatic break',
       'manualBreak': 'Manual Break',
       'breakTime': 'Break Time',
       'breaktimeDeatils':
@@ -797,6 +798,7 @@ class AppTranslation extends Translations {
       'automaticBreakSub':
           'Erhalten Sie Benachrichtigungen, wenn es Zeit für eine Pause ist, damit Sie keine Ruhezeit verpassen.',
       'noLeaveHistory': 'Kein Urlaubsverlauf',
+      'noBreakHistory': 'Keine abgeschlossenen Pausen in den letzten 7 Tagen',
       'shortBreak': 'Kurze Pause',
       'lunch': 'Mittagessen',
       'coffee': 'Kaffee',
@@ -1095,7 +1097,7 @@ class AppTranslation extends Translations {
       'typeNote': 'Notiz eingeben',
       'typeHere': 'hier eingeben',
       'breakSettings': 'Pauseneinstellung',
-      'automaticBreak': '',
+      'automaticBreak': 'Automatische Pause',
       'manualBreak': 'Pause manuell eintragen',
       'breakTime': 'Pausenzeit',
       'breaktimeDeatils':
@@ -1440,6 +1442,7 @@ class AppTranslation extends Translations {
       'automaticBreakSub':
           'احصل على إشعارات عندما يحين وقت الاستراحة، حتى لا تفوّت أي فترة راحة.',
       'noLeaveHistory': 'لا يوجد سجل إجازات',
+      'noBreakHistory': 'لا توجد استراحات مكتملة في آخر 7 أيام',
       'shortBreak': 'استراحة قصيرة',
       'lunch': 'الغداء',
       'coffee': 'القهوة',
@@ -1721,7 +1724,7 @@ class AppTranslation extends Translations {
       'typeNote': 'أدخل ملاحظة',
       'typeHere': 'أدخل هنا',
       'breakSettings': 'إعدادات الاستراحة',
-      'automaticBreak': '',
+      'automaticBreak': 'استراحة تلقائية',
       'manualBreak': 'دخال الاستراحة يدويًا',
       'breakTime': 'وقت الاستراحة',
       'breaktimeDeatils':
@@ -2064,6 +2067,7 @@ class AppTranslation extends Translations {
       'automaticBreakSub':
           'Primește notificări când e timpul pentru o pauză, ca să nu ratezi nicio perioadă de odihnă.',
       'noLeaveHistory': 'Niciun istoric de concedii',
+      'noBreakHistory': 'Nicio pauză finalizată în ultimele 7 zile',
       'shortBreak': 'Pauză scurtă',
       'lunch': 'Prânz',
       'coffee': 'Cafea',
@@ -2356,7 +2360,7 @@ class AppTranslation extends Translations {
       'typeNote': 'Introduceți notiță',
       'typeHere': 'Introduceți aici',
       'breakSettings': 'Setări pauză',
-      'automaticBreak': '',
+      'automaticBreak': 'Pauză automată',
       'manualBreak': 'Adăugați pauză manual',
       'breakTime': 'Timp pauză',
       'breaktimeDeatils': 'Primiți notificări când este timpul pentru pauză',

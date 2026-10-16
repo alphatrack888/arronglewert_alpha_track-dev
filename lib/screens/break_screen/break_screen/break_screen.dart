@@ -1,4 +1,5 @@
 import 'package:alpha_track/core/app_route/app_route.dart';
+import 'package:alpha_track/screens/break_screen/break_screen/controller/break_settings_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/ds/ds_back_button.dart';
@@ -6,26 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-/// Break Settings — matches Figma 73-3442 (Automatic / Manual Break toggles).
-class BreakScreen extends StatefulWidget {
+/// Break Settings — automatic break reminders (hourly in-app prompt when enabled).
+class BreakScreen extends StatelessWidget {
   const BreakScreen({super.key});
 
   @override
-  State<BreakScreen> createState() => _BreakScreenState();
-}
-
-class _BreakScreenState extends State<BreakScreen> {
-  bool _automaticBreak = false;
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(BreakSettingsController());
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Row(
@@ -41,12 +36,13 @@ class _BreakScreenState extends State<BreakScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            _toggleRow(
-              title: 'automaticBreak'.tr,
-              subtitle:
-                  'automaticBreakSub'.tr,
-              value: _automaticBreak,
-              onChanged: (v) => setState(() => _automaticBreak = v),
+            Obx(
+              () => _toggleRow(
+                title: 'automaticBreak'.tr,
+                subtitle: 'automaticBreakSub'.tr,
+                value: controller.automaticBreakEnabled.value,
+                onChanged: (v) => controller.setAutomaticBreak(v),
+              ),
             ),
           ],
         ),
@@ -101,5 +97,4 @@ class _BreakScreenState extends State<BreakScreen> {
       ),
     );
   }
-
 }

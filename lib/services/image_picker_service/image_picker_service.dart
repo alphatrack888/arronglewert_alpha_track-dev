@@ -8,6 +8,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
 
+/// System photo picker on Android needs no broad storage/photos permission.
+bool skipGalleryPermissionForAndroidSdk(int sdkInt) => true;
+
 class ImagePickerService {
   final ImagePicker _picker = ImagePicker();
 
@@ -69,18 +72,17 @@ class ImagePickerService {
     try {
       log('🔍 Starting gallery picker...');
 
-      // Request storage permission
-      bool hasPermission = await _requestStoragePermission();
-      log('📱 Storage permission granted: $hasPermission');
+      final needsPermission = await _needsAndRequestGalleryPermission();
+      log('📱 Gallery pre-permission step passed: $needsPermission');
 
-      if (!hasPermission) {
+      if (!needsPermission) {
         if (context.mounted) {
-          _showPermissionDialog(context, 'Storage', 'photos and media');
+          _showGalleryPermissionDenied(context);
         }
         return null;
       }
 
-      log('✅ Storage permission granted, opening gallery...');
+      log('✅ Opening gallery picker...');
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -219,36 +221,32 @@ class ImagePickerService {
     }
   }
 
-  /// Request storage permission based on Android version
-  Future<bool> _requestStoragePermission() async {
+  /// Returns false only when legacy Android needs storage and user denied it.
+  Future<bool> _needsAndRequestGalleryPermission() async {
     try {
       if (Platform.isIOS) {
-        // iOS handles permissions automatically
         return true;
       }
 
       if (Platform.isAndroid) {
-        final androidInfo = await DeviceInfoPlugin().androidInfo;
-        final sdkVersion = androidInfo.version.sdkInt;
-        log('📱 Android SDK Version: $sdkVersion');
-
-        if (sdkVersion >= 33) {
-          // Android 13+ - use photos permission
-          final status = await Permission.photos.request();
-          log('📱 Photos permission: $status');
-          return status.isGranted;
-        } else {
-          // Android < 13 - use storage permission
-          final status = await Permission.storage.request();
-          log('📱 Storage permission: $status');
-          return status.isGranted;
-        }
+        return true;
       }
       return false;
     } catch (e) {
       log('❌ Permission request error: $e');
       return false;
     }
+  }
+
+  void _showGalleryPermissionDenied(BuildContext context) {
+    if (!context.mounted) return;
+
+    DsDialog.alert(
+      title: 'permissionRequiredFor'.trParams({'type': 'Storage'}),
+      message: 'chooseFromGallery'.tr,
+      tone: DsDialogTone.warning,
+      icon: LucideIcons.lock,
+    );
   }
 
   /// Show permission dialog

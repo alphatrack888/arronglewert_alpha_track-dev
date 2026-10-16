@@ -233,9 +233,13 @@ class AuthRepository {
       "Verified saved token: ${savedToken.isNotEmpty ? 'Token saved successfully' : 'ERROR: Token not saved!'}",
     );
 
-    final String refreshToken = data["accessToken"];
-    appLog("refreshToken from login api $refreshToken");
-    await storageServices.setRefreshToken(refreshToken);
+    final refreshToken = data["refreshToken"];
+    if (refreshToken is String && refreshToken.isNotEmpty) {
+      appLog("refreshToken from login api saved");
+      await storageServices.setRefreshToken(refreshToken);
+    } else {
+      await storageServices.setRefreshToken('');
+    }
 
     final String role = data["role"];
     appLog("role from login api $role");
@@ -251,6 +255,55 @@ class AuthRepository {
 
     Get.offAllNamed(AppRoute.bottomNavigation);
     AppSnackBar.success("Login Successfully");
+  }
+
+  /// Exchange refresh token for a new access token (plain Dio — no AppApi interceptor).
+  Future<bool> refreshAccessToken() async {
+    final refresh = storageServices.getRefreshToken();
+    if (refresh.isEmpty) {
+      return false;
+    }
+    try {
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      final response = await dio.post<Map<String, dynamic>>(
+        ApiUrls.refreshToken,
+        data: {'refreshToken': refresh},
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        return false;
+      }
+      final data = body['data'];
+      if (data is! Map) {
+        return false;
+      }
+      final accessToken = data['accessToken'];
+      if (accessToken is! String || accessToken.isEmpty) {
+        return false;
+      }
+
+      await storageServices.setAccessToken(accessToken);
+      AppSocketAllOperation.instance.connectIfAuthenticated();
+      appLog('accessToken refreshed successfully');
+      return true;
+    } on DioException catch (e) {
+      appLog(
+        'refreshAccessToken failed: status=${e.response?.statusCode}',
+      );
+      return false;
+    } catch (e) {
+      appLog('refreshAccessToken error: $e');
+      return false;
+    }
   }
 
   //! Resend Otp

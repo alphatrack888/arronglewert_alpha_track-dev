@@ -22,6 +22,21 @@ class ProfileRepository {
     }
   }
 
+  /// JSON PATCH for profile fields (e.g. manualBreak) without multipart.
+  Future<bool> patchProfileFields(Map<String, dynamic> fields) async {
+    try {
+      final response = await apiServices.apiPatchServices(
+        url: ApiUrls.updateProfile,
+        body: fields,
+      );
+      return response != null &&
+          (response['success'] == true || response['success'] == null);
+    } catch (e) {
+      debugPrint('patchProfileFields error: $e');
+      return false;
+    }
+  }
+
   Future<bool> updaeProfile({
     String? fullName,
     String? contactNumber,
@@ -108,32 +123,46 @@ class ProfileRepository {
   //! Upload Gallery Image
   Future<bool> uploadGalleryImage({required File image}) async {
     try {
-      FormData formData = FormData();
-      // Check if file exists before uploading
-      if (await image.exists()) {
-        String fileName = image.path.split('/').last;
-        formData.files.add(
-          MapEntry(
-            'images',
-            await MultipartFile.fromFile(
-              image.path,
-              filename: fileName,
-              contentType: DioMediaType.parse(_getMimeType(fileName)),
-            ),
-          ),
-        );
+      if (!await image.exists()) {
+        debugPrint('Gallery upload error: image file does not exist');
+        return false;
       }
+
+      final fileName = image.path.split('/').last;
+      final formData = FormData();
+      formData.files.add(
+        MapEntry(
+          'images',
+          await MultipartFile.fromFile(
+            image.path,
+            filename: fileName,
+            contentType: DioMediaType.parse(_getMimeType(fileName)),
+          ),
+        ),
+      );
+
       final response = await apiServices.apiPostServices(
         url: ApiUrls.gallery,
         body: formData,
       );
-      if (response != null) {
-        return true;
-      } else {
-        throw Exception('Profile image file does not exist');
-      }
+      return response is Map && response['success'] == true;
     } catch (e) {
-      debugPrint('Gallery upload error: $e'); // Add logging
+      debugPrint('Gallery upload error: $e');
+      return false;
+    }
+  }
+
+  //! Delete gallery images by server _id
+  Future<bool> deleteGalleryImages(List<String> imageIds) async {
+    if (imageIds.isEmpty) return false;
+    try {
+      final response = await apiServices.apiDeleteServices(
+        url: ApiUrls.gallery,
+        body: {'images': imageIds},
+      );
+      return response != null && response['success'] == true;
+    } catch (e) {
+      debugPrint('Gallery delete error: $e');
       return false;
     }
   }

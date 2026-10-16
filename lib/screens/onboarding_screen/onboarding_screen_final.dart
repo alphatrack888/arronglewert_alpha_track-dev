@@ -63,7 +63,7 @@ class OnboardingScreenFinal extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 18),
-              //! Continue as Guest — enters the app without an account
+              //! Continue as Guest — browse UI without login (no demo data in release).
               GestureDetector(
                 onTap: () => Get.toNamed(AppRoute.bottomNavigation),
                 child: Text(

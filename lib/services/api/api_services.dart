@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/api/api.dart';
-import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
@@ -20,7 +18,6 @@ class ApiServices {
 
   //////////  object
   final api = AppApi();
-  var storageServices = StorageServices.instance;
 
   Future<dynamic> apiPutServices({
     required String url,
@@ -48,12 +45,8 @@ class ApiServices {
       return null;
     } on DioException catch (e) {
       if (e.response.runtimeType != Null) {
-        if (e.response?.statusCode == 401) {
-          await storageServices.storageClear();
-          Get.offAllNamed(AppRoute.onboardingScreen);
-        }
-
-        if (e.response?.data["message"].runtimeType != Null) {
+        if (e.response?.statusCode != 401 &&
+            e.response?.data["message"].runtimeType != Null) {
           AppSnackBar.error("${e.response?.data["message"]}");
         }
 
@@ -89,7 +82,7 @@ class ApiServices {
         requestOptions = Options();
       }
 
-      final dynamic response = await AppApi().sendRequest.post(
+      final dynamic response = await api.sendRequest.post(
         url,
         data: body,
         options: requestOptions,
@@ -118,12 +111,8 @@ class ApiServices {
       return null;
     } on DioException catch (e) {
       if (e.response.runtimeType != Null) {
-        if (e.response?.statusCode == 401) {
-          await storageServices.storageClear();
-          Get.offAllNamed(AppRoute.onboardingScreen);
-        }
-
-        if (e.response?.data["message"].runtimeType != Null) {
+        if (e.response?.statusCode != 401 &&
+            e.response?.data["message"].runtimeType != Null) {
           AppSnackBar.error("${e.response?.data["message"]}");
         }
 
@@ -161,7 +150,7 @@ class ApiServices {
       requestOptions = Options();
     }
 
-    final dynamic response = await AppApi().sendRequest.post(
+    final dynamic response = await api.sendRequest.post(
       url,
       data: body,
       options: requestOptions,
@@ -189,12 +178,8 @@ class ApiServices {
     return null;
   } on DioException catch (e) {
     if (e.response != null) {
-      if (e.response?.statusCode == 401) {
-        await storageServices.storageClear();
-        Get.offAllNamed(AppRoute.onboardingScreen);
-      }
-
-      if (e.response?.data["message"] != null) {
+      if (e.response?.statusCode != 401 &&
+          e.response?.data["message"] != null) {
         AppSnackBar.error("${e.response?.data["message"]}");
       }
 
@@ -236,12 +221,8 @@ class ApiServices {
       return null;
     } on DioException catch (e) {
       if (e.response.runtimeType != Null) {
-        if (e.response?.statusCode == 401) {
-          await storageServices.storageClear();
-          Get.offAllNamed(AppRoute.onboardingScreen);
-        }
-
-        if (e.response?.data["message"].runtimeType != Null) {
+        if (e.response?.statusCode != 401 &&
+            e.response?.data["message"].runtimeType != Null) {
           AppSnackBar.error("${e.response?.data["message"]}");
         }
 
@@ -286,15 +267,10 @@ class ApiServices {
       errorLog('api time out exception', e);
       return null;
     } on DioException catch (e) {
-      // Fixed null checking
       if (e.response != null) {
-        if (e.response?.statusCode == 401) {
-          await storageServices.storageClear();
-          Get.offAllNamed(AppRoute.onboardingScreen);
-        }
-
-        // Fixed null checking for message
-        if (e.response?.data != null && e.response?.data["message"] != null) {
+        if (e.response?.statusCode != 401 &&
+            e.response?.data != null &&
+            e.response?.data["message"] != null) {
           AppSnackBar.error("${e.response?.data["message"]}");
         }
         return null;
@@ -347,12 +323,8 @@ class ApiServices {
       return null;
     } on DioException catch (e) {
       if (e.response?.data != null) {
-        if (e.response?.statusCode == 401) {
-          await storageServices.storageClear();
-          Get.offAllNamed(AppRoute.onboardingScreen);
-        }
-
-        if (e.response?.data["message"] != null) {
+        if (e.response?.statusCode != 401 &&
+            e.response?.data["message"] != null) {
           AppSnackBar.error("${e.response?.data["message"]}");
         }
 

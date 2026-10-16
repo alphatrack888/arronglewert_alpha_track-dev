@@ -42,9 +42,6 @@ class LeaveScreenController extends GetxController {
   final DateRangePickerController toDateController =
       DateRangePickerController();
 
-  //! Form validation
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
   @override
   void onInit() {
     super.onInit();
@@ -124,90 +121,8 @@ class LeaveScreenController extends GetxController {
     return DateFormat('yyyy-MM-dd').format(date).toString();
   }
 
-  //! Validate form data before submission
-  bool _validateLeaveApplication() {
-    //! Form validation
-    if (!(formKey.currentState?.validate() ?? false)) {
-      return false;
-    }
-
-    //! Reason validation
-    if (reason.value.trim().isEmpty) {
-      AppSnackBar.error(AppString.pleaseEnterReasonForLeave.tr);
-      return false;
-    }
-
-    //! Minimum leave duration validation
-    if (leaveDuration < 1) {
-      AppSnackBar.error(AppString.minOneDayLeave.tr);
-      return false;
-    }
-
-    //! Date range validation
-    if (toDate.value.isBefore(fromDate.value)) {
-      AppSnackBar.error(AppString.invalidDateRange.tr);
-      return false;
-    }
-
-    return true;
-  }
-
-  //! Submit leave application to API
-  Future<void> submitLeaveApplication() async {
-    //! Validate form data
-    if (!_validateLeaveApplication()) {
-      return;
-    }
-
-    try {
-      isLoading(true);
-      //! Get company ID from storage
-      final companyId = _storageServices.getCompanyId();
-      if (companyId.isEmpty) {
-        AppSnackBar.error(AppString.companyIdNotFound.tr);
-        return;
-      }
-
-      //! Prepare API parameters
-      final String apiLeaveType = _getLeaveTypeForAPI(selectedLeaveType.value);
-      final String fromDateFormatted = _formatDateForAPI(fromDate.value);
-      final String toDateFormatted = _formatDateForAPI(toDate.value);
-      final String leaveReason = reason.value.trim();
-
-      //! Call API through repository
-      final bool success = await _leaveRepository.applyforLeave(
-        companyId: companyId,
-        fromDate: fromDateFormatted,
-        toDate: toDateFormatted,
-        reason: leaveReason,
-        type: apiLeaveType,
-      );
-
-      //! Handle API response
-      if (success) {
-        AppSnackBar.success(AppString.leaveApplicationSubmitted.tr);
-        _resetFormAfterSuccess();
-        //! Refresh break screen controller to update leave balance and UI
-        final breakScreenController = Get.find<BreakScreenController>();
-        await breakScreenController.updateLeaveData();
-        //! Optional: Navigate back
-        //! Get.back();
-      } else {
-        AppSnackBar.error(
-          AppString.leaveApplicationFailed.tr,
-        );
-      }
-    } catch (e) {
-      AppSnackBar.error(
-        AppString.leaveApplicationError.tr,
-      );
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  /// Apply leave from the Leave Schedule bottom sheet (which does not use the
-  /// Form/formKey path). Validates reason + dates, then in demo mode adds the
+  /// Apply leave from the Leave Schedule bottom sheet. Validates reason + dates,
+  /// then in demo mode adds the
   /// leave locally so it shows up on the calendar / Upcoming section, or in real
   /// mode submits to the API. Returns true on success so the sheet can close.
   Future<bool> applyLeaveFromSheet() async {
@@ -230,7 +145,7 @@ class LeaveScreenController extends GetxController {
     }
 
     try {
-      isLoading(true);
+      isLoading.value = true;
       final companyId = _storageServices.getCompanyId();
       if (companyId.isEmpty) {
         AppSnackBar.error(AppString.companyIdNotFound.tr);
@@ -255,7 +170,7 @@ class LeaveScreenController extends GetxController {
       AppSnackBar.error(AppString.leaveApplicationError.tr);
       return false;
     } finally {
-      isLoading(false);
+      isLoading.value = false;
     }
   }
 

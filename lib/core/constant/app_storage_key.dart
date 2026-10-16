@@ -15,4 +15,5 @@ class AppStorageKey {
   String companyId = "companyId";
   String userId = "userId";
   String registeredDeviceToken = "registeredDeviceToken";
+  String automaticBreakEnabled = "automaticBreakEnabled";
 }

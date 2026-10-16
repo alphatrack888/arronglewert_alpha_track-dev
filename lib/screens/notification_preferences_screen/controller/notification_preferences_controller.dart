@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:alpha_track/screens/notification_preferences_screen/models/notification_preferences_model.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -14,6 +16,9 @@ class NotificationPreferencesController extends GetxController {
   var preferences = NotificationPreferences().obs;
   var demoMode = false.obs;
 
+  Timer? _saveDebounce;
+  static const _debounceMs = 500;
+
   @override
   void onInit() {
     super.onInit();
@@ -21,8 +26,14 @@ class NotificationPreferencesController extends GetxController {
     fetchPreferences();
   }
 
-  Future<void> fetchPreferences() async {
-    isLoading.value = true;
+  @override
+  void onClose() {
+    _saveDebounce?.cancel();
+    super.onClose();
+  }
+
+  Future<void> fetchPreferences({bool silent = false}) async {
+    if (!silent) isLoading.value = true;
     try {
       if (kDemoMode) {
         preferences.value = NotificationPreferences();
@@ -35,12 +46,22 @@ class NotificationPreferencesController extends GetxController {
     } catch (e) {
       appLog("Error fetching notification preferences: $e");
     } finally {
-      isLoading.value = false;
+      if (!silent) isLoading.value = false;
     }
+  }
+
+  void _scheduleAutoSave() {
+    if (isLoading.value || kDemoMode) return;
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(
+      const Duration(milliseconds: _debounceMs),
+      () => savePreferences(showSuccessSnackbar: false),
+    );
   }
 
   void setPushEnabled(bool value) {
     preferences.update((p) => p?.pushEnabled = value);
+    _scheduleAutoSave();
   }
 
   void setCategory(String category, bool value) {
@@ -66,34 +87,45 @@ class NotificationPreferencesController extends GetxController {
           break;
       }
     });
+    _scheduleAutoSave();
   }
 
   void setDigestMode(String value) {
     preferences.update((p) => p?.digestMode = value);
+    _scheduleAutoSave();
   }
 
   void setLanguage(String value) {
     preferences.update((p) => p?.language = value);
+    _scheduleAutoSave();
   }
 
-  Future<bool> savePreferences() async {
+  Future<bool> savePreferences({bool showSuccessSnackbar = true}) async {
     if (kDemoMode) {
-      AppSnackBar.message(AppString.preferencesNotAvailableInDemo.tr);
+      if (showSuccessSnackbar) {
+        AppSnackBar.message(AppString.preferencesNotAvailableInDemo.tr);
+      }
       return false;
     }
     isSaving.value = true;
     try {
       final success = await _repository.updatePreferences(preferences.value);
       if (success) {
-        await fetchPreferences();
-        AppSnackBar.success(AppString.preferencesSaved.tr);
+        await fetchPreferences(silent: !showSuccessSnackbar);
+        if (showSuccessSnackbar) {
+          AppSnackBar.success(AppString.preferencesSaved.tr);
+        }
       } else {
-        AppSnackBar.error(AppString.preferencesSaveFailed.tr);
+        if (showSuccessSnackbar) {
+          AppSnackBar.error(AppString.preferencesSaveFailed.tr);
+        }
       }
       return success;
     } catch (e) {
       appLog("Error saving notification preferences: $e");
-      AppSnackBar.error(AppString.preferencesSaveFailed.tr);
+      if (showSuccessSnackbar) {
+        AppSnackBar.error(AppString.preferencesSaveFailed.tr);
+      }
       return false;
     } finally {
       isSaving.value = false;

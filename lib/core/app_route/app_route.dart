@@ -10,7 +10,6 @@ import 'package:alpha_track/screens/auth_screen/reset_password_screen/reset_pass
 import 'package:alpha_track/screens/auth_screen/signup_screen/signup_screen.dart';
 import 'package:alpha_track/screens/bottom_navigation/bottom_navigation_screen.dart';
 import 'package:alpha_track/screens/break_screen/break_screen/break_screen.dart';
-import 'package:alpha_track/screens/break_screen/leave_screen/leave_screen.dart';
 import 'package:alpha_track/screens/break_screen/leave_screen/leave_schedule_screen.dart';
 import 'package:alpha_track/screens/break_screen/history_screens.dart';
 import 'package:alpha_track/screens/error_screen/erro_screen.dart';
@@ -190,7 +189,7 @@ class AppRoute {
     ),
     GetPage(
       name: AppRoute.leaveScreen,
-      page: () => LeaveScreen(),
+      page: () => const LeaveScheduleScreen(),
       transition: Transition.rightToLeftWithFade,
       binding: BreakScreenBindings(),
       middlewares: [InternetCheckMiddleWare()],

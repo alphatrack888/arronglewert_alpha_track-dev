@@ -1,3 +1,4 @@
+import 'package:alpha_track/screens/break_screen/break_history_controller.dart';
 import 'package:alpha_track/screens/break_screen/break_screen/controller/break_screen_controller.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -128,48 +129,69 @@ class LeaveHistoryScreen extends StatelessWidget {
   }
 }
 
-/// Past breaks (demo list).
+/// Completed work-session breaks from API (last 7 days).
 class BreakHistoryScreen extends StatelessWidget {
   const BreakHistoryScreen({super.key});
 
-  static const _breaks = [
-    {'title': 'lunch', 'date': 'today1', 'time': '12:30 – 13:05', 'dur': '35m'},
-    {'title': 'coffee', 'date': 'today1', 'time': '10:15 – 10:23', 'dur': '8m'},
-    {'title': 'lunch', 'date': 'yesterday', 'time': '12:40 – 13:20', 'dur': '40m'},
-    {'title': 'shortBreak', 'date': 'yesterday', 'time': '15:00 – 15:10', 'dur': '10m'},
-    {'title': 'lunch', 'date': 'Jun 12', 'time': '12:30 – 13:00', 'dur': '30m'},
-  ];
-
   @override
   Widget build(BuildContext context) {
-    // Group breaks by their date label, preserving first-seen order, so the
-    // list reads: Today → its breaks, Yesterday → its breaks, etc.
-    final groups = <String, List<Map<String, String>>>{};
-    for (final b in _breaks) {
-      groups.putIfAbsent(b['date']!, () => []).add(b);
-    }
-
-    final children = <Widget>[];
-    groups.forEach((date, items) {
-      children.add(Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-        child: Text(date.tr.toUpperCase(), style: AppTextStyles.eyebrow),
-      ));
-      for (final b in items) {
-        children.add(_breakCard(b));
-      }
-    });
+    final controller = Get.put(BreakHistoryController());
 
     return _historyScaffold(
       'breakHistory'.tr,
-      ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        children: children,
-      ),
+      Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = controller.entries;
+        if (list.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'noBreakHistory'.tr,
+                style: AppTextStyles.subtitle,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final groups = <String, List<BreakHistoryEntry>>{};
+        for (final e in list) {
+          final label = _dayLabel(e.day);
+          groups.putIfAbsent(label, () => []).add(e);
+        }
+
+        final children = <Widget>[];
+        for (final entry in groups.entries) {
+          children.add(Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+            child: Text(entry.key.toUpperCase(), style: AppTextStyles.eyebrow),
+          ));
+          for (final b in entry.value) {
+            children.add(_breakCard(b));
+          }
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: children,
+        );
+      }),
     );
   }
 
-  Widget _breakCard(Map<String, String> b) {
+  String _dayLabel(DateTime day) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final d = DateTime(day.year, day.month, day.day);
+    if (d == today) return 'today1'.tr;
+    if (d == today.subtract(const Duration(days: 1))) return 'yesterday'.tr;
+    return '${_months[day.month - 1]} ${day.day}';
+  }
+
+  Widget _breakCard(BreakHistoryEntry b) {
     return DsCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -188,13 +210,13 @@ class BreakHistoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(b['title']!.tr, style: AppTextStyles.bodySemibold),
+                Text(b.projectName, style: AppTextStyles.bodySemibold),
                 const SizedBox(height: 2),
-                Text(b['time']!, style: AppTextStyles.caption),
+                Text(b.timeRange, style: AppTextStyles.caption),
               ],
             ),
           ),
-          Text(b['dur']!, style: AppTextStyles.bodySemibold),
+          Text(b.durationLabel, style: AppTextStyles.bodySemibold),
         ],
       ),
     );

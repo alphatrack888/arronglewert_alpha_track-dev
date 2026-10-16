@@ -45,7 +45,7 @@ Single entry point for **Android internal pilot** go/no-go against `https://api.
 **Blockers / limits (if any):**
 
 - **P2 automated scope complete** (P2.1 static, P2.3 `DemoData` audit, CI pre-checks). **Steps 1–3 device evidence** still required per [PHASE_P2_DEVICE_GATE.md](PHASE_P2_DEVICE_GATE.md) before upgrading to full **Go** for Phase 0 pilot.
-- **Known limits (non-blockers):** onboarding “Continue as Guest” may bypass auth; Android backup may restore prefs on reinstall (P1.4).
+- **Known limits (non-blockers):** onboarding “Continue as Guest” opens the app without login (UI preview; API data requires real login); Android backup may restore prefs on reinstall (P1.4).
 
 ---
 

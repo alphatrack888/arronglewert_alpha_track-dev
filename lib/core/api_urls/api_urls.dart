@@ -4,6 +4,7 @@ class ApiUrls {
   static const String localDomain = "http://88.198.112.109:5000/";
   static const String baseUrl = "${liveDomain}api/v1";
   static const String employeeLogin = "$baseUrl/auth/login";
+  static const String refreshToken = "$baseUrl/auth/refresh-token";
   // TODO(backend): confirm the registration endpoint path/contract. Best guess
   // based on the existing /auth/* routes; adjust if the API differs.
   static const String register = "$baseUrl/auth/register";

@@ -387,7 +387,9 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
 
   // ---- Apply Leave bottom sheet --------------------------------------------
   void _showApplyLeaveSheet() {
-    final c = Get.put(LeaveScreenController());
+    final c = Get.isRegistered<LeaveScreenController>()
+        ? Get.find<LeaveScreenController>()
+        : Get.put(LeaveScreenController());
     String fmt(DateTime d) =>
         '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
 

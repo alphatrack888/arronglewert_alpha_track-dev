@@ -4,7 +4,7 @@ import 'package:alpha_track/core/app_route/app_route.dart';
 String? routeForNotificationCategory(String? category) {
   switch (category) {
     case 'leave':
-      return AppRoute.leaveScreen;
+      return AppRoute.leaveScheduleScreen;
     case 'payroll':
       return AppRoute.payRoleScreen;
     case 'project':
