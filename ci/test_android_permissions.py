@@ -21,11 +21,17 @@ class AndroidPermissionsTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing"):
                 check_release_manifests(directory)
 
-    def test_final_manifest_accepts_camera_microphone_and_rejects_broad_access(self):
+    def test_final_manifest_accepts_gallery_and_rejects_broad_access(self):
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml"
             manifest.parent.mkdir(parents=True)
-            for permission in ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", *FORBIDDEN]:
+            allowed = [
+                "android.permission.CAMERA",
+                "android.permission.RECORD_AUDIO",
+                "android.permission.READ_MEDIA_IMAGES",
+                "android.permission.READ_EXTERNAL_STORAGE",
+            ]
+            for permission in [*allowed, *FORBIDDEN]:
                 for element in ("uses-permission", "uses-permission-sdk-23"):
                     with self.subTest(permission=permission, element=element):
                         manifest.write_text(
@@ -36,7 +42,7 @@ class AndroidPermissionsTest(unittest.TestCase):
                         if permission in FORBIDDEN:
                             with self.assertRaisesRegex(ValueError, "prohibited"):
                                 check_release_manifests(directory)
-                        else:
+                        elif permission in allowed:
                             self.assertEqual(check_release_manifests(directory), 1)
 
 

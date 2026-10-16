@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_model.dart';
+import 'package:alpha_track/screens/profile_screen/gallery_screen/models/gallery_upload_result.dart';
 import 'package:alpha_track/screens/profile_screen/pay_role_screen/models/payrole_model.dart';
 import 'package:dio/dio.dart';
 import '../../../screens/profile_screen/profile_screen_main/models/profile_model.dart';
@@ -120,12 +121,12 @@ class ProfileRepository {
     }
   }
 
-  //! Upload Gallery Image
-  Future<bool> uploadGalleryImage({required File image}) async {
+  //! Upload Gallery Image (POST /gallery/ — multipart field `images`, Cloudinary on server)
+  Future<GalleryUploadResult> uploadGalleryImage({required File image}) async {
     try {
       if (!await image.exists()) {
         debugPrint('Gallery upload error: image file does not exist');
-        return false;
+        return const GalleryUploadResult(success: false);
       }
 
       final fileName = image.path.split('/').last;
@@ -141,14 +142,36 @@ class ProfileRepository {
         ),
       );
 
-      final response = await apiServices.apiPostServices(
-        url: ApiUrls.gallery,
-        body: formData,
+      final response = await apiServices.api.sendRequest.post(
+        ApiUrls.gallery,
+        data: formData,
       );
-      return response is Map && response['success'] == true;
+      final data = response.data;
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300 &&
+          data is Map &&
+          data['success'] == true) {
+        return GalleryUploadResult(
+          success: true,
+          message: data['message']?.toString(),
+        );
+      }
+      final serverMessage =
+          data is Map ? data['message']?.toString() : null;
+      debugPrint(
+        'Gallery upload failed: status=${response.statusCode} message=$serverMessage',
+      );
+      return GalleryUploadResult(success: false, message: serverMessage);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final serverMessage =
+          data is Map ? data['message']?.toString() : null;
+      debugPrint('Gallery upload error: $e message=$serverMessage');
+      return GalleryUploadResult(success: false, message: serverMessage);
     } catch (e) {
       debugPrint('Gallery upload error: $e');
-      return false;
+      return const GalleryUploadResult(success: false);
     }
   }
 

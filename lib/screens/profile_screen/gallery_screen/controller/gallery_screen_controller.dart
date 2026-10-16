@@ -26,7 +26,7 @@ class GalleryScreenController extends GetxController {
   }
 
   /// Fetch gallery images from API
-  Future<void> fetchGalleryImages() async {
+  Future<void> fetchGalleryImages({bool showLoading = true}) async {
     // TEMPORARY demo mode — show sample gallery images without a backend.
     if (kDemoMode) {
       galleryModel.value = DemoData.gallery;
@@ -35,7 +35,9 @@ class GalleryScreenController extends GetxController {
       return;
     }
     try {
-      isLoading.value = true;
+      if (showLoading) {
+        isLoading.value = true;
+      }
       final response = await _profileRepository.fetchGallery();
 
       if (response.success == true && response.data != null) {
@@ -57,8 +59,11 @@ class GalleryScreenController extends GetxController {
     }
   }
 
+  bool get _canStartUpload => !isUploading.value;
+
   /// Show image picker using existing service
   Future<void> showImagePicker() async {
+    if (!_canStartUpload) return;
     try {
       // Use your existing ImagePickerService
       final File? pickedImage = await _imagePickerService.pickImage(
@@ -76,6 +81,7 @@ class GalleryScreenController extends GetxController {
 
   /// Pick image from camera directly
   Future<void> pickFromCamera() async {
+    if (!_canStartUpload) return;
     try {
       final File? image = await _imagePickerService.pickFromCamera(
         Get.context!,
@@ -91,6 +97,7 @@ class GalleryScreenController extends GetxController {
 
   /// Pick image from gallery directly
   Future<void> pickFromGallery() async {
+    if (!_canStartUpload) return;
     try {
       final File? image = await _imagePickerService.pickFromGallery(
         Get.context!,
@@ -121,22 +128,28 @@ class GalleryScreenController extends GetxController {
     }
     try {
       isUploading.value = true;
-      AppSnackBar.message( 'uploadingImage'.tr);
 
-      final success = await _profileRepository.uploadGalleryImage(
+      final result = await _profileRepository.uploadGalleryImage(
         image: imageFile,
       );
 
-      if (success) {
-        AppSnackBar.success('imageUploaded'.tr);
-        // Refresh gallery after successful upload
-        await fetchGalleryImages();
+      if (result.success) {
+        AppSnackBar.success(
+          result.message?.isNotEmpty == true
+              ? result.message!
+              : 'imageUploaded'.tr,
+        );
+        await fetchGalleryImages(showLoading: false);
       } else {
-        AppSnackBar.error( 'failedUploadImage'.tr);
+        AppSnackBar.error(
+          result.message?.isNotEmpty == true
+              ? result.message!
+              : 'failedUploadImage'.tr,
+        );
       }
     } catch (e) {
       errorLog("Exception in uploadImage", e);
-      AppSnackBar.error( 'failedUploadImage'.tr);
+      AppSnackBar.error('failedUploadImage'.tr);
     } finally {
       isUploading.value = false;
     }

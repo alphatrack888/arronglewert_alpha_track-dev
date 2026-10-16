@@ -23,44 +23,51 @@ class GalleryScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(controller),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value) {
-                  return _buildLoadingWidget();
-                }
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Obx(() => _buildHeader(controller)),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isLoading.value) {
+                      return _buildLoadingWidget();
+                    }
 
-                if (controller.isGalleryEmpty) {
-                  return _buildEmptyGallery(controller);
-                }
+                    if (controller.isGalleryEmpty) {
+                      return _buildEmptyGallery(controller);
+                    }
 
-                return _buildGalleryContent(controller);
-              }),
+                    return _buildGalleryContent(controller);
+                  }),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Obx(() {
+            if (!controller.isUploading.value) {
+              return const SizedBox.shrink();
+            }
+            return _buildUploadOverlay();
+          }),
+        ],
       ),
       floatingActionButton: Obx(() {
-        return controller.isUploading.value
-            ? FloatingActionButton(
-                onPressed: null,
-                backgroundColor: AppColors.primary,
-                child: LoadingAnimationWidget.beat(
+        final uploading = controller.isUploading.value;
+        return FloatingActionButton(
+          onPressed: uploading ? null : controller.showImagePicker,
+          backgroundColor: AppColors.primary,
+          child: uploading
+              ? LoadingAnimationWidget.beat(
                   size: 24,
                   color: AppColors.white50,
-                ),
-              )
-            : FloatingActionButton(
-                onPressed: controller.showImagePicker,
-                backgroundColor: AppColors.primary,
-                child: const Icon(
+                )
+              : const Icon(
                   Icons.add_a_photo,
                   color: AppColors.white50,
                 ),
-              );
+        );
       }),
     );
   }
@@ -88,6 +95,7 @@ class GalleryScreen extends StatelessWidget {
 
   /// Header: back + title + upload (image picker) action.
   Widget _buildHeader(GalleryScreenController controller) {
+    final actionsEnabled = !controller.isUploading.value;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Row(
@@ -97,11 +105,50 @@ class GalleryScreen extends StatelessWidget {
           Expanded(
             child: Text(AppString.gallery.tr, style: AppTextStyles.headline),
           ),
-          _circleIconButton(
-            icon: Icons.ios_share,
-            onTap: controller.showImagePicker,
+          Opacity(
+            opacity: actionsEnabled ? 1 : 0.4,
+            child: _circleIconButton(
+              icon: Icons.ios_share,
+              onTap: actionsEnabled ? controller.showImagePicker : () {},
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Blocks interaction and shows upload progress over the gallery.
+  Widget _buildUploadOverlay() {
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: ColoredBox(
+          color: Colors.black.withValues(alpha: 0.35),
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LoadingAnimationWidget.beat(
+                    size: 32,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'uploadingImage'.tr,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -156,12 +203,16 @@ class GalleryScreen extends StatelessWidget {
               style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
             ),
             const SizedBox(height: 28),
-            PrimaryButton(
-              label: AppString.addImage.tr,
-              onTap: controller.showImagePicker,
-              icon: Icons.add_a_photo,
-              isTranslate: false,
-              width: 200,
+            Obx(
+              () => PrimaryButton(
+                label: AppString.addImage.tr,
+                onTap: controller.isUploading.value
+                    ? () {}
+                    : controller.showImagePicker,
+                icon: Icons.add_a_photo,
+                isTranslate: false,
+                width: 200,
+              ),
             ),
           ],
         ),
@@ -171,8 +222,11 @@ class GalleryScreen extends StatelessWidget {
 
   /// Build gallery content with images
   Widget _buildGalleryContent(GalleryScreenController controller) {
+    final actionsEnabled = !controller.isUploading.value;
     return RefreshIndicator(
-      onRefresh: controller.refreshGallery,
+      onRefresh: controller.isUploading.value
+          ? () async {}
+          : controller.refreshGallery,
       color: AppColors.primary,
       child: Column(
         children: [
@@ -187,42 +241,47 @@ class GalleryScreen extends StatelessWidget {
                       .toUpperCase(),
                   style: AppTextStyles.eyebrow,
                 ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: controller.pickFromCamera,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(
-                          Icons.camera_alt_outlined,
-                          size: 20,
-                          color: AppColors.textMuted,
+                Opacity(
+                  opacity: actionsEnabled ? 1 : 0.4,
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: actionsEnabled ? controller.pickFromCamera : null,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(
+                            Icons.camera_alt_outlined,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: controller.pickFromGallery,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(
-                          Icons.photo_library_outlined,
-                          size: 20,
-                          color: AppColors.textMuted,
+                      GestureDetector(
+                        onTap:
+                            actionsEnabled ? controller.pickFromGallery : null,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Icon(
+                            Icons.photo_library_outlined,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: controller.refreshGallery,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Icon(
-                          Icons.refresh,
-                          size: 20,
-                          color: AppColors.textMuted,
+                      GestureDetector(
+                        onTap:
+                            actionsEnabled ? controller.refreshGallery : null,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Icon(
+                            Icons.refresh,
+                            size: 20,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

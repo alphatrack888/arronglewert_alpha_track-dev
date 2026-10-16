@@ -8,8 +8,32 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
 
-/// System photo picker on Android needs no broad storage/photos permission.
-bool skipGalleryPermissionForAndroidSdk(int sdkInt) => true;
+/// SDK level at which Android uses [Permission.photos] instead of [Permission.storage].
+const int androidGalleryPhotosPermissionMinSdk = 33;
+
+/// Maps Android API level to the gallery permission used before opening the picker.
+String galleryAndroidPermissionKindForSdk(int sdkInt) =>
+    sdkInt >= androidGalleryPhotosPermissionMinSdk ? 'photos' : 'storage';
+
+/// User-visible label for permission dialogs (API 33+ uses Photos).
+String galleryPermissionLabelForSdk(int sdkInt) =>
+    sdkInt >= androidGalleryPhotosPermissionMinSdk ? 'Photos' : 'Storage';
+
+/// Whether [permission_handler] status allows opening the gallery picker.
+bool isGalleryPermissionSufficient(PermissionStatus status) =>
+    status.isGranted || status.isLimited;
+
+class _GalleryPermissionRequestResult {
+  const _GalleryPermissionRequestResult({
+    required this.canPick,
+    this.permanentlyDenied = false,
+    this.permissionLabel = 'Storage',
+  });
+
+  final bool canPick;
+  final bool permanentlyDenied;
+  final String permissionLabel;
+}
 
 class ImagePickerService {
   final ImagePicker _picker = ImagePicker();
@@ -72,12 +96,19 @@ class ImagePickerService {
     try {
       log('🔍 Starting gallery picker...');
 
-      final needsPermission = await _needsAndRequestGalleryPermission();
-      log('📱 Gallery pre-permission step passed: $needsPermission');
+      final permissionResult = await _requestGalleryPermission();
+      log(
+        '📱 Gallery permission: canPick=${permissionResult.canPick} '
+        'permanentlyDenied=${permissionResult.permanentlyDenied}',
+      );
 
-      if (!needsPermission) {
-        if (context.mounted) {
-          _showGalleryPermissionDenied(context);
+      if (!permissionResult.canPick) {
+        if (permissionResult.permanentlyDenied && context.mounted) {
+          _showPermissionDialog(
+            context,
+            permissionResult.permissionLabel,
+            permissionResult.permissionLabel.toLowerCase(),
+          );
         }
         return null;
       }
@@ -221,32 +252,47 @@ class ImagePickerService {
     }
   }
 
-  /// Returns false only when legacy Android needs storage and user denied it.
-  Future<bool> _needsAndRequestGalleryPermission() async {
+  Future<_GalleryPermissionRequestResult> _requestGalleryPermission() async {
     try {
       if (Platform.isIOS) {
-        return true;
+        return const _GalleryPermissionRequestResult(canPick: true);
       }
 
-      if (Platform.isAndroid) {
-        return true;
+      if (!Platform.isAndroid) {
+        return const _GalleryPermissionRequestResult(canPick: false);
       }
-      return false;
+
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkVersion = androidInfo.version.sdkInt;
+      final label = galleryPermissionLabelForSdk(sdkVersion);
+      log('📱 Android SDK Version: $sdkVersion');
+
+      final Permission permission;
+      if (galleryAndroidPermissionKindForSdk(sdkVersion) == 'photos') {
+        permission = Permission.photos;
+      } else {
+        permission = Permission.storage;
+      }
+
+      final status = await permission.request();
+      log('📱 Gallery permission ($label): $status');
+
+      if (isGalleryPermissionSufficient(status)) {
+        return _GalleryPermissionRequestResult(
+          canPick: true,
+          permissionLabel: label,
+        );
+      }
+
+      return _GalleryPermissionRequestResult(
+        canPick: false,
+        permanentlyDenied: status.isPermanentlyDenied,
+        permissionLabel: label,
+      );
     } catch (e) {
       log('❌ Permission request error: $e');
-      return false;
+      return const _GalleryPermissionRequestResult(canPick: false);
     }
-  }
-
-  void _showGalleryPermissionDenied(BuildContext context) {
-    if (!context.mounted) return;
-
-    DsDialog.alert(
-      title: 'permissionRequiredFor'.trParams({'type': 'Storage'}),
-      message: 'chooseFromGallery'.tr,
-      tone: DsDialogTone.warning,
-      icon: LucideIcons.lock,
-    );
   }
 
   /// Show permission dialog
@@ -293,7 +339,7 @@ class ImagePickerService {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       log('📱 Android Version: ${androidInfo.version.release} (SDK: ${androidInfo.version.sdkInt})');
 
-      if (androidInfo.version.sdkInt >= 33) {
+      if (androidInfo.version.sdkInt >= androidGalleryPhotosPermissionMinSdk) {
         final photosStatus = await Permission.photos.status;
         log('📱 Photos Permission: $photosStatus');
       } else {

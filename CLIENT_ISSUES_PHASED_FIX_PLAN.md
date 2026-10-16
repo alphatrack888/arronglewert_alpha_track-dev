@@ -112,6 +112,8 @@
 
 - Profile → Gallery → add photo → delete → gone after refresh / relaunch.
 
+**Follow-up (gallery permissions):** Phase 4.1 picker-first was superseded by standard Android runtime permissions (`READ_MEDIA_IMAGES` + legacy storage `maxSdkVersion="32"`, SDK-split `Permission.photos` / `Permission.storage`). See [GALLERY_PERMISSIONS.md](GALLERY_PERMISSIONS.md).
+
 ---
 
 ## Phase 5 — Auth reliability (C1)
