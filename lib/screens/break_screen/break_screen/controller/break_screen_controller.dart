@@ -28,7 +28,7 @@ class BreakScreenController extends GetxController {
     fetchLeaveHistory(); // Fetch leave history on init since we only have leave section
   }
 
-  void fetchLeaveBalance() async {
+  Future<void> fetchLeaveBalance() async {
     // TEMPORARY demo mode — show sample leave balance without a backend.
     if (kDemoMode) {
       leaveBalanceData.value = DemoData.leaveBalance;
@@ -54,7 +54,7 @@ class BreakScreenController extends GetxController {
     }
   }
 
-  void fetchLeaveHistory() async {
+  Future<void> fetchLeaveHistory() async {
     // TEMPORARY demo mode — show sample leave history without a backend.
     if (kDemoMode) {
       leaveBalanceHistoryData.value = DemoData.leaveHistory;
@@ -78,10 +78,10 @@ class BreakScreenController extends GetxController {
   /// Refreshes both leave balance and leave history data.
   /// Sets the corresponding loading flags and updates the observable values.
   Future<void> updateLeaveData() async {
-    await Future.wait([
+    await Future.wait<void>([
       fetchLeaveBalance(),
       fetchLeaveHistory(),
-    ] as Iterable<Future>);
+    ]);
   }
 
   // /// Refreshes only the leave balance.

@@ -57,13 +57,16 @@ class Data {
 }
 
 class CompanyLeaveBalance {
+    /// API code: casual | sick | earn | wp (legacy rows may use English phrases).
     String? type;
+    String? label;
     int? taken;
     int? balance;
     String? status;
 
     CompanyLeaveBalance({
         this.type,
+        this.label,
         this.taken,
         this.balance,
         this.status,
@@ -75,6 +78,7 @@ class CompanyLeaveBalance {
 
     factory CompanyLeaveBalance.fromJson(Map<String, dynamic> json) => CompanyLeaveBalance(
         type: json["type"],
+        label: json["label"],
         taken: json["taken"],
         balance: json["balance"],
         status: json["status"],
@@ -82,6 +86,7 @@ class CompanyLeaveBalance {
 
     Map<String, dynamic> toJson() => {
         "type": type,
+        "label": label,
         "taken": taken,
         "balance": balance,
         "status": status,

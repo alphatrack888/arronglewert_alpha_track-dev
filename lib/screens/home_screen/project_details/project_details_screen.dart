@@ -13,6 +13,7 @@ import 'package:alpha_track/widgets/ds/ds_buttons.dart';
 import 'package:alpha_track/widgets/ds/ds_card.dart';
 import 'package:alpha_track/widgets/ds/ds_chip.dart';
 import 'package:alpha_track/widgets/ds/ds_project_tile.dart';
+import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:alpha_track/widgets/ds/ds_waveform.dart';
 import 'package:alpha_track/widgets/ds/ds_bar_chart.dart';
 import 'package:flutter/material.dart';
@@ -739,29 +740,37 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   // Idle state: Start Tracking (+ Add Note only on the Notes tab).
   Widget _startBar(SingleProjectModelData? data, String title) {
-    return Row(
-      children: [
-        Expanded(
-          child: PrimaryButton(
-            label: 'startTracking'.tr,
-            isTranslate: false,
-            icon: LucideIcons.play,
-            onTap: () => _startTracking(data, title),
-          ),
-        ),
-        if (_tab == 2) ...[
-          const SizedBox(width: 12),
+    final home = _home;
+    final projectId = data?.id ?? '';
+    return Obx(() {
+      final loading = home.isApiLoading;
+      return Row(
+        children: [
           Expanded(
-            child: SecondaryButton(
-              label: 'addNote'.tr,
+            child: PrimaryButton(
+              label: 'startTracking'.tr,
               isTranslate: false,
-              icon: LucideIcons.edit,
-              onTap: () => _openCreateNote(data, title),
+              icon: LucideIcons.play,
+              isLoading: loading,
+              onTap: loading
+                  ? null
+                  : () => _startTracking(data, title, projectId: projectId),
             ),
           ),
+          if (_tab == 2) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: SecondaryButton(
+                label: 'addNote'.tr,
+                isTranslate: false,
+                icon: LucideIcons.edit,
+                onTap: loading ? null : () => _openCreateNote(data, title),
+              ),
+            ),
+          ],
         ],
-      ],
-    );
+      );
+    });
   }
 
   // Active state: compact blue tracking pill. On the Notes tab it shrinks to
@@ -880,11 +889,19 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Future<void> _startTracking(
-      SingleProjectModelData? data, String title) async {
+    SingleProjectModelData? data,
+    String title, {
+    required String projectId,
+  }) async {
     final home = _home;
+    if (home.isApiLoading) return;
+    if (projectId.isEmpty) {
+      AppSnackBar.error('selectProjectFirst'.tr);
+      return;
+    }
     // Await the project switch first so its state reload can't race the
     // start() below and reset the timer back to stopped.
-    await home.setCurrentProjectId(data?.id ?? '', projectTitle: title);
+    await home.setCurrentProjectId(projectId, projectTitle: title);
     await home.start();
   }
 

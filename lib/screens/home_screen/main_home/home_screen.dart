@@ -246,14 +246,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _startButton() {
-    return PrimaryButton(
-      label: AppString.start,
-      svgIcon: null,
-      icon: LucideIcons.play,
-      color: AppColors.white50.withValues(alpha: 0.22),
-      textColor: AppColors.white50,
-      onTap: () => controller.toggleStartReset(),
-    );
+    return Obx(() => PrimaryButton(
+          label: AppString.start,
+          svgIcon: null,
+          icon: LucideIcons.play,
+          color: AppColors.white50.withValues(alpha: 0.22),
+          textColor: AppColors.white50,
+          isLoading: controller.isApiLoading,
+          onTap: controller.isApiLoading
+              ? null
+              : () => controller.toggleStartReset(),
+        ));
   }
 
   Widget _runningProjectRow() {

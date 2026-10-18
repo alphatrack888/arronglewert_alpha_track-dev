@@ -528,7 +528,7 @@ class GalleryPreviewScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Get.back(),
+          onPressed: () => dsPop(context),
         ),
         title: Obx(
           () => Text(

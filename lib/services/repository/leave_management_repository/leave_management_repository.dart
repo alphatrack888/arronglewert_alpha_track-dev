@@ -1,7 +1,9 @@
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_mdoel.dart';
+import 'package:alpha_track/services/api/api_call_result.dart';
 import 'package:alpha_track/services/api/api_services.dart';
+import 'package:alpha_track/services/api/leave_api.dart';
 import 'package:alpha_track/services/storage_services/company_id_persistence.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
@@ -31,33 +33,20 @@ class LeaveManagementRepository {
   }
 
   //! Apply for leave
-  Future<bool> applyforLeave({
+  Future<ApiCallResult<void>> applyforLeave({
     required String companyId,
     required String fromDate,
     required String toDate,
     required String reason,
     required String type,
   }) async {
-    try {
-      final Map<String, dynamic> body = {
-        "company": companyId,
-        "from": fromDate,
-        "to": toDate,
-        "reason": reason,
-        "type": type,
-      };
-      final response = await apiServices.apiPostServices(
-        url: ApiUrls.leaveManagement,
-        body: body,
-      );
-      if (response["success"] == true) {
-        return true;
-      }
-      return false;
-    } catch (e) {
-      appLog(e.toString());
-      return false;
-    }
+    return postApplyLeave(
+      companyId: companyId,
+      fromDate: fromDate,
+      toDate: toDate,
+      reason: reason,
+      type: type,
+    );
   }
 
   //! Get leave balance history

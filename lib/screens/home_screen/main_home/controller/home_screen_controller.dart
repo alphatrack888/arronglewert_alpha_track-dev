@@ -10,6 +10,7 @@ import 'package:alpha_track/services/break_preference/break_preference_service.d
 import 'package:alpha_track/services/location_services/location_services.dart';
 import 'package:alpha_track/services/repository/report_repository/report_repository.dart';
 import 'package:alpha_track/services/repository/time_tracker_repository/time_tracker_repository.dart';
+import 'package:alpha_track/services/repository/time_tracker_repository/timer_start_errors.dart';
 
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -636,6 +637,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   Future<void> start() async {
     if (_timerState.value != TimerState.stopped) {
       appLog('Timer already running or paused');
+      AppSnackBar.error('timerAlreadyActive'.tr);
       return;
     }
 
@@ -653,6 +655,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Validate project selection
       if (!_validateProjectSelection()) {
         apiLoadingState.value = LoadingState.idle;
+        return;
+      }
+
+      if (!isEmployeeRoleForTimer(_storageService.getUserRole())) {
+        apiLoadingState.value = LoadingState.idle;
+        AppSnackBar.error('timerStartEmployeeOnly'.tr);
         return;
       }
 
@@ -706,6 +714,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         apiLoadingState.value = LoadingState.idle;
         appLog('Location services disabled, prompting user...');
         await _locationService.checkAndRequestLocationPermission();
+        if (!await _locationService.isLocationServiceEnabled()) {
+          AppSnackBar.error('locationServicesDisabledBody'.tr);
+        }
         return;
       }
 
@@ -720,13 +731,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       }
 
       // Call API to start timer
-      String? sessionId = await _timeTrackerRepository.startTimer(
+      final startResult = await _timeTrackerRepository.startTimer(
         projectID: _currentProjectId.value,
         lat: currentLatitude.value,
         lng: currentLongitude.value,
       );
 
-      if (sessionId != null) {
+      if (startResult.success && startResult.data != null) {
+        final sessionId = startResult.data!;
         _timerState.value = TimerState.running;
         setSessionId(sessionId);
         _startTimer();
@@ -736,7 +748,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         appLog('Timer started successfully with session ID: $sessionId');
         appLog('Company ID for running timer: ${_currentCompanyId.value}');
       } else {
-        AppSnackBar.error('timerStartFailed'.tr);
+        final message = timerStartFailureMessage(startResult);
+        AppSnackBar.error(message);
       }
     } catch (e) {
       appLog('Error starting timer: $e');

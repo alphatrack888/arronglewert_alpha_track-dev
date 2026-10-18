@@ -1,32 +1,17 @@
 import 'package:alpha_track/core/api_urls/api_urls.dart';
+import 'package:alpha_track/services/api/api_call_result.dart';
 import 'package:alpha_track/services/api/api_services.dart';
+import 'package:alpha_track/services/api/timer_api.dart';
 
 class TimeTrackerRepository {
   ApiServices apiServices = ApiServices.instance;
 
-  Future<String?> startTimer({
+  Future<ApiCallResult<String>> startTimer({
     required String projectID,
     required double lat,
     required double lng,
   }) async {
-    try {
-      final body = {
-        "project": projectID,
-        "location": {"lat": lat, "lng": lng},
-      };
-
-      final response = await apiServices.apiPostServices(
-        url: ApiUrls.startTimer,
-        body: body,
-      );
-
-      if (response != null && response["success"] == true) {
-        return response["data"]["_id"];
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    return postStartTimer(projectId: projectID, lat: lat, lng: lng);
   }
 
   //! Pause Timer

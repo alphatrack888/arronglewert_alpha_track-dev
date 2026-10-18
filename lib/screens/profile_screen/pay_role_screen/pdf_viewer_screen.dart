@@ -46,7 +46,7 @@ class PdfViewerScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () => Get.back(),
+                    onTap: () => dsPop(context),
                     child: Text(
                       "Close",
                       style: AppTextStyles.bodySemibold.copyWith(

@@ -1,6 +1,7 @@
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/break_screen/break_screen/controller/break_screen_controller.dart';
 import 'package:alpha_track/screens/break_screen/leave_screen/controller/leave_screen_controller.dart';
+import 'package:alpha_track/screens/break_screen/leave_screen/leave_type_display.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
@@ -14,6 +15,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:alpha_track/utils/app_date/app_date.dart';
+import 'package:alpha_track/utils/app_string/app_string.dart';
+import 'package:alpha_track/utils/demo_data/demo_data.dart';
+import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 
 /// Leave Schedule — matches Figma 73-3487 (month calendar + leave balance).
 class LeaveScheduleScreen extends StatefulWidget {
@@ -39,36 +43,9 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Type → accent colour for calendar highlights + balance dots.
-  Color _typeColor(String? type) {
-    switch ((type ?? '').toLowerCase()) {
-      case 'sick':
-        return const Color(0xFFF5B6D0);
-      case 'earn':
-        return const Color(0xFF8FE0D0);
-      case 'wp':
-      case 'without pay':
-        return const Color(0xFFE9856B);
-      case 'casual':
-      default:
-        return const Color(0xFFC7E89B);
-    }
-  }
+  Color _typeColor(String? type) => colorForApiType(type);
 
-  String _typeName(String? type) {
-    switch ((type ?? '').toLowerCase()) {
-      case 'sick':
-        return 'sickLeave'.tr;
-      case 'earn':
-        return 'earnLeave'.tr;
-      case 'wp':
-        return 'withoutPay'.tr;
-      case 'casual':
-        return 'casualLeave'.tr;
-      default:
-        return type ?? '';
-    }
-  }
+  String _typeName(String? type) => labelForApiType(type ?? '');
 
   @override
   Widget build(BuildContext context) {
@@ -119,19 +96,7 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
   Widget _header() {
     return Row(
       children: [
-        GestureDetector(
-          onTap: Get.back,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 40,
-            height: 40,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-                color: AppColors.surface, shape: BoxShape.circle),
-            child: const Icon(LucideIcons.arrowLeft,
-                size: 20, color: AppColors.textPrimary),
-          ),
-        ),
+        const DsBackButton(),
         const SizedBox(width: 12),
         Expanded(child: Text('leaveSchedule'.tr, style: AppTextStyles.title)),
         GestureDetector(
@@ -385,11 +350,86 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
   Widget _th(String t) =>
       Text(t, style: AppTextStyles.caption.copyWith(color: AppColors.textMuted));
 
+  /// Opens a menu anchored below the leave-type row (tracks scroll position).
+  Future<void> _showLeaveTypeMenu(
+    BuildContext sheetContext,
+    LeaveScreenController c,
+    GlobalKey fieldKey,
+  ) async {
+    final box = fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+
+    final offset = box.localToGlobal(Offset.zero);
+    final size = box.size;
+    final selected = await showMenu<String>(
+      context: sheetContext,
+      position: RelativeRect.fromLTRB(
+        offset.dx,
+        offset.dy + size.height,
+        offset.dx + size.width,
+        offset.dy + size.height,
+      ),
+      items: c.leaveTypesForPicker()
+          .map(
+            (t) => PopupMenuItem<String>(
+              value: t,
+              child: Text(t.tr, style: AppTextStyles.body),
+            ),
+          )
+          .toList(),
+    );
+    if (selected != null) c.updateLeaveType(selected);
+  }
+
+  Widget _applyLeaveFeedbackBanner(LeaveScreenController c) {
+    return Obx(() {
+      final message = c.applyLeaveFeedbackMessage.value;
+      if (message == null || message.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      final isError = c.applyLeaveFeedbackIsError.value;
+      final color = isError ? AppColors.danger : AppColors.success;
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Material(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  isError ? LucideIcons.circleAlert : LucideIcons.circleCheck,
+                  size: 20,
+                  color: color,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: AppTextStyles.bodyMedium.copyWith(color: color),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: c.clearApplyLeaveFeedback,
+                  child: Icon(LucideIcons.x, size: 18, color: color),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   // ---- Apply Leave bottom sheet --------------------------------------------
   void _showApplyLeaveSheet() {
+    final leaveTypeFieldKey = GlobalKey();
     final c = Get.isRegistered<LeaveScreenController>()
         ? Get.find<LeaveScreenController>()
         : Get.put(LeaveScreenController());
+    c.clearApplyLeaveFeedback();
     String fmt(DateTime d) =>
         '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
 
@@ -460,30 +500,39 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 label('leaveType'.tr),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.stroke),
-                  ),
-                  child: Obx(() => DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: c.selectedLeaveType.value,
-                          icon: const Icon(LucideIcons.chevronDown,
+                GestureDetector(
+                  key: leaveTypeFieldKey,
+                  onTap: () {
+                    final ctx = leaveTypeFieldKey.currentContext;
+                    if (ctx != null) {
+                      _showLeaveTypeMenu(ctx, c, leaveTypeFieldKey);
+                    }
+                  },
+                  child: Obx(
+                    () => Container(
+                      height: 52,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.stroke),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              c.selectedLeaveType.value.tr,
+                              style: AppTextStyles.body,
+                            ),
+                          ),
+                          const Icon(LucideIcons.chevronDown,
                               size: 18, color: AppColors.textMuted),
-                          items: c.leaveTypes
-                              .map((t) => DropdownMenuItem(
-                                    value: t,
-                                    child: Text(t.tr, style: AppTextStyles.body),
-                                  ))
-                              .toList(),
-                          onChanged: (v) {
-                            if (v != null) c.updateLeaveType(v);
-                          },
-                        ),
-                      )),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(children: [
@@ -512,6 +561,7 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
                   maxLines: 4,
                 ),
                 const SizedBox(height: 20),
+                _applyLeaveFeedbackBanner(c),
                 Obx(() => PrimaryButton(
                       label: 'applyForDayLeave'.trParams({'n': '${c.leaveDuration}'}),
                       isTranslate: false,
@@ -520,7 +570,15 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
                           ? null
                           : () async {
                               final ok = await c.applyLeaveFromSheet();
-                              if (ok) Get.back(); // close the sheet
+                              if (!ok) return;
+                              Get.back();
+                              if (kDemoMode) {
+                                AppSnackBar.success('leaveSubmitted'.tr);
+                              } else {
+                                AppSnackBar.success(
+                                  AppString.leaveApplicationSubmitted.tr,
+                                );
+                              }
                             },
                     )),
               ],

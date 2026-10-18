@@ -1,9 +1,15 @@
 import 'package:alpha_track/screens/break_screen/break_screen/controller/break_screen_controller.dart';
+import 'package:alpha_track/screens/break_screen/leave_screen/leave_type_display.dart';
+import 'package:alpha_track/screens/break_screen/leave_screen/leave_type_mapping.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
+import 'package:alpha_track/services/repository/leave_management_repository/leave_apply_errors.dart';
 import 'package:alpha_track/services/repository/leave_management_repository/leave_management_repository.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
+import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
 import 'package:alpha_track/utils/demo_data/demo_data.dart';
+import 'dart:async';
+
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -24,17 +30,44 @@ class LeaveScreenController extends GetxController {
   var reason = ''.obs;
   var isLoading = false.obs;
 
+  /// Inline feedback in the apply-leave sheet (top snackbars are hidden under
+  /// the GetX bottom sheet overlay).
+  final RxnString applyLeaveFeedbackMessage = RxnString();
+  final RxBool applyLeaveFeedbackIsError = false.obs;
+
   //! Text controller for reason field
   final TextEditingController reasonController = TextEditingController();
 
-  //! Dropdown options
-  final List<String> leaveTypes = [
-    AppString.annualLeave,
-    AppString.sickLeave,
+  /// Fallback when [leaveTypesForPicker] has no API balance rows yet.
+  static const List<String> defaultLeaveTypeUiKeys = [
     AppString.casualLeave,
+    AppString.sickLeave,
     AppString.earnLeave,
     AppString.withoutPayleave,
   ];
+
+  /// Picker options: API balance rows when loaded, else [defaultLeaveTypeUiKeys].
+  List<String> leaveTypesForPicker() {
+    final balances = Get.isRegistered<BreakScreenController>()
+        ? Get.find<BreakScreenController>()
+            .leaveBalanceHistoryData
+            .value
+            ?.data
+            ?.companyLeaveBalance
+        : null;
+    if (balances == null || balances.isEmpty) {
+      return List<String>.from(defaultLeaveTypeUiKeys);
+    }
+    final codes = balances
+        .map((b) => normalizeLeaveApiType(b.type))
+        .where((c) => kLeaveApiTypes.contains(c))
+        .toSet();
+    if (codes.isEmpty) return List<String>.from(defaultLeaveTypeUiKeys);
+    return kDefaultLeaveApiTypes
+        .where(codes.contains)
+        .map(leaveUiKeyForApiType)
+        .toList();
+  }
 
   //! Date picker controllers
   final DateRangePickerController fromDateController =
@@ -106,19 +139,27 @@ class LeaveScreenController extends GetxController {
     return duration > 0 ? duration : 1;
   }
 
-  //! Convert UI leave type to API format
-  String _getLeaveTypeForAPI(String leaveType) {
-    if (leaveType == AppString.sickLeave) return 'sick';
-    if (leaveType == AppString.annualLeave) return 'annual';
-    if (leaveType == AppString.casualLeave) return 'casual';
-    if (leaveType == AppString.earnLeave) return 'earn';
-    if (leaveType == AppString.withoutPayleave) return 'wp';
-    return 'casual'; // Default fallback
-  }
-
   //! Format date for API (YYYY-MM-DD format)
   String _formatDateForAPI(DateTime date) {
     return DateFormat('yyyy-MM-dd').format(date).toString();
+  }
+
+  void clearApplyLeaveFeedback() {
+    applyLeaveFeedbackMessage.value = null;
+  }
+
+  void _showApplyLeaveFeedback(String message, {required bool isError}) {
+    applyLeaveFeedbackMessage.value = message;
+    applyLeaveFeedbackIsError.value = isError;
+  }
+
+  Future<void> _refreshLeaveDataAfterApply() async {
+    if (!Get.isRegistered<BreakScreenController>()) return;
+    try {
+      await Get.find<BreakScreenController>().updateLeaveData();
+    } catch (e, st) {
+      appLog('Leave refresh after apply failed: $e\n$st');
+    }
   }
 
   /// Apply leave from the Leave Schedule bottom sheet. Validates reason + dates,
@@ -126,48 +167,56 @@ class LeaveScreenController extends GetxController {
   /// leave locally so it shows up on the calendar / Upcoming section, or in real
   /// mode submits to the API. Returns true on success so the sheet can close.
   Future<bool> applyLeaveFromSheet() async {
+    clearApplyLeaveFeedback();
+
     if (reason.value.trim().isEmpty) {
-      AppSnackBar.error('vLeaveReason'.tr);
+      _showApplyLeaveFeedback('vLeaveReason'.tr, isError: true);
       return false;
     }
     if (leaveDuration < 1 || toDate.value.isBefore(fromDate.value)) {
-      AppSnackBar.error('vDateRange'.tr);
+      _showApplyLeaveFeedback('vDateRange'.tr, isError: true);
       return false;
     }
 
     // Demo/review builds: no backend — add the leave to the local store so it
     // appears immediately (pending) on the calendar and Upcoming section.
     if (kDemoMode) {
-      _addDemoLeave();
-      AppSnackBar.success('leaveSubmitted'.tr);
+      if (!_addDemoLeave()) {
+        _showApplyLeaveFeedback(AppString.leaveApplicationFailed.tr, isError: true);
+        return false;
+      }
       _resetFormAfterSuccess();
       return true;
     }
 
+    isLoading.value = true;
     try {
-      isLoading.value = true;
       final companyId = _storageServices.getCompanyId();
       if (companyId.isEmpty) {
-        AppSnackBar.error(AppString.companyIdNotFound.tr);
+        _showApplyLeaveFeedback(AppString.companyIdNotFound.tr, isError: true);
         return false;
       }
-      final success = await _leaveRepository.applyforLeave(
+      final result = await _leaveRepository.applyforLeave(
         companyId: companyId,
         fromDate: _formatDateForAPI(fromDate.value),
         toDate: _formatDateForAPI(toDate.value),
         reason: reason.value.trim(),
-        type: _getLeaveTypeForAPI(selectedLeaveType.value),
+        type: leaveTypeKeyToApi(selectedLeaveType.value),
       );
-      if (success) {
-        AppSnackBar.success(AppString.leaveApplicationSubmitted.tr);
+      if (result.success) {
         _resetFormAfterSuccess();
-        await Get.find<BreakScreenController>().updateLeaveData();
+        // Refresh in background so the apply button does not stay loading.
+        unawaited(_refreshLeaveDataAfterApply());
         return true;
       }
-      AppSnackBar.error(AppString.leaveApplicationFailed.tr);
+      _showApplyLeaveFeedback(
+        leaveApplyFailureMessage(result),
+        isError: true,
+      );
       return false;
-    } catch (e) {
-      AppSnackBar.error(AppString.leaveApplicationError.tr);
+    } catch (e, st) {
+      appLog('applyLeaveFromSheet unexpected: $e\n$st');
+      _showApplyLeaveFeedback(AppString.leaveApplicationError.tr, isError: true);
       return false;
     } finally {
       isLoading.value = false;
@@ -175,14 +224,15 @@ class LeaveScreenController extends GetxController {
   }
 
   /// Insert a pending leave into the in-memory leave data (demo mode only).
-  void _addDemoLeave() {
+  /// Returns false if demo leave data is not loaded.
+  bool _addDemoLeave() {
     final breakCtrl = Get.find<BreakScreenController>();
     final data = breakCtrl.leaveBalanceHistoryData.value?.data;
-    if (data == null) return;
+    if (data == null) return false;
     (data.leavemanagements ??= <Leavemanagement>[]).add(
       Leavemanagement(
         id: 'demo-${fromDate.value.microsecondsSinceEpoch}',
-        type: _getLeaveTypeForAPI(selectedLeaveType.value),
+        type: leaveTypeKeyToApi(selectedLeaveType.value),
         status: 'pending',
         from: DateTime(
             fromDate.value.year, fromDate.value.month, fromDate.value.day),
@@ -192,6 +242,7 @@ class LeaveScreenController extends GetxController {
       ),
     );
     breakCtrl.leaveBalanceHistoryData.refresh();
+    return true;
   }
 
   //! Reset form to initial state after successful submission

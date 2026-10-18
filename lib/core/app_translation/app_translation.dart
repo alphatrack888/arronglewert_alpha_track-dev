@@ -78,7 +78,19 @@ class AppTranslation extends Translations {
       'locationUnable':
           'Unable to get your location. Please check your location settings.',
       'timerStartFailed': 'Failed to start timer. Please try again.',
+      'timerStartFailedWithReason':
+          'Couldn\'t start tracking: @reason',
       'timerStartError': 'An error occurred while starting timer',
+      'timerStartEmployeeOnly':
+          'Time tracking is only available for employee accounts. Sign in as an employee or use the company dashboard.',
+      'timerAlreadyActive':
+          'A session is already running or paused. Stop or resume it before starting again.',
+      'timerStartTimeout':
+          'Starting tracking timed out. Check your connection and try again.',
+      'sessionExpiredStartTimer':
+          'Your session expired. Please sign in again to start tracking.',
+      'timerProjectLoading':
+          'Project details are still loading. Please wait a moment and try again.',
       'locationPermissionRequired': 'Location Permission Required',
       'locationPermissionBody':
           'To track your work time, we need access to your location. You can enable this in Settings.',
@@ -636,6 +648,32 @@ class AppTranslation extends Translations {
       'leaveApplicationSubmitted': 'Leave application submitted successfully!',
       'leaveApplicationFailed':
           'Failed to submit leave application. Please try again.',
+      'leaveApplicationFailedWithReason':
+          'Could not submit leave: @reason',
+      'leaveApplicationTimeout':
+          'Leave request timed out. Check your connection and try again.',
+      'leaveApplicationServerError':
+          'Something went wrong on our side. Please try again later.',
+      'leaveApplyErr_LEAVE_BALANCE_NOT_CONFIGURED':
+          'Your employer has not set up leave allowances yet. Please contact your manager or HR.',
+      'leaveApplyErr_LEAVE_INSUFFICIENT_BALANCE':
+          'You do not have enough leave days for this request. Try fewer days or another leave type.',
+      'leaveApplyErr_LEAVE_INVALID_DATE_RANGE':
+          'Those dates are not valid. The end date must be on or after the start date.',
+      'leaveApplyErr_LEAVE_INVALID_TYPE':
+          'That leave type is not available. Please choose another type.',
+      'leaveApplyErr_LEAVE_CREATE_FAILED':
+          'We could not save your leave request. Please try again.',
+      'leaveApplyErr_LEAVE_SUBMIT_UNEXPECTED':
+          'Unable to submit leave request. Please try again later.',
+      'leaveApplyErr_LEAVE_TYPE_REQUIRED': 'Please select a leave type.',
+      'leaveApplyErr_LEAVE_TYPE_INVALID': 'Please select a valid leave type.',
+      'leaveApplyErr_LEAVE_FROM_REQUIRED': 'Please select a start date.',
+      'leaveApplyErr_LEAVE_TO_REQUIRED': 'Please select an end date.',
+      'leaveApplyErr_LEAVE_VALIDATION_FAILED':
+          'Please check your leave details and try again.',
+      'leaveApplyErr_SESSION_EXPIRED':
+          'Your session expired. Please sign in again and try.',
       'leaveApplicationError':
           'An error occurred while submitting leave application.',
       'submitting': 'Submitting...',
@@ -716,7 +754,19 @@ class AppTranslation extends Translations {
           'Ihr Standort konnte nicht ermittelt werden. Bitte prüfen Sie Ihre Standorteinstellungen.',
       'timerStartFailed':
           'Timer konnte nicht gestartet werden. Bitte versuchen Sie es erneut.',
+      'timerStartFailedWithReason':
+          'Erfassung konnte nicht gestartet werden: @reason',
       'timerStartError': 'Fehler beim Starten des Timers',
+      'timerStartEmployeeOnly':
+          'Zeiterfassung ist nur für Mitarbeiterkonten verfügbar. Melden Sie sich als Mitarbeiter an oder nutzen Sie das Firmen-Dashboard.',
+      'timerAlreadyActive':
+          'Eine Sitzung läuft bereits oder ist pausiert. Beenden oder fortsetzen Sie sie, bevor Sie neu starten.',
+      'timerStartTimeout':
+          'Zeitüberschreitung beim Start. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
+      'sessionExpiredStartTimer':
+          'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an, um die Erfassung zu starten.',
+      'timerProjectLoading':
+          'Projektdetails werden noch geladen. Bitte warten Sie einen Moment.',
       'locationPermissionRequired': 'Standortberechtigung erforderlich',
       'locationPermissionBody':
           'Zur Erfassung Ihrer Arbeitszeit benötigen wir Zugriff auf Ihren Standort. Sie können dies in den Einstellungen aktivieren.',
@@ -1298,6 +1348,33 @@ class AppTranslation extends Translations {
       'leaveApplicationSubmitted': 'Urlaubsantrag erfolgreich eingereicht!',
       'leaveApplicationFailed':
           'Urlaubsantrag konnte nicht eingereicht werden. Bitte versuchen Sie es erneut.',
+      'leaveApplicationFailedWithReason':
+          'Urlaubsantrag konnte nicht eingereicht werden: @reason',
+      'leaveApplicationTimeout':
+          'Zeitüberschreitung beim Urlaubsantrag. Verbindung prüfen und erneut versuchen.',
+      'leaveApplicationServerError':
+          'Auf unserer Seite ist ein Fehler aufgetreten. Bitte später erneut versuchen.',
+      'leaveApplyErr_LEAVE_BALANCE_NOT_CONFIGURED':
+          'Ihr Arbeitgeber hat noch keine Urlaubskonten eingerichtet. Bitte wenden Sie sich an Ihre Führungskraft oder HR.',
+      'leaveApplyErr_LEAVE_INSUFFICIENT_BALANCE':
+          'Sie haben nicht genug Urlaubstage für diesen Antrag. Wählen Sie weniger Tage oder eine andere Urlaubsart.',
+      'leaveApplyErr_LEAVE_INVALID_DATE_RANGE':
+          'Diese Daten sind ungültig. Das Enddatum muss am oder nach dem Startdatum liegen.',
+      'leaveApplyErr_LEAVE_INVALID_TYPE':
+          'Diese Urlaubsart ist nicht verfügbar. Bitte wählen Sie eine andere.',
+      'leaveApplyErr_LEAVE_CREATE_FAILED':
+          'Ihr Urlaubsantrag konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+      'leaveApplyErr_LEAVE_SUBMIT_UNEXPECTED':
+          'Der Urlaubsantrag konnte nicht eingereicht werden. Bitte später erneut versuchen.',
+      'leaveApplyErr_LEAVE_TYPE_REQUIRED': 'Bitte wählen Sie eine Urlaubsart.',
+      'leaveApplyErr_LEAVE_TYPE_INVALID':
+          'Bitte wählen Sie eine gültige Urlaubsart.',
+      'leaveApplyErr_LEAVE_FROM_REQUIRED': 'Bitte wählen Sie ein Startdatum.',
+      'leaveApplyErr_LEAVE_TO_REQUIRED': 'Bitte wählen Sie ein Enddatum.',
+      'leaveApplyErr_LEAVE_VALIDATION_FAILED':
+          'Bitte überprüfen Sie Ihre Angaben und versuchen Sie es erneut.',
+      'leaveApplyErr_SESSION_EXPIRED':
+          'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
       'leaveApplicationError':
           'Beim Einreichen des Urlaubsantrags ist ein Fehler aufgetreten.',
       'submitting': 'Wird eingereicht...',
@@ -1372,7 +1449,18 @@ class AppTranslation extends Translations {
       'locationRequiredToStart': 'إذن الموقع مطلوب لبدء المؤقت.',
       'locationUnable': 'تعذّر تحديد موقعك. يرجى التحقق من إعدادات الموقع.',
       'timerStartFailed': 'فشل بدء المؤقت. يرجى المحاولة مرة أخرى.',
+      'timerStartFailedWithReason': 'تعذّر بدء التتبع: @reason',
       'timerStartError': 'حدث خطأ أثناء بدء المؤقت',
+      'timerStartEmployeeOnly':
+          'تتبع الوقت متاح فقط لحسابات الموظفين. سجّل الدخول كموظف أو استخدم لوحة الشركة.',
+      'timerAlreadyActive':
+          'هناك جلسة قيد التشغيل أو متوقفة مؤقتًا. أوقفها أو استأنفها قبل البدء من جديد.',
+      'timerStartTimeout':
+          'انتهت مهلة بدء التتبع. تحقق من الاتصال وحاول مرة أخرى.',
+      'sessionExpiredStartTimer':
+          'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى لبدء التتبع.',
+      'timerProjectLoading':
+          'تفاصيل المشروع قيد التحميل. انتظر قليلًا ثم حاول مرة أخرى.',
       'locationPermissionRequired': 'إذن الموقع مطلوب',
       'locationPermissionBody':
           'لتتبع وقت عملك نحتاج إلى الوصول إلى موقعك. يمكنك تفعيل ذلك في الإعدادات.',
@@ -1924,6 +2012,32 @@ class AppTranslation extends Translations {
       'leaveApplicationSubmitted': 'تم تقديم طلب الإجازة بنجاح!',
       'leaveApplicationFailed':
           'فشل تقديم طلب الإجازة. يرجى المحاولة مرة أخرى.',
+      'leaveApplicationFailedWithReason':
+          'تعذّر تقديم الإجازة: @reason',
+      'leaveApplicationTimeout':
+          'انتهت مهلة طلب الإجازة. تحقق من الاتصال وحاول مرة أخرى.',
+      'leaveApplicationServerError':
+          'حدث خطأ من جانبنا. يرجى المحاولة لاحقًا.',
+      'leaveApplyErr_LEAVE_BALANCE_NOT_CONFIGURED':
+          'لم يقم صاحب العمل بإعداد أرصدة الإجازات بعد. يرجى التواصل مع المدير أو الموارد البشرية.',
+      'leaveApplyErr_LEAVE_INSUFFICIENT_BALANCE':
+          'لا يوجد لديك أيام إجازة كافية لهذا الطلب. جرّب عدد أيام أقل أو نوع إجازة آخر.',
+      'leaveApplyErr_LEAVE_INVALID_DATE_RANGE':
+          'التواريخ غير صالحة. يجب أن يكون تاريخ الانتهاء في نفس يوم البدء أو بعده.',
+      'leaveApplyErr_LEAVE_INVALID_TYPE':
+          'نوع الإجازة غير متاح. يرجى اختيار نوع آخر.',
+      'leaveApplyErr_LEAVE_CREATE_FAILED':
+          'تعذّر حفظ طلب الإجازة. يرجى المحاولة مرة أخرى.',
+      'leaveApplyErr_LEAVE_SUBMIT_UNEXPECTED':
+          'تعذّر تقديم طلب الإجازة. يرجى المحاولة لاحقًا.',
+      'leaveApplyErr_LEAVE_TYPE_REQUIRED': 'يرجى اختيار نوع الإجازة.',
+      'leaveApplyErr_LEAVE_TYPE_INVALID': 'يرجى اختيار نوع إجازة صالح.',
+      'leaveApplyErr_LEAVE_FROM_REQUIRED': 'يرجى اختيار تاريخ البدء.',
+      'leaveApplyErr_LEAVE_TO_REQUIRED': 'يرجى اختيار تاريخ الانتهاء.',
+      'leaveApplyErr_LEAVE_VALIDATION_FAILED':
+          'يرجى مراجعة تفاصيل الإجازة والمحاولة مرة أخرى.',
+      'leaveApplyErr_SESSION_EXPIRED':
+          'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى والمحاولة.',
       'leaveApplicationError': 'حدث خطأ أثناء تقديم طلب الإجازة.',
       'submitting': 'جارٍ الإرسال...',
     },
@@ -2002,7 +2116,19 @@ class AppTranslation extends Translations {
       'locationUnable':
           'Nu am putut obține locația. Verifică setările de locație.',
       'timerStartFailed': 'Pornirea cronometrului a eșuat. Încearcă din nou.',
+      'timerStartFailedWithReason':
+          'Nu s-a putut începe urmărirea: @reason',
       'timerStartError': 'Eroare la pornirea cronometrului',
+      'timerStartEmployeeOnly':
+          'Urmărirea timpului este disponibilă doar pentru conturi de angajat. Autentifică-te ca angajat sau folosește panoul companiei.',
+      'timerAlreadyActive':
+          'Există deja o sesiune activă sau în pauză. Oprește-o sau reia-o înainte de a începe din nou.',
+      'timerStartTimeout':
+          'Pornirea urmăririi a expirat. Verifică conexiunea și încearcă din nou.',
+      'sessionExpiredStartTimer':
+          'Sesiunea a expirat. Autentifică-te din nou pentru a începe urmărirea.',
+      'timerProjectLoading':
+          'Detaliile proiectului se încarcă. Așteaptă puțin și încearcă din nou.',
       'locationPermissionRequired': 'Permisiune de locație necesară',
       'locationPermissionBody':
           'Pentru a-ți urmări timpul de lucru avem nevoie de acces la locație. Poți activa asta în Setări.',
@@ -2574,6 +2700,32 @@ class AppTranslation extends Translations {
           'Cererea de concediu a fost trimisă cu succes!',
       'leaveApplicationFailed':
           'Nu s-a reușit trimiterea cererii de concediu. Vă rugăm să încercați din nou.',
+      'leaveApplicationFailedWithReason':
+          'Nu s-a putut trimite concediul: @reason',
+      'leaveApplicationTimeout':
+          'Cererea de concediu a expirat. Verifică conexiunea și încearcă din nou.',
+      'leaveApplicationServerError':
+          'Ceva nu a funcționat la noi. Te rugăm să încerci mai târziu.',
+      'leaveApplyErr_LEAVE_BALANCE_NOT_CONFIGURED':
+          'Angajatorul tău nu a configurat încă zilele de concediu. Contactează managerul sau HR.',
+      'leaveApplyErr_LEAVE_INSUFFICIENT_BALANCE':
+          'Nu ai suficiente zile de concediu pentru această cerere. Încearcă mai puține zile sau alt tip.',
+      'leaveApplyErr_LEAVE_INVALID_DATE_RANGE':
+          'Datele nu sunt valide. Data de sfârșit trebuie să fie la sau după data de început.',
+      'leaveApplyErr_LEAVE_INVALID_TYPE':
+          'Acest tip de concediu nu este disponibil. Alege alt tip.',
+      'leaveApplyErr_LEAVE_CREATE_FAILED':
+          'Nu am putut salva cererea de concediu. Încearcă din nou.',
+      'leaveApplyErr_LEAVE_SUBMIT_UNEXPECTED':
+          'Cererea de concediu nu a putut fi trimisă. Încearcă mai târziu.',
+      'leaveApplyErr_LEAVE_TYPE_REQUIRED': 'Selectează un tip de concediu.',
+      'leaveApplyErr_LEAVE_TYPE_INVALID': 'Selectează un tip de concediu valid.',
+      'leaveApplyErr_LEAVE_FROM_REQUIRED': 'Selectează data de început.',
+      'leaveApplyErr_LEAVE_TO_REQUIRED': 'Selectează data de sfârșit.',
+      'leaveApplyErr_LEAVE_VALIDATION_FAILED':
+          'Verifică detaliile concediului și încearcă din nou.',
+      'leaveApplyErr_SESSION_EXPIRED':
+          'Sesiunea a expirat. Autentifică-te din nou și încearcă.',
       'leaveApplicationError':
           'A apărut o eroare la trimiterea cererii de concediu.',
       'submitting': 'Se trimite...',

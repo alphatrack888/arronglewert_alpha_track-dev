@@ -1,6 +1,7 @@
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_icons/app_icons.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
@@ -39,7 +40,7 @@ class AuthAppBar extends StatelessWidget implements PreferredSizeWidget {
                 width: 35,
                 height: 35,
               ),
-              onPressed: onBackPressed ?? () => Get.back(),
+              onPressed: onBackPressed ?? () => dsPop(context),
             )
           : null,
       centerTitle: true,

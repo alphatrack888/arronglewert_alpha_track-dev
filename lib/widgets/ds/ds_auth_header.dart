@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 
 /// Shared auth-screen header for the 2026 redesign.
 ///
-/// Presentation only: round white 40x40 back button (calls [Get.back]) next to
+/// Presentation only: round white 40x40 back button ([DsBackButton] / [dsPop])
+/// next to
 /// a bold [title], with an optional muted [subtitle] below. Matches the Figma
 /// auth frames (Log In, Create Account, Reset Password, OTP).
 class DsAuthHeader extends StatelessWidget {

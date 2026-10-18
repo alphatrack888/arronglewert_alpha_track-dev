@@ -1,5 +1,6 @@
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
+import 'package:alpha_track/widgets/ds/ds_back_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../widgets/app_images/app_images.dart';
@@ -45,7 +46,7 @@ class ImagePreviewScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () => Get.back(),
+                    onTap: () => dsPop(context),
                     child: Text(
                       "Close",
                       style: AppTextStyles.bodySemibold.copyWith(
