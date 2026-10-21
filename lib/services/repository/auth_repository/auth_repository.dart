@@ -1,6 +1,7 @@
 import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/api/api_services.dart';
+import 'package:alpha_track/services/repository/time_tracker_repository/timer_start_errors.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
@@ -89,6 +90,11 @@ class AuthRepository {
             color: AppColors.mediumBlue,
           );
           return true;
+        } else if (statusCode == 403) {
+          final errorMessage =
+              responseData["message"] ?? 'loginWrongPortalEmployee'.tr;
+          AppSnackBar.error(errorMessage);
+          return false;
         } else if (statusCode == 200 &&
             responseData["data"]?["accessToken"] != null) {
           // Successful login - when API returns 200 status
@@ -123,9 +129,10 @@ class AuthRepository {
         data: {"email": email, "password": password},
         options: Options(
           validateStatus: (status) {
-            // Accept both success status codes and 407 as valid responses
             return (status != null &&
-                ((status >= 200 && status < 300) || status == 407));
+                ((status >= 200 && status < 300) ||
+                    status == 407 ||
+                    status == 403));
           },
         ),
       );
@@ -218,6 +225,14 @@ class AuthRepository {
 
   //! Handle Successful login
   Future<void> _handleSuccessfulLogin(Map<String, dynamic> data) async {
+    final roleValue = data['role'];
+    final role = roleValue is String ? roleValue : '';
+    if (!isEmployeeRoleForAppAuth(role)) {
+      await storageServices.clearSession();
+      AppSnackBar.error('loginWrongPortalEmployee'.tr);
+      return;
+    }
+
     await storageServices.setOnboardScreen();
     appLog(data);
     final String accessToken = data["accessToken"];
@@ -241,7 +256,6 @@ class AuthRepository {
       await storageServices.setRefreshToken('');
     }
 
-    final String role = data["role"];
     appLog("role from login api $role");
     await storageServices.setUserRole(role);
 

@@ -1,8 +1,9 @@
 
 import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart';
 import 'package:alpha_track/screens/home_screen/models/single_project_model.dart';
-import 'package:alpha_track/screens/home_screen/models/working_hours_summary_model.dart';
 import 'package:alpha_track/screens/home_screen/project_details/project_details_note_mapper.dart';
+import 'package:alpha_track/screens/home_screen/project_details/project_time_query.dart';
+import 'package:alpha_track/screens/report_screen/report_period.dart';
 import 'package:alpha_track/services/repository/note_repository/note_repository.dart';
 import 'package:alpha_track/services/repository/project_repository/project_repository.dart';
 import 'package:alpha_track/services/repository/report_repository/report_repository.dart';
@@ -14,6 +15,8 @@ import 'package:get/get.dart';
 enum LoadingStateProjectDetails { idle, loading, error }
 
 enum ProjectNotesLoadingState { idle, loading, error }
+
+enum ProjectTimeLoadingState { idle, loading, error }
 
 class ProjectDetailsScreenController extends GetxController {
   final ProjectRepository _projectRepository = ProjectRepository();
@@ -31,52 +34,82 @@ class ProjectDetailsScreenController extends GetxController {
   String? currentProjectId;
 
   final Rxn<DailySummaryModel> dailySummaryData = Rxn<DailySummaryModel>();
-  final Rxn<WorkingHoursSummaryModel> workingHoursSummary =
-      Rxn<WorkingHoursSummaryModel>();
+  final Rxn<DailySummaryModel> weekSummaryData = Rxn<DailySummaryModel>();
+  final Rx<ProjectTimeLoadingState> timeLoadingState =
+      ProjectTimeLoadingState.idle.obs;
 
   @override
   void onInit() {
     super.onInit();
+    syncFromRoute();
+  }
+
+  /// Re-read [Get.arguments] and load (or revalidate) project data.
+  void syncFromRoute() {
     final args = Get.arguments;
     if (args is Map && args['projectId'] is String) {
-      currentProjectId = args['projectId'] as String;
+      syncProject(args['projectId'] as String);
+    } else if (currentProjectId != null) {
+      syncProject(currentProjectId!);
     } else if (kDemoMode) {
-      currentProjectId = 'demo_p1';
+      syncProject('demo_p1');
     } else {
       apiLoadingState.value = LoadingStateProjectDetails.error;
       AppSnackBar.error('projectIdNotFound'.tr);
-      return;
     }
+  }
 
-    final projectId = currentProjectId!;
-    loadSingleProject(projectId);
+  /// Idempotent project bind. Always revalidates time data.
+  void syncProject(String projectId) {
+    final changed = currentProjectId != projectId;
+    currentProjectId = projectId;
+    if (changed || singleProjectData.value == null) {
+      loadSingleProject(projectId);
+      loadProjectNotes(projectId);
+    }
     loadTimeData(projectId);
-    loadProjectNotes(projectId);
   }
 
   Future<void> loadTimeData(String projectId) async {
+    timeLoadingState.value = ProjectTimeLoadingState.loading;
+    weekSummaryData.value = null;
     if (kDemoMode) {
       dailySummaryData.value = DemoData.dailySummary;
-      workingHoursSummary.value = DemoData.workingHours;
+      final hours = hoursByProject(
+        DemoData.dailySummary.data?.sessions ?? const [],
+      )[projectId] ?? 0;
+      weekSummaryData.value = DailySummaryModel.fromJson({
+        'statusCode': 200,
+        'data': {'totalTime': hours.toStringAsFixed(2)},
+      });
+      timeLoadingState.value = ProjectTimeLoadingState.idle;
       return;
     }
     try {
-      final now = DateTime.now();
-      final formattedDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final today = utcDateKey();
+      final weekFrom = utcMondayKey(DateTime.now());
 
       final daily = await _reportRepository.fetchDailySummary(
         projectId: projectId,
-        todayData: formattedDate,
+        todayData: today,
       );
-      if (daily.statusCode == 200) dailySummaryData.value = daily;
+      if (daily.statusCode == 200) {
+        dailySummaryData.value = daily;
+        timeLoadingState.value = ProjectTimeLoadingState.idle;
+      } else {
+        timeLoadingState.value = ProjectTimeLoadingState.error;
+        appLog('Daily summary fetch failed: ${daily.statusCode} ${daily.message}');
+      }
 
-      final working = await _reportRepository.fetchWorkingHoursSummary(
-        todayDate: formattedDate,
+      final week = await _reportRepository.fetchDailySummary(
+        projectId: projectId,
+        from: weekFrom,
+        to: today,
       );
-      if (working.statusCode == 200) workingHoursSummary.value = working;
+      if (week.statusCode == 200) weekSummaryData.value = week;
     } catch (e) {
       appLog('Error loading project time data: $e');
+      timeLoadingState.value = ProjectTimeLoadingState.error;
     }
   }
 

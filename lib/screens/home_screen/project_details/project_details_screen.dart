@@ -2,6 +2,8 @@ import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/home_screen/main_home/controller/home_screen_controller.dart';
 import 'package:alpha_track/screens/home_screen/models/single_project_model.dart';
 import 'package:alpha_track/screens/home_screen/project_details/controller/project_details_screen_controller.dart';
+import 'package:alpha_track/screens/home_screen/project_details/project_time_query.dart';
+import 'package:alpha_track/screens/home_screen/project_details/time_tracker_sessions_body.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'dart:io';
@@ -15,7 +17,6 @@ import 'package:alpha_track/widgets/ds/ds_chip.dart';
 import 'package:alpha_track/widgets/ds/ds_project_tile.dart';
 import 'package:alpha_track/widgets/app_snackbar/app_snackbar.dart';
 import 'package:alpha_track/widgets/ds/ds_waveform.dart';
-import 'package:alpha_track/widgets/ds/ds_bar_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -30,11 +31,22 @@ class ProjectDetailsScreen extends StatefulWidget {
 }
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
-  final ProjectDetailsScreenController controller =
-      Get.put(ProjectDetailsScreenController());
+  late final ProjectDetailsScreenController controller =
+      Get.isRegistered<ProjectDetailsScreenController>()
+          ? Get.find<ProjectDetailsScreenController>()
+          : Get.put(ProjectDetailsScreenController());
   int _tab = 0; // 0 Overview · 1 Time Tracker · 2 Notes
   bool _descExpanded = false;
   String _noteSort = 'Newest'; // 'Newest' | 'Oldest'
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.syncFromRoute();
+    });
+  }
 
   static const _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -65,7 +77,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                       _tabBar(),
                       const SizedBox(height: 16),
                       if (_tab == 0) _overview(data),
-                      if (_tab == 1) _timeTracker(data),
+                      if (_tab == 1) Obx(() => _timeTracker(data)),
                       if (_tab == 2) _notesTab(),
                     ],
                   ),
@@ -129,7 +141,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         final selected = _tab == i;
         return Expanded(
           child: GestureDetector(
-            onTap: () => setState(() => _tab = i),
+            onTap: () {
+              setState(() => _tab = i);
+              if (i == 1) {
+                final id = controller.currentProjectId;
+                if (id != null) controller.loadTimeData(id);
+              }
+            },
             behavior: HitTestBehavior.opaque,
             child: Column(
               children: [
@@ -313,27 +331,24 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// Real tracked time for this project + the current user. Values come from the
   /// controller (daily summary + working-hours summary); nothing is hardcoded.
   Widget _timeTracker(SingleProjectModelData? data) {
-    final summary = controller.workingHoursSummary.value?.data;
     final daily = controller.dailySummaryData.value?.data;
-
-    // Sessions for THIS project only (the daily summary can include others).
-    final sessions = (daily?.sessions ?? <dsum.Session>[])
-        .where((s) =>
-            data?.id == null ||
-            s.project?.id == null ||
-            s.project?.id == data?.id)
-        .toList()
-      ..sort((a, b) => (b.startTime ?? DateTime(0))
-          .compareTo(a.startTime ?? DateTime(0)));
+    final week = controller.weekSummaryData.value?.data;
+    final timeState = controller.timeLoadingState.value;
+    final sessions = sortedSessionsByStartDesc(daily?.sessions);
+    final kind = timeTrackerListKind(
+      loading: timeState == ProjectTimeLoadingState.loading,
+      error: timeState == ProjectTimeLoadingState.error,
+      sessionCount: sessions.length,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _ttStat('totalLogged'.tr, daily?.totalTime ?? '0h 0m'),
+            _ttStat('totalLogged'.tr, _formatSummaryHours(daily?.totalTime)),
             const SizedBox(width: 12),
-            _ttStat('thisWeek'.tr, _formatHours(summary?.thisWeek)),
+            _ttStat('thisWeek'.tr, _formatSummaryHours(week?.totalTime)),
             const SizedBox(width: 12),
             _ttStat('overtime'.tr,
                 daily?.overtimeInHoursFormatted ?? daily?.overtime ?? '0h 0m'),
@@ -362,21 +377,21 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              if (sessions.isEmpty)
-                _timeEmptyState()
-              else
-                SizedBox(height: 170, child: _activityChart(sessions)),
             ],
           ),
         ),
         const SizedBox(height: 24),
         Text('recentSessions'.tr, style: AppTextStyles.eyebrow),
         const SizedBox(height: 12),
-        if (sessions.isEmpty)
-          _timeEmptyState()
-        else
-          ...sessions.map(_sessionCard),
+        TimeTrackerSessionsBody(
+          kind: kind,
+          onRetry: () {
+            final id = controller.currentProjectId;
+            if (id != null) controller.loadTimeData(id);
+          },
+          empty: _timeEmptyState(),
+          children: sessions.map(_sessionCard).toList(),
+        ),
       ],
     );
   }
@@ -397,6 +412,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (dt == null) return '--:--';
     final l = dt.toLocal();
     return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Summary `totalTime` is a numeric hours string (`"5.50"`).
+  String _formatSummaryHours(String? raw) {
+    final parsed = double.tryParse(raw ?? '');
+    if (parsed == null) {
+      if (raw == null || raw.isEmpty) return '0h';
+      return raw;
+    }
+    return _formatHours(parsed);
   }
 
   String _formatHours(double? hours) {
@@ -444,21 +469,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  static String _hoursLabel(double v) {
-    final h = v.floor();
-    final m = ((v - h) * 60).round();
-    return '${h}H ${m}M';
-  }
-
-  /// One bar per real session today, height = worked hours, label = start time.
-  Widget _activityChart(List<dsum.Session> sessions) {
-    return DsBarChart(
-      values: sessions.map(_sessionHours).toList(),
-      labels: sessions.map((s) => _clock(s.startTime)).toList(),
-      labelBuilder: (_, value) => _hoursLabel(value),
     );
   }
 
@@ -800,6 +810,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   // The mini timer widget itself (also shared with Time Tracker/Notes tabs).
   Widget _trackingPill(HomeScreenController home) {
     final onBreak = home.isPaused;
+    final loading = home.isApiLoading;
     return Container(
       height: 44,
       padding: const EdgeInsets.fromLTRB(13, 5, 5, 5),
@@ -851,6 +862,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 icon: LucideIcons.square,
                 background: AppColors.trackingStopBg,
                 iconColor: AppColors.surface,
+                loading: loading,
                 onTap: () => home.stop(),
               ),
               const SizedBox(width: 4),
@@ -858,6 +870,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 icon: onBreak ? LucideIcons.play : LucideIcons.pause,
                 background: AppColors.trackingPauseBg,
                 iconColor: AppColors.primary,
+                loading: loading,
                 onTap: () => onBreak ? home.resume() : home.pause(),
               ),
             ],
@@ -872,18 +885,29 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     required Color background,
     required Color iconColor,
     required VoidCallback onTap,
+    bool loading = false,
   }) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       child: Container(
         width: 32,
         height: 32,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, size: 16, color: iconColor),
+        child: loading
+            ? SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: iconColor,
+                ),
+              )
+            : Icon(icon, size: 16, color: iconColor),
       ),
     );
   }

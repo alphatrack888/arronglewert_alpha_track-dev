@@ -244,8 +244,7 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${_typeName(l.type)} leave',
-                    style: AppTextStyles.bodySemibold),
+                Text(_typeName(l.type), style: AppTextStyles.bodySemibold),
                 const SizedBox(height: 2),
                 Text('$range • ${l.totalDays ?? 0}d',
                     style: AppTextStyles.caption),
@@ -483,22 +482,28 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
         );
 
     DsBottomSheet.show(
-      Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(Get.context!).viewInsets.bottom),
-        child: DsBottomSheet(
-          title: 'applyLeave'.tr,
-          trailing: GestureDetector(
-            onTap: Get.back,
-            child: Text('Cancel',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textMuted)),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      Builder(
+        builder: (sheetContext) {
+          return DsBottomSheet(
+            title: 'applyLeave'.tr,
+            trailing: GestureDetector(
+              onTap: () => dsPop(sheetContext),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Text('Cancel',
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(color: AppColors.textMuted)),
+              ),
+            ),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 label('leaveType'.tr),
                 GestureDetector(
                   key: leaveTypeFieldKey,
@@ -571,7 +576,7 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
                           : () async {
                               final ok = await c.applyLeaveFromSheet();
                               if (!ok) return;
-                              Get.back();
+                              await dsPop(sheetContext);
                               if (kDemoMode) {
                                 AppSnackBar.success('leaveSubmitted'.tr);
                               } else {
@@ -581,10 +586,11 @@ class _LeaveScheduleScreenState extends State<LeaveScheduleScreen> {
                               }
                             },
                     )),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -27,6 +27,7 @@ class DsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -35,36 +36,46 @@ class DsBottomSheet extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
+        bottom: !keyboardOpen,
         child: Padding(
           padding: padding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 4),
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.stroke,
-                    borderRadius: BorderRadius.circular(99),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bounded = constraints.maxHeight.isFinite;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.stroke,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              if (title != null) ...[
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: Text(title!, style: AppTextStyles.title)),
-                    if (trailing != null) trailing!,
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ] else
-                const SizedBox(height: 12),
-              child,
-            ],
+                  if (title != null) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                            child: Text(title!, style: AppTextStyles.title)),
+                        if (trailing != null) trailing!,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ] else
+                    const SizedBox(height: 12),
+                  if (bounded)
+                    Flexible(fit: FlexFit.loose, child: child)
+                  else
+                    child,
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -3,8 +3,13 @@ import 'package:alpha_track/services/api/api_call_result.dart';
 import 'package:alpha_track/services/api/api_services.dart';
 import 'package:alpha_track/services/api/timer_api.dart';
 
+export 'package:alpha_track/services/api/timer_api.dart' show OpenTimeSession;
+
 class TimeTrackerRepository {
   ApiServices apiServices = ApiServices.instance;
+
+  /// Null when the request fails. Empty when the employee has no open session.
+  Future<List<OpenTimeSession>?> getOpenSessions() => fetchOpenSessions();
 
   Future<ApiCallResult<String>> startTimer({
     required String projectID,

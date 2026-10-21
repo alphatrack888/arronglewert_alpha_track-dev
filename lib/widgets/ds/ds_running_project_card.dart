@@ -23,6 +23,7 @@ class DsRunningProjectCard extends StatelessWidget {
     required this.paused,
     required this.onStop,
     required this.onToggle,
+    this.isLoading = false,
     this.overtime = 'Overtime',
     this.onTap,
   });
@@ -33,6 +34,7 @@ class DsRunningProjectCard extends StatelessWidget {
   final String thisWeek;
   final String billable;
   final bool paused; // running vs paused (controls the pause/resume glyph)
+  final bool isLoading;
   final VoidCallback onStop;
   final VoidCallback onToggle;
   final String overtime;
@@ -68,10 +70,12 @@ class DsRunningProjectCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _squareBtn(LucideIcons.square, AppColors.danger,
-                  AppColors.danger.withValues(alpha: 0.12), onStop),
+                  AppColors.danger.withValues(alpha: 0.12), onStop,
+                  loading: isLoading),
               const SizedBox(width: 10),
               _squareBtn(paused ? LucideIcons.play : LucideIcons.pause,
-                  Colors.white, AppColors.primary, onToggle),
+                  Colors.white, AppColors.primary, onToggle,
+                  loading: isLoading),
             ],
           ),
           const SizedBox(height: 16),
@@ -99,9 +103,15 @@ class DsRunningProjectCard extends StatelessWidget {
     );
   }
 
-  Widget _squareBtn(IconData icon, Color fg, Color bg, VoidCallback onTap) {
+  Widget _squareBtn(
+    IconData icon,
+    Color fg,
+    Color bg,
+    VoidCallback onTap, {
+    bool loading = false,
+  }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: loading ? null : onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: 44,
@@ -111,7 +121,13 @@ class DsRunningProjectCard extends StatelessWidget {
           color: bg,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: fg, size: 20),
+        child: loading
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+              )
+            : Icon(icon, color: fg, size: 20),
       ),
     );
   }

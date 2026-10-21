@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:alpha_track/core/app_route/app_route.dart';
+import 'package:alpha_track/screens/home_screen/project_details/controller/project_details_screen_controller.dart';
+import 'package:alpha_track/screens/home_screen/project_details/project_time_query.dart';
+import 'package:alpha_track/screens/report_screen/report_period.dart';
 import 'package:alpha_track/screens/home_screen/models/all_project_models.dart';
 import 'package:alpha_track/screens/home_screen/models/break_hours_model.dart';
 import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart';
@@ -274,13 +277,21 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         _locationService.checkAndRequestLocationPermission();
       }
 
-      // Load timer state for the current project
-      if (_currentProjectId.value.isNotEmpty) {
+      // The server is the source of truth for a session left open. A reinstall
+      // or a missed stop has no local timer, so adopt that session before
+      // falling back to storage.
+      if (!kDemoMode && await _restoreOpenSessionFromServer(loadReport: true)) {
+        appLog('Restored open session from server');
+        return;
+      }
+
+      // A fresh install has no saved project. Selecting one here loads its
+      // timer state and report, so that work is not repeated below.
+      final selectedFresh = await _ensureCurrentProject();
+      if (!selectedFresh && _currentProjectId.value.isNotEmpty) {
         await _loadTimerStateForProject(_currentProjectId.value);
-        // Initialize report data if project is selected
         await initializeReportData();
-      } else {
-        // if no project is selected, ensure timer is reset
+      } else if (_currentProjectId.value.isEmpty) {
         _resetTimer(clearPersistedState: false);
       }
       appLog('App initialized successfully');
@@ -386,6 +397,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   Future<void> setCurrentProjectId(
     String projectId, {
     String? projectTitle,
+    bool announce = true,
   }) async {
     try {
       if (_currentProjectId.value == projectId) return;
@@ -429,7 +441,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       appLog('Project selected: $projectId - $projectTitle');
 
       // Show success message
-      if (projectTitle != null) {
+      if (announce && projectTitle != null) {
         AppSnackBar.customMessage(
           'Timer will track time for: $projectTitle',
           color: AppColors.mediumBlue,
@@ -646,13 +658,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       _currentSessionId.value = 'demo_session';
       _timerState.value = TimerState.running;
       _startTimer();
+      _refreshProjectTimeList();
       return;
     }
 
     try {
       apiLoadingState.value = LoadingState.loading;
 
-      // Validate project selection
+      await _ensureCurrentProject();
       if (!_validateProjectSelection()) {
         apiLoadingState.value = LoadingState.idle;
         return;
@@ -747,6 +760,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         AppSnackBar.success('Timer started for: $currentProjectTitle');
         appLog('Timer started successfully with session ID: $sessionId');
         appLog('Company ID for running timer: ${_currentCompanyId.value}');
+        _refreshProjectTimeList();
+      } else if (startResult.statusCode == 409) {
+        await _restoreOpenSessionFromServer();
+        AppSnackBar.error('sessionStillOpen'.tr);
       } else {
         final message = timerStartFailureMessage(startResult);
         AppSnackBar.error(message);
@@ -774,6 +791,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> pause({bool isAutoPause = false}) async {
+    if (isApiLoading) return;
     if (_timerState.value != TimerState.running) {
       appLog('Timer is not running, cannot pause');
       return;
@@ -781,18 +799,17 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
     if (kDemoMode) {
       _timerState.value = TimerState.paused;
-      _timer?.cancel();
+      _freezeWorkClock();
       breakStartedAt = DateTime.now();
       reminderVisible.value = true;
       _breakMilliseconds.value = 0;
-      _breakTimer?.cancel();
-      _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        _breakMilliseconds.value += 1000;
-      });
+      _startBreakClock();
       if (isAutoPause) _showOneMinuteDialog();
       return;
     }
 
+    final workWasRunning = _freezeWorkClock();
+    var committed = false;
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -818,8 +835,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       );
 
       if (success) {
+        committed = true;
         _timerState.value = TimerState.paused;
-        _timer?.cancel();
         await _saveTimerStateForProject(_currentProjectId.value);
 
         if (isAutoPause) {
@@ -835,18 +852,24 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       appLog('Error pausing timer: $e');
       AppSnackBar.error('timerPauseError'.tr);
     } finally {
+      if (!committed &&
+          workWasRunning &&
+          _timerState.value == TimerState.running) {
+        _startTimer();
+      }
       apiLoadingState.value = LoadingState.idle;
     }
   }
 
   Future<void> resume() async {
+    if (isApiLoading) return;
     if (_timerState.value != TimerState.paused) {
       appLog('Timer is not paused, cannot resume');
       return;
     }
 
     if (kDemoMode) {
-      _breakTimer?.cancel();
+      _freezeBreakClock();
       _breakMilliseconds.value = 0;
       breakStartedAt = null;
       _timerState.value = TimerState.running;
@@ -854,6 +877,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
+    final breakWasRunning = _freezeBreakClock();
+    var committed = false;
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -877,6 +902,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       );
 
       if (success) {
+        committed = true;
         _timerState.value = TimerState.running;
         _startTimer();
         await _saveTimerStateForProject(_currentProjectId.value);
@@ -890,18 +916,31 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       appLog('Error resuming timer: $e');
       AppSnackBar.error('timerResumeError'.tr);
     } finally {
+      if (!committed &&
+          breakWasRunning &&
+          _timerState.value == TimerState.paused) {
+        _startBreakClock();
+      }
       apiLoadingState.value = LoadingState.idle;
     }
   }
 
   Future<void> stop() async {
+    if (isApiLoading) return;
     if (kDemoMode) {
-      _breakTimer?.cancel();
+      _freezeBreakClock();
       _breakMilliseconds.value = 0;
       breakStartedAt = null;
       _resetTimer();
+      _refreshProjectTimeList();
       return;
     }
+
+    final wasRunning = _timerState.value == TimerState.running;
+    final wasPaused = _timerState.value == TimerState.paused;
+    final workWasRunning = wasRunning && _freezeWorkClock();
+    final breakWasRunning = wasPaused && _freezeBreakClock();
+    var committed = false;
     try {
       apiLoadingState.value = LoadingState.loading;
 
@@ -922,10 +961,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       );
 
       if (success) {
+        committed = true;
         _resetTimer();
 
         AppSnackBar.success('timerStopped'.tr);
         appLog('Timer stopped successfully via API');
+        _refreshProjectTimeList();
       } else {
         AppSnackBar.error('timerStopFailed'.tr);
       }
@@ -933,6 +974,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       appLog('Error stopping timer: $e');
       AppSnackBar.error('timerStopError'.tr);
     } finally {
+      if (!committed) {
+        if (workWasRunning && _timerState.value == TimerState.running) {
+          _startTimer();
+        }
+        if (breakWasRunning && _timerState.value == TimerState.paused) {
+          _startBreakClock();
+        }
+      }
       apiLoadingState.value = LoadingState.idle;
     }
   }
@@ -944,6 +993,31 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return BreakPreferenceService.defaultAutomaticBreakEnabled;
     }
     return Get.find<BreakPreferenceService>().automaticBreakEnabled;
+  }
+
+  /// Stops the work clock without changing the session state.
+  /// Returns whether it was ticking.
+  bool _freezeWorkClock() {
+    final active = _timer?.isActive ?? false;
+    _timer?.cancel();
+    _timer = null;
+    return active;
+  }
+
+  /// Stops the break clock without changing the session state.
+  /// Returns whether it was ticking.
+  bool _freezeBreakClock() {
+    final active = _breakTimer?.isActive ?? false;
+    _breakTimer?.cancel();
+    _breakTimer = null;
+    return active;
+  }
+
+  void _startBreakClock() {
+    _breakTimer?.cancel();
+    _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _breakMilliseconds.value += 1000;
+    });
   }
 
   void _startTimer() {
@@ -969,8 +1043,21 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     });
   }
 
+  /// Revalidate Project Details Time Tracker list after timer mutations.
+  void _refreshProjectTimeList() {
+    if (!Get.isRegistered<ProjectDetailsScreenController>()) return;
+    final c = Get.find<ProjectDetailsScreenController>();
+    final id = c.currentProjectId;
+    if (id != null && id == _currentProjectId.value) {
+      unawaited(c.loadTimeData(id));
+    }
+  }
+
   void _resetTimer({bool clearPersistedState = true}) {
     _timer?.cancel();
+    _timer = null;
+    _breakTimer?.cancel();
+    _breakTimer = null;
     _timerState.value = TimerState.stopped;
     _elapsedMilliseconds.value = 0;
     _lastDialogHour.value = 0;
@@ -1068,6 +1155,81 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   //! ==================== VALIDATION METHODS ====================
 
+  /// Shows the oldest server session that is still active or paused.
+  /// Returns false when there is nothing to adopt, including a failed fetch,
+  /// so the caller can keep the locally saved timer.
+  Future<bool> _restoreOpenSessionFromServer({bool loadReport = false}) async {
+    final sessions = await _timeTrackerRepository.getOpenSessions();
+    if (sessions == null || sessions.isEmpty) return false;
+
+    final session = sessions.first;
+    final projectId = session.projectId;
+    final switching = projectId != null &&
+        projectId.isNotEmpty &&
+        projectId != _currentProjectId.value;
+    if (switching) {
+      await setCurrentProjectId(
+        projectId,
+        projectTitle: session.projectTitle,
+        announce: false,
+      );
+    } else if (session.projectTitle != null &&
+        session.projectTitle!.isNotEmpty &&
+        selectedProjectTitle.value.isEmpty) {
+      selectedProjectTitle.value = session.projectTitle!;
+      await _storageService.saveData(
+        'selected_project_title',
+        session.projectTitle,
+      );
+    }
+
+    await _applyServerSession(session);
+    if (loadReport && !switching && _currentProjectId.value.isNotEmpty) {
+      await initializeReportData();
+    }
+    return true;
+  }
+
+  Future<void> _applyServerSession(OpenTimeSession session) async {
+    _timer?.cancel();
+    _timer = null;
+    _breakTimer?.cancel();
+    _breakTimer = null;
+    final elapsed = session.elapsedMs < 0 ? 0 : session.elapsedMs;
+    _elapsedMilliseconds.value = elapsed;
+    _lastDialogHour.value = (elapsed / 3600000).floor();
+    _currentSessionId.value = session.id;
+    if (session.status == 'paused') {
+      _timerState.value = TimerState.paused;
+    } else {
+      _timerState.value = TimerState.running;
+      _startTimer();
+    }
+    if (_currentProjectId.value.isNotEmpty) {
+      await _saveTimerStateForProject(_currentProjectId.value);
+    }
+  }
+
+  /// Picks the first loaded project when the saved id is empty or no longer
+  /// in the list. Returns true when [setCurrentProjectId] ran, which already
+  /// loads that project's timer state and report.
+  Future<bool> _ensureCurrentProject() async {
+    final projects = allProjectData.value?.data?.data;
+    if (projects == null || projects.isEmpty) return false;
+
+    final saved = _currentProjectId.value;
+    final known = saved.isNotEmpty &&
+        projects.any((project) => project.id == saved);
+    if (known) return false;
+
+    final first = projects.first;
+    final id = first.id;
+    if (id == null || id.isEmpty) return false;
+
+    await setCurrentProjectId(id, projectTitle: first.title);
+    return _currentProjectId.value == id;
+  }
+
   bool _validateProjectSelection() {
     if (_currentProjectId.value.isEmpty) {
       AppSnackBar.error('selectProjectFirst'.tr);
@@ -1146,58 +1308,108 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   final Rx<LoadingState> reportLoadingState = LoadingState.idle.obs;
 
+  /// Worked hours for the signed-in user, keyed by project id.
+  final RxMap<String, double> projectTodayHours = <String, double>{}.obs;
+  final RxMap<String, double> projectWeekHours = <String, double>{}.obs;
+
+  /// Today and this UTC week, summed from session `totalTime` per project.
+  Future<void> loadProjectTrackedHours() async {
+    if (kDemoMode) {
+      final hours = hoursByProject(
+        DemoData.dailySummary.data?.sessions ?? const [],
+      );
+      projectTodayHours.assignAll(hours);
+      projectWeekHours.assignAll(hours);
+      return;
+    }
+    try {
+      final today = utcDateKey();
+      final weekFrom = utcMondayKey(DateTime.now());
+      final todaySummary = await _reportRepository.fetchDailySummary(
+        todayData: today,
+      );
+      final weekSummary = await _reportRepository.fetchDailySummary(
+        from: weekFrom,
+        to: today,
+      );
+      if (todaySummary.statusCode == 200) {
+        projectTodayHours.assignAll(
+          hoursByProject(todaySummary.data?.sessions ?? const []),
+        );
+      }
+      if (weekSummary.statusCode == 200) {
+        projectWeekHours.assignAll(
+          hoursByProject(weekSummary.data?.sessions ?? const []),
+        );
+      }
+    } catch (e) {
+      appLog('Error loading project tracked hours: $e');
+    }
+  }
+
+  /// `day`, `week`, or `month`. Bounds are UTC date strings.
+  final RxString reportPeriod = 'day'.obs;
+  final RxString reportFrom = ''.obs;
+  final RxString reportTo = ''.obs;
+
+  void setReportPeriod(String period) {
+    if (reportPeriod.value == period) return;
+    reportPeriod.value = period;
+    loadReportData();
+  }
+
   Future<void> loadReportData() async {
     // TEMPORARY demo mode — populate report screens without a backend.
     if (kDemoMode) {
       breakHoursData.value = DemoData.breakHours;
       dailySummaryData.value = DemoData.dailySummary;
       workingHoursSummary.value = DemoData.workingHours;
+      final selected = utcDateKey(selectedDate.value);
+      reportFrom.value = selected;
+      reportTo.value = selected;
       reportLoadingState.value = LoadingState.idle;
       return;
     }
     try {
       reportLoadingState.value = LoadingState.loading;
+      workingHoursSummary.value = null;
+      dailySummaryData.value = null;
 
-      // Format date as required by API (YYYY-MM-DD)
-      String formattedDate =
-          "${selectedDate.value.year}-${selectedDate.value.month.toString().padLeft(2, '0')}-${selectedDate.value.day.toString().padLeft(2, '0')}";
-
-      // Validate project selection
-      if (_currentProjectId.value.isEmpty) {
-        AppSnackBar.error('selectProjectFirst'.tr);
-        return;
+      final selected = utcDateKey(selectedDate.value);
+      String? from;
+      String? to;
+      String? date;
+      switch (reportPeriod.value) {
+        case 'week':
+          from = utcMondayKey(selectedDate.value);
+          to = selected;
+          break;
+        case 'month':
+          from = utcMonthStartKey(selectedDate.value);
+          to = selected;
+          break;
+        default:
+          date = selected;
       }
+      reportFrom.value = from ?? selected;
+      reportTo.value = to ?? selected;
 
-      // Load break hours data for bar chart
-      final breakHoursResponse = await _reportRepository.fetchBreakHoursByDay();
-      if (breakHoursResponse.statusCode == 200) {
-        breakHoursData.value = breakHoursResponse;
-      }
-
-      // Load daily summary data
       final dailySummaryResponse = await _reportRepository.fetchDailySummary(
-        projectId: _currentProjectId.value,
-        todayData: formattedDate,
+        todayData: date,
+        from: from,
+        to: to,
       );
       if (dailySummaryResponse.statusCode == 200) {
         dailySummaryData.value = dailySummaryResponse;
       }
 
-      // Load working hours summary
       final workingHoursResponse = await _reportRepository
-          .fetchWorkingHoursSummary(todayDate: formattedDate);
+          .fetchWorkingHoursSummary(todayDate: selected);
       if (workingHoursResponse.statusCode == 200) {
         workingHoursSummary.value = workingHoursResponse;
       }
 
-      // Load today's break periods
-      final breakPeriodsResponse = await _reportRepository
-          .fetchTodayBreakPeriods(todayDate: formattedDate);
-      if (breakPeriodsResponse.statusCode == 200) {
-        todayBreakPeriods.value = breakPeriodsResponse;
-      }
-
-      appLog('Report data loaded successfully for date: $formattedDate');
+      appLog('Report data loaded successfully for date: $selected');
     } catch (e) {
       appLog('Error loading report data: $e');
       AppSnackBar.error('failedLoadReport'.tr);
@@ -1232,9 +1444,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
   // Initialize report data on app start
   Future<void> initializeReportData() async {
-    // Set initial date to today
     selectedDate.value = DateTime.now();
-    // Load initial report data
+    reportPeriod.value = 'day';
     await loadReportData();
   }
 }

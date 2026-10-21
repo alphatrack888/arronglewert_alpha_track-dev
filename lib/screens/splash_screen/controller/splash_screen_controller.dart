@@ -2,6 +2,7 @@ import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/socket_service/employee_socket_subscriptions.dart';
 import 'package:alpha_track/services/socket_service/socket_service.dart';
+import 'package:alpha_track/services/repository/time_tracker_repository/timer_start_errors.dart';
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/demo_data/demo_data.dart';
@@ -16,13 +17,18 @@ class SplashScreenController extends GetxController {
         Get.offNamed(AppRoute.bottomNavigation);
         return;
       }
-      String token = StorageServices.instance.getAccessToken();
+      final storage = StorageServices.instance;
+      String token = storage.getAccessToken();
       if (token.isNotEmpty) {
+        if (!isEmployeeRoleForAppAuth(storage.getUserRole())) {
+          await storage.clearSession();
+          Get.offNamed(AppRoute.loginScreen);
+          return;
+        }
         AppSocketAllOperation.instance.connectIfAuthenticated();
         await EmployeeSocketSubscriptions.primeUserIdFromProfileIfNeeded();
         Get.offNamed(AppRoute.bottomNavigation);
         PushNotificationService.instance.onAuthenticatedNavigationReady();
-        final storage = StorageServices.instance;
         if (storage.getRegisteredDeviceToken().isEmpty) {
           await PushNotificationService.instance.registerCurrentToken();
         } else {

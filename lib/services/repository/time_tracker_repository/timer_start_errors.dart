@@ -59,3 +59,9 @@ bool isEmployeeRoleForTimer(String? role) {
   if (role == null || role.isEmpty) return true;
   return role == 'employee';
 }
+
+/// Mobile app sign-in and session: only employee accounts are supported.
+bool isEmployeeRoleForAppAuth(String? role) {
+  if (role == null || role.isEmpty) return false;
+  return role == 'employee';
+}

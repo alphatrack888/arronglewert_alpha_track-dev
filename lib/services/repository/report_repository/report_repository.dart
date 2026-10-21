@@ -59,13 +59,33 @@ class ReportRepository {
     }
   }
 
-  //! Daily Summary
+  //! Daily or range summary. [projectId] is optional (report loads all projects).
   Future<DailySummaryModel> fetchDailySummary({
-    required String todayData,
-    required String projectId,
+    String? todayData,
+    String? projectId,
+    String? from,
+    String? to,
   }) async {
     try {
-      final response = await apiServices.apiGetServices("${ApiUrls.dailySummary}$todayData&project=$projectId");
+      final params = <String, String>{};
+      if (from != null &&
+          from.isNotEmpty &&
+          to != null &&
+          to.isNotEmpty) {
+        params['from'] = from;
+        params['to'] = to;
+      } else if (todayData != null && todayData.isNotEmpty) {
+        params['date'] = todayData;
+      }
+      if (projectId != null && projectId.isNotEmpty) {
+        params['project'] = projectId;
+      }
+      final query = params.entries
+          .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+          .join('&');
+      final response = await apiServices.apiGetServices(
+        '${ApiUrls.timeSummary}?$query',
+      );
       if (response != null) {
         return DailySummaryModel.fromJson(response);
       }

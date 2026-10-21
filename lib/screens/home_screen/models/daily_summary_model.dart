@@ -198,9 +198,11 @@ class Pause {
 
 class Project {
     String? id;
+    String? name;
 
     Project({
         this.id,
+        this.name,
     });
 
     factory Project.fromRawJson(String str) => Project.fromJson(json.decode(str));
@@ -209,9 +211,11 @@ class Project {
 
     factory Project.fromJson(Map<String, dynamic> json) => Project(
         id: json["_id"],
+        name: json["name"] ?? json["title"],
     );
 
     Map<String, dynamic> toJson() => {
         "_id": id,
+        "title": name,
     };
 }

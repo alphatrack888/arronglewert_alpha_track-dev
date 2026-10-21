@@ -3,7 +3,7 @@ class ApiUrls {
   static const String liveDomain = "https://api.alphatrack.app/";
   static const String localDomain = "http://88.198.112.109:5000/";
   static const String baseUrl = "${liveDomain}api/v1";
-  static const String employeeLogin = "$baseUrl/auth/login";
+  static const String employeeLogin = "$baseUrl/auth/employee-login";
   static const String refreshToken = "$baseUrl/auth/refresh-token";
   // TODO(backend): confirm the registration endpoint path/contract. Best guess
   // based on the existing /auth/* routes; adjust if the API differs.
@@ -17,6 +17,7 @@ class ApiUrls {
   static const String allProject = "$baseUrl/project";
   static const String singleProject = "$baseUrl/project/";
   static const String startTimer = "$baseUrl/timetracker/start";
+  static const String openSessions = "$baseUrl/timetracker/open";
   static const String pauseTimer = "$baseUrl/timetracker/pause/";
   static const String resumeTimer = "$baseUrl/timetracker/resume/";
   static const String stopTimer = "$baseUrl/timetracker/stop/";
@@ -39,6 +40,7 @@ class ApiUrls {
       "$baseUrl/user/working-hours-summary?date=";
   static const String todayBreakPeriods =
       "$baseUrl/user/todays-break-periods?date=";
+  static const String timeSummary = "$baseUrl/timetracker/summary";
   static const String dailySummary = "$baseUrl/timetracker/summary?date=";
   static const String notification = "$baseUrl/notifications";
   static const String notificationMarkAllRead = "$baseUrl/notifications/all";

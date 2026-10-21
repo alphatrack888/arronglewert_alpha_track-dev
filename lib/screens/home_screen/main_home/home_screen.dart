@@ -284,16 +284,29 @@ class _HomeScreenState extends State<HomeScreen> {
               style: AppTextStyles.bodySemibold.copyWith(color: AppColors.white50))),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: () => controller.togglePauseResume(),
+            onTap: controller.isApiLoading
+                ? null
+                : () => controller.togglePauseResume(),
             child: Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
                 color: AppColors.white50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Obx(() => Icon(
-                  controller.isPaused ? LucideIcons.play : LucideIcons.pause,
-                  color: AppColors.primary, size: 22)),
+              child: controller.isApiLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(9),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : Obx(() => Icon(
+                      controller.isPaused
+                          ? LucideIcons.play
+                          : LucideIcons.pause,
+                      color: AppColors.primary,
+                      size: 22)),
             ),
           ),
         ],
@@ -303,6 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---- session actions (running) -------------------------------------------
   Widget _buildSessionActions() {
+    final loading = controller.isApiLoading;
     return Row(
       children: [
         Expanded(
@@ -311,6 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isTranslate: false,
             icon: LucideIcons.coffee,
             color: AppColors.warning,
+            isLoading: loading,
             onTap: () => controller.pause(),
           ),
         ),
@@ -321,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isTranslate: false,
             icon: LucideIcons.square,
             color: AppColors.danger,
+            isLoading: loading,
             onTap: () => controller.stop(),
           ),
         ),
@@ -370,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () => controller.resume(),
+            onTap: controller.isApiLoading ? null : () => controller.resume(),
             behavior: HitTestBehavior.opaque,
             child: Container(
               width: 44,
@@ -380,7 +396,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: white.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(LucideIcons.play, color: white, size: 20),
+              child: controller.isApiLoading
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: white,
+                      ),
+                    )
+                  : Icon(LucideIcons.play, color: white, size: 20),
             ),
           ),
         ],
@@ -619,6 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
               thisWeek: _fmtMins(project.duration),
               billable: '\$0',
               paused: paused,
+              isLoading: controller.isApiLoading,
               onStop: () => controller.stop(),
               onToggle: () => controller.togglePauseResume(),
               onTap: () {

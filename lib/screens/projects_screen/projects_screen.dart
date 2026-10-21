@@ -32,6 +32,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     super.initState();
     controller = Get.find<HomeScreenController>();
     controller.loadProjectList();
+    controller.loadProjectTrackedHours();
   }
 
   // Bucket projects by their status field into the four tabs.
@@ -44,12 +45,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     return 0; // default everything else to Active
   }
 
-  String _formatProjectTime(int? minutes) {
-    if (minutes == null || minutes <= 0) return '0h 0m';
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    return '${h}h ${m}m';
+  String _formatHours(double? hours) {
+    final h = hours ?? 0;
+    final whole = h.floor();
+    final minutes = ((h - whole) * 60).round();
+    if (minutes == 0) return '${whole}h';
+    return '${whole}h ${minutes}m';
   }
+
+  String _todayLabel(String? projectId) =>
+      _formatHours(controller.projectTodayHours[projectId]);
+
+  String _weekLabel(String? projectId) =>
+      _formatHours(controller.projectWeekHours[projectId]);
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +129,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     Get.to(() => ProjectSearchScreen(
           projects: all,
           onOpen: _openProject,
-          formatTime: _formatProjectTime,
+          formatTime: _todayLabel,
         ));
   }
 
@@ -179,10 +187,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       return DsRunningProjectCard(
         title: title,
         company: company,
-        today: _formatProjectTime(project.projectTime),
-        thisWeek: _formatProjectTime(project.duration),
+        today: _todayLabel(project.id),
+        thisWeek: _weekLabel(project.id),
         billable: '\$0',
         paused: paused,
+        isLoading: controller.isApiLoading,
         onStop: () => controller.stop(),
         onToggle: () => _toggleTracking(project),
         onTap: () => _openProject(project),
@@ -242,9 +251,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _stat('today1'.tr, _formatProjectTime(project.projectTime)),
+              _stat('today1'.tr, _todayLabel(project.id)),
               _divider(),
-              _stat('thisWeek'.tr, _formatProjectTime(project.duration)),
+              _stat('thisWeek'.tr, _weekLabel(project.id)),
               _divider(),
               _stat('billable'.tr, '\$0'),
             ],
@@ -297,7 +306,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       return DsProjectTile(
         title: title,
         subtitle: company,
-        trailingText: _formatProjectTime(project.projectTime),
+        trailingText: _todayLabel(project.id),
         trailingSub: 'today1'.tr,
         actionIcon:
             running ? Icons.pause_rounded : Icons.play_arrow_rounded,
@@ -353,7 +362,7 @@ class ProjectSearchScreen extends StatefulWidget {
 
   final List<Datum> projects;
   final Future<void> Function(Datum) onOpen;
-  final String Function(int?) formatTime;
+  final String Function(String? projectId) formatTime;
 
   @override
   State<ProjectSearchScreen> createState() => _ProjectSearchScreenState();
@@ -442,26 +451,29 @@ class _ProjectSearchScreenState extends State<ProjectSearchScreen> {
               ),
             ),
             Expanded(
-              child: results.isEmpty
-                  ? _noResults()
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
-                        Text(
-                            _query.isEmpty
-                                ? 'allProjects'.tr
-                                : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
-                            style: AppTextStyles.eyebrow),
-                        const SizedBox(height: 12),
-                        ...results.map((p) => DsProjectTile(
-                              title: p.title ?? 'Untitled',
-                              subtitle: p.company?.name ?? '',
-                              trailingText: widget.formatTime(p.projectTime),
-                              trailingSub: 'today1'.tr,
-                              onTap: () => widget.onOpen(p),
-                            )),
-                      ],
-                    ),
+              child: Obx(() {
+                // Rebuild when tracked hours arrive after this screen opened.
+                Get.find<HomeScreenController>().projectTodayHours.length;
+                if (results.isEmpty) return _noResults();
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  children: [
+                    Text(
+                        _query.isEmpty
+                            ? 'allProjects'.tr
+                            : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
+                        style: AppTextStyles.eyebrow),
+                    const SizedBox(height: 12),
+                    ...results.map((p) => DsProjectTile(
+                          title: p.title ?? 'Untitled',
+                          subtitle: p.company?.name ?? '',
+                          trailingText: widget.formatTime(p.id),
+                          trailingSub: 'today1'.tr,
+                          onTap: () => widget.onOpen(p),
+                        )),
+                  ],
+                );
+              }),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:alpha_track/screens/break_screen/break_history_controller.dart';
 import 'package:alpha_track/screens/break_screen/break_screen/controller/break_screen_controller.dart';
+import 'package:alpha_track/screens/break_screen/leave_screen/leave_type_display.dart';
 import 'package:alpha_track/screens/break_screen/model/leave_balance_left.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
@@ -17,6 +18,17 @@ const _months = [
 String _d(DateTime? d) =>
     d == null ? '—' : '${_months[d.month - 1]} ${d.day}, ${d.year}';
 
+Widget _historyStatusChip(String? status) {
+  switch ((status ?? '').toLowerCase()) {
+    case 'rejected':
+      return DsChip.danger('Rejected');
+    case 'pending':
+      return DsChip.warning('Pending');
+    default:
+      return DsChip.success('Approved');
+  }
+}
+
 Widget _historyScaffold(String title, Widget body) {
   return Scaffold(
     backgroundColor: AppColors.background,
@@ -30,7 +42,14 @@ Widget _historyScaffold(String title, Widget body) {
               children: [
                 const DsBackButton(),
                 const SizedBox(width: 12),
-                Text(title, style: AppTextStyles.title),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTextStyles.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -60,10 +79,15 @@ class LeaveHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(BreakScreenController());
+    final controller = Get.isRegistered<BreakScreenController>()
+        ? Get.find<BreakScreenController>()
+        : Get.put(BreakScreenController());
     return _historyScaffold(
       'leaveHistory'.tr,
       Obx(() {
+        if (controller.isLeaveHistoryLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
         final all =
             controller.leaveBalanceHistoryData.value?.data?.leavemanagements ??
                 <Leavemanagement>[];
@@ -107,7 +131,7 @@ class LeaveHistoryScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${(l.type ?? '').isEmpty ? 'leaveWord'.tr : l.type![0].toUpperCase()}${(l.type ?? '').length > 1 ? l.type!.substring(1) : ''} ${'leaveWord'.tr}',
+                          labelForApiType(l.type ?? ''),
                           style: AppTextStyles.bodySemibold,
                         ),
                         const SizedBox(height: 2),
@@ -116,9 +140,7 @@ class LeaveHistoryScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  (l.status ?? '').toLowerCase() == 'rejected'
-                      ? DsChip.danger('Rejected')
-                      : DsChip.success('Approved'),
+                  _historyStatusChip(l.status),
                 ],
               ),
             );

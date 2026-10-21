@@ -89,6 +89,7 @@ class SecondaryButton extends StatelessWidget {
     this.color,
     this.radius = 9999,
     this.isTranslate = true,
+    this.isLoading = false,
   });
 
   final String label;
@@ -100,12 +101,13 @@ class SecondaryButton extends StatelessWidget {
   final Color? color;
   final double radius;
   final bool isTranslate;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     final accent = color ?? AppColors.primary;
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
         height: height,
@@ -116,23 +118,25 @@ class SecondaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(color: AppColors.stroke),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (svgIcon != null) ...[
-              SvgPicture.asset(svgIcon!, width: 18, height: 18),
-              const SizedBox(width: 8),
-            ] else if (icon != null) ...[
-              Icon(icon, size: 18, color: accent),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              isTranslate ? label.tr : label,
-              style: AppTextStyles.button.copyWith(color: accent),
-            ),
-          ],
-        ),
+        child: isLoading
+            ? LoadingAnimationWidget.waveDots(color: accent, size: 28)
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (svgIcon != null) ...[
+                    SvgPicture.asset(svgIcon!, width: 18, height: 18),
+                    const SizedBox(width: 8),
+                  ] else if (icon != null) ...[
+                    Icon(icon, size: 18, color: accent),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    isTranslate ? label.tr : label,
+                    style: AppTextStyles.button.copyWith(color: accent),
+                  ),
+                ],
+              ),
       ),
     );
   }

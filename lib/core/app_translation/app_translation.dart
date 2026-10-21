@@ -83,8 +83,12 @@ class AppTranslation extends Translations {
       'timerStartError': 'An error occurred while starting timer',
       'timerStartEmployeeOnly':
           'Time tracking is only available for employee accounts. Sign in as an employee or use the company dashboard.',
+      'loginWrongPortalEmployee':
+          'This account must sign in from the company dashboard, not the mobile app.',
       'timerAlreadyActive':
           'A session is already running or paused. Stop or resume it before starting again.',
+      'sessionStillOpen':
+          'A session is still open. Clock out before starting another.',
       'timerStartTimeout':
           'Starting tracking timed out. Check your connection and try again.',
       'sessionExpiredStartTimer':
@@ -492,7 +496,7 @@ class AppTranslation extends Translations {
       'earnLeave': 'Earn Leave',
       'withoutPayleave': 'Without Pay Leave',
       'applyNow': 'Apply Now ',
-      'leaveHistory': 'Leave His tory',
+      'leaveHistory': 'Leave History',
       'leaveType': 'Leave Type',
       'leaveReason': 'Leave Reason',
       'fromDate': 'From Date',
@@ -759,8 +763,12 @@ class AppTranslation extends Translations {
       'timerStartError': 'Fehler beim Starten des Timers',
       'timerStartEmployeeOnly':
           'Zeiterfassung ist nur für Mitarbeiterkonten verfügbar. Melden Sie sich als Mitarbeiter an oder nutzen Sie das Firmen-Dashboard.',
+      'loginWrongPortalEmployee':
+          'Dieses Konto muss sich über das Firmen-Dashboard anmelden, nicht über die mobile App.',
       'timerAlreadyActive':
           'Eine Sitzung läuft bereits oder ist pausiert. Beenden oder fortsetzen Sie sie, bevor Sie neu starten.',
+      'sessionStillOpen':
+          'Eine Zeiterfassung ist noch offen. Beenden Sie sie, bevor Sie eine neue starten.',
       'timerStartTimeout':
           'Zeitüberschreitung beim Start. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
       'sessionExpiredStartTimer':
@@ -1453,8 +1461,12 @@ class AppTranslation extends Translations {
       'timerStartError': 'حدث خطأ أثناء بدء المؤقت',
       'timerStartEmployeeOnly':
           'تتبع الوقت متاح فقط لحسابات الموظفين. سجّل الدخول كموظف أو استخدم لوحة الشركة.',
+      'loginWrongPortalEmployee':
+          'يجب تسجيل الدخول إلى هذا الحساب من لوحة الشركة وليس من تطبيق الهاتف.',
       'timerAlreadyActive':
           'هناك جلسة قيد التشغيل أو متوقفة مؤقتًا. أوقفها أو استأنفها قبل البدء من جديد.',
+      'sessionStillOpen':
+          'هناك جلسة ما زالت مفتوحة. سجّل الخروج قبل بدء جلسة أخرى.',
       'timerStartTimeout':
           'انتهت مهلة بدء التتبع. تحقق من الاتصال وحاول مرة أخرى.',
       'sessionExpiredStartTimer':
@@ -2121,8 +2133,12 @@ class AppTranslation extends Translations {
       'timerStartError': 'Eroare la pornirea cronometrului',
       'timerStartEmployeeOnly':
           'Urmărirea timpului este disponibilă doar pentru conturi de angajat. Autentifică-te ca angajat sau folosește panoul companiei.',
+      'loginWrongPortalEmployee':
+          'Acest cont trebuie să se autentifice din panoul companiei, nu din aplicația mobilă.',
       'timerAlreadyActive':
           'Există deja o sesiune activă sau în pauză. Oprește-o sau reia-o înainte de a începe din nou.',
+      'sessionStillOpen':
+          'O sesiune este încă deschisă. Închide-o înainte de a începe alta.',
       'timerStartTimeout':
           'Pornirea urmăririi a expirat. Verifică conexiunea și încearcă din nou.',
       'sessionExpiredStartTimer':

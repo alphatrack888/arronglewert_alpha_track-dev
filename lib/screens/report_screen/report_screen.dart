@@ -1,5 +1,9 @@
 import 'package:alpha_track/screens/home_screen/main_home/controller/home_screen_controller.dart';
+import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart';
+import 'package:alpha_track/screens/home_screen/project_details/project_time_query.dart';
+import 'package:alpha_track/screens/report_screen/report_period.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
+import 'package:alpha_track/utils/app_date/app_date.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/ds/ds_area_chart.dart';
 import 'package:alpha_track/widgets/ds/ds_back_button.dart';
@@ -10,7 +14,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:alpha_track/utils/app_date/app_date.dart';
 
 /// Reports screen (Day / Week / Month) — new in the 2026 redesign.
 ///
@@ -82,20 +85,22 @@ class _ReportScreenState extends State<ReportScreen> {
 
   String _formatMonthHeader(DateTime d) => '${_months[d.month - 1]} ${d.year}';
 
+  /// Worked hours for the open day, week, or month. This is the summary
+  /// total, the same sessions the bars and session list use.
+  double? _periodWorkedHours() {
+    return double.tryParse(
+      controller.dailySummaryData.value?.data?.totalTime ?? '',
+    );
+  }
+
   /// Share a plain-text summary of the current report via the native share
-  /// sheet. Uses the real working-hours totals already loaded by the controller.
+  /// sheet. Worked, break, and overtime come from the selected summary.
   Future<void> _shareReport() async {
-    final working = controller.workingHoursSummary.value?.data;
     final summary = controller.dailySummaryData.value?.data;
 
-    final breakLabel = summary?.totalBreakInHoursFormatted ??
-        summary?.totalBreakInHours ??
-        '0h';
-    final overtimeLabel =
-        summary?.overtimeInHoursFormatted ?? summary?.overtime ?? '0h';
+    final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
+    final overtimeLabel = summary?.overtimeInHoursFormatted ?? '0h 0m';
 
-    // Period the user is currently looking at, so the shared text matches the
-    // screen instead of always reading as a generic summary.
     final date = controller.selectedDate.value;
     final String period;
     switch (_tab) {
@@ -109,17 +114,15 @@ class _ReportScreenState extends State<ReportScreen> {
         period = _formatMonthHeader(date);
         break;
     }
+    final worked = _formatHours(_periodWorkedHours());
 
     final text = StringBuffer()
       ..writeln('timeReport'.tr)
       ..writeln(period)
       ..writeln()
-      ..writeln('${'today1'.tr}:      ${_formatHours(working?.today)}')
-      ..writeln('${'thisWeek'.tr}:  ${_formatHours(working?.thisWeek)}')
-      ..writeln('This month: ${_formatHours(working?.thisMonth)}')
-      ..writeln()
-      ..writeln('${'breaks'.tr}:   $breakLabel')
-      ..write('Overtime: $overtimeLabel');
+      ..writeln('${'worked'.tr}: $worked')
+      ..writeln('${'breakLabel'.tr}: $breakLabel')
+      ..write('${'overtime'.tr}: $overtimeLabel');
 
     await SharePlus.instance.share(
       ShareParams(text: text.toString(), subject: 'timeReport'.tr),
@@ -262,7 +265,14 @@ class _ReportScreenState extends State<ReportScreen> {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _tab = tab),
+        onTap: () {
+          setState(() => _tab = tab);
+          controller.setReportPeriod(switch (tab) {
+            _ReportTab.week => 'week',
+            _ReportTab.month => 'month',
+            _ReportTab.day => 'day',
+          });
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -372,23 +382,19 @@ class _ReportScreenState extends State<ReportScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildWorkedCard() {
-    final data = controller.workingHoursSummary.value?.data;
     final String title;
-    final String total;
     switch (_tab) {
       case _ReportTab.day:
         title = 'workedToday'.tr;
-        total = _formatHours(data?.today);
         break;
       case _ReportTab.week:
         title = 'workedThisWeek'.tr;
-        total = _formatHours(data?.thisWeek);
         break;
       case _ReportTab.month:
         title = 'workedThisMonth'.tr;
-        total = _formatHours(data?.thisMonth);
         break;
     }
+    final total = _formatHours(_periodWorkedHours());
 
     return DsCard(
       padding: const EdgeInsets.all(18),
@@ -399,7 +405,10 @@ class _ReportScreenState extends State<ReportScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(title, style: AppTextStyles.eyebrow),
-              _pillLabel(LucideIcons.barChart3, 'workVsBreak'.tr),
+              _pillLabel(
+                LucideIcons.barChart3,
+                _tab == _ReportTab.day ? 'workVsBreak'.tr : 'worked'.tr,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -422,26 +431,12 @@ class _ReportScreenState extends State<ReportScreen> {
   /// "Break" label when the curve is scrubbed over them.
   Widget _buildDayChart() {
     final sessions = controller.dailySummaryData.value?.data?.sessions ?? [];
+    final intervals = workIntervalsLocal(sessions);
 
-    // Collect work intervals as hour-of-day decimals (e.g. 09:02 -> 9.033).
-    final intervals = <List<double>>[];
-    for (final s in sessions) {
-      final start = s.startTime;
-      final end = s.endTime ?? DateTime.now().toUtc(); // running session
-      if (start == null) continue;
-      final a = start.hour + start.minute / 60.0;
-      final b = end.hour + end.minute / 60.0;
-      if (b > a) intervals.add([a, b]);
-    }
-    intervals.sort((x, y) => x[0].compareTo(y[0]));
-
-    // Fallback for days with no usable sessions: a representative two-session
-    // day so the curve and "Break" interaction still demonstrate.
     if (intervals.isEmpty) {
-      intervals.addAll([
-        [9.0, 12.0],
-        [12.75, 16.5],
-      ]);
+      return Center(
+        child: Text('noSessionsPeriod'.tr, style: AppTextStyles.subtitle),
+      );
     }
 
     final dayStart = intervals.first[0];
@@ -512,18 +507,30 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Widget _buildBarChart() {
-    final values = controller.getBarChartData(); // 7 days: Sat..Fri
-    // Labels must line up with that Sat..Fri value order, so take the
-    // Sunday-first localized week and rotate Saturday to the front.
-    final sundayFirst = AppDate.weekdayLabels(startMonday: false);
-    final labels = [sundayFirst.last, ...sundayFirst.take(6)];
+    final sessions = controller.dailySummaryData.value?.data?.sessions ?? [];
+    final bars = workedBarsForRange(
+      sessions,
+      controller.reportFrom.value,
+      controller.reportTo.value,
+    );
+    if (bars.isEmpty || bars.every((bar) => bar.hours == 0)) {
+      return Center(
+        child: Text('noSessionsPeriod'.tr, style: AppTextStyles.subtitle),
+      );
+    }
+
+    final labels = bars.map((bar) {
+      if (_tab == _ReportTab.month) {
+        return int.parse(bar.date.substring(8)).toString();
+      }
+      final weekday = DateTime.parse('${bar.date}T00:00:00.000Z').weekday;
+      return AppDate.weekdayLabels(startMonday: true)[weekday - 1];
+    }).toList();
 
     return DsBarChart(
-      values: values,
+      values: bars.map((bar) => bar.hours).toList(),
       labels: labels,
-      barWidth: 18,
-      // Per-day break isn't available from the report API, so the floating
-      // label surfaces the worked total for the tapped day.
+      barWidth: bars.length > 14 ? 8 : 18,
       labelBuilder: (_, value) => _formatHours(value),
     );
   }
@@ -536,30 +543,28 @@ class _ReportScreenState extends State<ReportScreen> {
     // No per-project breakdown is provided by the report API, so we surface the
     // real values that DO exist for the selected period: worked, break, overtime.
     final summary = controller.dailySummaryData.value?.data;
-    final working = controller.workingHoursSummary.value?.data;
 
-    final double workedHours;
+    final workedHours = _periodWorkedHours() ?? 0;
     final String periodChip;
     switch (_tab) {
       case _ReportTab.day:
-        workedHours = working?.today ?? 0;
         periodChip = 'today1'.tr;
         break;
       case _ReportTab.week:
-        workedHours = working?.thisWeek ?? 0;
         periodChip = 'thisWeek'.tr;
         break;
       case _ReportTab.month:
-        workedHours = working?.thisMonth ?? 0;
         periodChip = 'thisMonth'.tr;
         break;
     }
 
-    final breakLabel = summary?.totalBreakInHoursFormatted ??
-        summary?.totalBreakInHours ??
-        '0h';
-    final overtimeLabel =
-        summary?.overtimeInHoursFormatted ?? summary?.overtime ?? '0h';
+    final breakHours = double.tryParse(summary?.totalBreakInHours ?? '') ?? 0;
+    final overtimeHours = double.tryParse(summary?.overtime ?? '') ?? 0;
+    final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
+    final overtimeLabel = summary?.overtimeInHoursFormatted ?? '0h 0m';
+    final maxHours = [workedHours, breakHours, overtimeHours].reduce(
+      (a, b) => a > b ? a : b,
+    );
 
     return DsCard(
       padding: const EdgeInsets.all(18),
@@ -574,12 +579,26 @@ class _ReportScreenState extends State<ReportScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _breakdownRow('worked'.tr, _formatHours(workedHours), 1.0,
-              AppColors.primary),
+          _breakdownRow(
+            'worked'.tr,
+            _formatHours(workedHours),
+            breakdownFraction(workedHours, maxHours),
+            AppColors.primary,
+          ),
           const SizedBox(height: 14),
-          _breakdownRow('breakLabel'.tr, breakLabel, 0.4, AppColors.success),
+          _breakdownRow(
+            'breakLabel'.tr,
+            breakLabel,
+            breakdownFraction(breakHours, maxHours),
+            AppColors.success,
+          ),
           const SizedBox(height: 14),
-          _breakdownRow('overtime'.tr, overtimeLabel, 0.2, AppColors.warning),
+          _breakdownRow(
+            'overtime'.tr,
+            overtimeLabel,
+            breakdownFraction(overtimeHours, maxHours),
+            AppColors.warning,
+          ),
         ],
       ),
     );
@@ -620,7 +639,9 @@ class _ReportScreenState extends State<ReportScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildRecentSessions() {
-    final sessions = controller.dailySummaryData.value?.data?.sessions ?? [];
+    final sessions = sortedSessionsByStartDesc(
+      controller.dailySummaryData.value?.data?.sessions,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -642,18 +663,22 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  Widget _sessionTile(dynamic session) {
-    final title = controller.currentProjectTitle;
-    final start = session.startTime as DateTime?;
-    final end = session.endTime as DateTime?;
-    final isCurrent = (session.status as String?) == 'running' || end == null;
+  Widget _sessionTile(Session session) {
+    final projectName = session.project?.name;
+    final title = (projectName != null && projectName.isNotEmpty)
+        ? projectName
+        : '—';
+    final start = session.startTime?.toLocal();
+    final end = session.endTime?.toLocal();
+    final isCurrent = session.endTime == null;
 
-    // In this branch isCurrent is false, so end is guaranteed non-null.
     final subtitle = isCurrent
         ? 'Current'
-        : (start != null ? '${_timeOfDay(start)} - ${_timeOfDay(end)}' : '');
+        : (start != null && end != null
+            ? '${_timeOfDay(start)} - ${_timeOfDay(end)}'
+            : '');
 
-    final totalMs = (session.totalTime as int?) ?? 0;
+    final totalMs = session.totalTime ?? 0;
     final trailing = _formatDuration(Duration(milliseconds: totalMs));
 
     return Padding(

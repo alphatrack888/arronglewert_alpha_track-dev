@@ -75,6 +75,70 @@ Future<ApiCallResult<String>> postStartTimer({
   }
 }
 
+/// A session the server still has open (`active` or `paused`).
+class OpenTimeSession {
+  const OpenTimeSession({
+    required this.id,
+    required this.status,
+    required this.elapsedMs,
+    this.projectId,
+    this.projectTitle,
+  });
+
+  final String id;
+  final String status;
+  final int elapsedMs;
+  final String? projectId;
+  final String? projectTitle;
+
+  static OpenTimeSession? fromJson(dynamic raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    if (id is! String || id.isEmpty) return null;
+    final status = raw['status'];
+    final elapsed = raw['elapsedMs'];
+    final project = raw['project'];
+    String? projectId;
+    String? projectTitle;
+    if (project is Map) {
+      final parsedId = project['id'];
+      final parsedTitle = project['title'];
+      if (parsedId is String && parsedId.isNotEmpty) projectId = parsedId;
+      if (parsedTitle is String && parsedTitle.isNotEmpty) {
+        projectTitle = parsedTitle;
+      }
+    }
+    return OpenTimeSession(
+      id: id,
+      status: status is String ? status : 'active',
+      elapsedMs: elapsed is num ? elapsed.round() : 0,
+      projectId: projectId,
+      projectTitle: projectTitle,
+    );
+  }
+}
+
+/// GET /timetracker/open. Null when the request fails so the caller can
+/// keep the locally saved timer. An empty list means nothing is open.
+Future<List<OpenTimeSession>?> fetchOpenSessions() async {
+  try {
+    final response = await ApiServices.instance.api.sendRequest.get(
+      ApiUrls.openSessions,
+    );
+    final status = response.statusCode ?? 0;
+    final data = response.data;
+    if (status < 200 || status >= 300 || data is! Map || data['success'] != true) {
+      return null;
+    }
+    final raw = data['data'];
+    if (raw is! List) return [];
+    return raw.map(OpenTimeSession.fromJson).whereType<OpenTimeSession>().toList();
+  } catch (e) {
+    errorLog('fetchOpenSessions', e);
+    return null;
+  }
+}
+
 String? _parseSessionId(dynamic sessionPayload) {
   if (sessionPayload == null) return null;
   if (sessionPayload is! Map) return null;
