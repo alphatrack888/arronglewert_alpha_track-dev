@@ -11,18 +11,22 @@ class DsCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(16),
     this.margin,
     this.onTap,
+    this.onLongPress,
     this.radius = 16,
     this.color,
     this.border = true,
+    this.borderColor,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final double radius;
   final Color? color;
   final bool border;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,9 @@ class DsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppColors.surface,
         borderRadius: BorderRadius.circular(radius),
-        border: border ? Border.all(color: AppColors.stroke) : null,
+        border: border
+            ? Border.all(color: borderColor ?? AppColors.stroke)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -45,7 +51,17 @@ class DsCard extends StatelessWidget {
       child: child,
     );
 
-    if (onTap == null) return card;
-    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque, child: card);
+    if (onTap == null && onLongPress == null) return card;
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress == null
+          ? null
+          : () {
+              Feedback.forLongPress(context);
+              onLongPress!();
+            },
+      behavior: HitTestBehavior.opaque,
+      child: card,
+    );
   }
 }

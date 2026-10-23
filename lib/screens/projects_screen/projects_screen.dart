@@ -65,6 +65,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Obx(() {
+          controller.currentProjectId;
+          controller.openSessionProjectId;
           final all = controller.allProjectData.value?.data?.data ?? <Datum>[];
           final buckets = <List<Datum>>[[], [], [], []];
           for (final p in all) {
@@ -129,6 +131,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     Get.to(() => ProjectSearchScreen(
           projects: all,
           onOpen: _openProject,
+          onSelect: (project) => controller.selectProjectForTracking(
+            project.id ?? '',
+            projectTitle: project.title,
+          ),
           formatTime: _todayLabel,
         ));
   }
@@ -197,8 +203,18 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         onTap: () => _openProject(project),
       );
     }
+    final id = project.id ?? '';
+    final chosen = controller.currentProjectId == id;
     return DsCard(
       onTap: () => _openProject(project),
+      onLongPress: controller.showsSelectFor(id)
+          ? () => controller.selectProjectForTracking(
+                id,
+                projectTitle: title,
+              )
+          : null,
+      borderColor: chosen ? AppColors.primary : null,
+      color: chosen ? DsProjectTile.selectedFill : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -230,18 +246,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
+                    color: controller.isStartBlockedFor(project.id ?? '')
+                        ? AppColors.fill
+                        : AppColors.primarySoft,
                     borderRadius: BorderRadius.circular(9999),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(running ? LucideIcons.pause : LucideIcons.play,
-                          size: 16, color: AppColors.primary),
+                          size: 16,
+                          color: controller.isStartBlockedFor(project.id ?? '')
+                              ? AppColors.textFaint
+                              : AppColors.primary),
                       const SizedBox(width: 6),
                       Text(running ? 'Pause' : (paused ? 'Resume' : 'Start'),
-                          style: AppTextStyles.bodySemibold
-                              .copyWith(color: AppColors.primary)),
+                          style: AppTextStyles.bodySemibold.copyWith(
+                            color: controller.isStartBlockedFor(project.id ?? '')
+                                ? AppColors.textMuted
+                                : AppColors.primary,
+                          )),
                     ],
                   ),
                 ),
@@ -303,6 +327,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       final company = project.company?.name ?? '';
       final isThis = controller.currentProjectId == (project.id ?? '');
       final running = isThis && controller.isRunning;
+      final id = project.id ?? '';
       return DsProjectTile(
         title: title,
         subtitle: company,
@@ -310,8 +335,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         trailingSub: 'today1'.tr,
         actionIcon:
             running ? Icons.pause_rounded : Icons.play_arrow_rounded,
-        onTap: () => _openProject(project), // card → details
-        onAction: () => _toggleTracking(project), // icon → start/pause/resume
+        actionMuted: controller.isStartBlockedFor(id),
+        selected: controller.currentProjectId == id,
+        onLongPress: controller.showsSelectFor(id)
+            ? () => controller.selectProjectForTracking(
+                  id,
+                  projectTitle: title,
+                )
+            : null,
+        onTap: () => _openProject(project),
+        onAction: () => _toggleTracking(project),
       );
     }).toList();
   }
@@ -324,9 +357,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     } else if (isThis && controller.isPaused) {
       controller.resume();
     } else {
-      await controller.setCurrentProjectId(project.id ?? '',
-          projectTitle: project.title);
-      await controller.start();
+      await controller.requestStartForProject(
+        project.id ?? '',
+        projectTitle: project.title,
+      );
     }
   }
 
@@ -342,12 +376,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
   }
 
-  Future<void> _openProject(Datum project) async {
-    await controller.setCurrentProjectId(
-      project.id ?? '',
-      projectTitle: project.title,
-    );
-    controller.gototheDetailsPage();
+  void _openProject(Datum project) {
+    controller.gototheDetailsPage(project.id ?? '');
   }
 }
 
@@ -357,11 +387,13 @@ class ProjectSearchScreen extends StatefulWidget {
     super.key,
     required this.projects,
     required this.onOpen,
+    required this.onSelect,
     required this.formatTime,
   });
 
   final List<Datum> projects;
-  final Future<void> Function(Datum) onOpen;
+  final void Function(Datum) onOpen;
+  final void Function(Datum) onSelect;
   final String Function(String? projectId) formatTime;
 
   @override
@@ -452,8 +484,10 @@ class _ProjectSearchScreenState extends State<ProjectSearchScreen> {
             ),
             Expanded(
               child: Obx(() {
-                // Rebuild when tracked hours arrive after this screen opened.
-                Get.find<HomeScreenController>().projectTodayHours.length;
+                final home = Get.find<HomeScreenController>();
+                home.projectTodayHours.length;
+                home.currentProjectId;
+                home.openSessionProjectId;
                 if (results.isEmpty) return _noResults();
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -464,13 +498,21 @@ class _ProjectSearchScreenState extends State<ProjectSearchScreen> {
                             : '${results.length} RESULT${results.length == 1 ? '' : 'S'}',
                         style: AppTextStyles.eyebrow),
                     const SizedBox(height: 12),
-                    ...results.map((p) => DsProjectTile(
-                          title: p.title ?? 'Untitled',
-                          subtitle: p.company?.name ?? '',
-                          trailingText: widget.formatTime(p.id),
-                          trailingSub: 'today1'.tr,
-                          onTap: () => widget.onOpen(p),
-                        )),
+                    ...results.map((p) {
+                      final id = p.id ?? '';
+                      final home = Get.find<HomeScreenController>();
+                      return DsProjectTile(
+                        title: p.title ?? 'Untitled',
+                        subtitle: p.company?.name ?? '',
+                        trailingText: widget.formatTime(p.id),
+                        trailingSub: 'today1'.tr,
+                        selected: home.currentProjectId == id,
+                        onLongPress: home.showsSelectFor(id)
+                            ? () => widget.onSelect(p)
+                            : null,
+                        onTap: () => widget.onOpen(p),
+                      );
+                    }),
                   ],
                 );
               }),

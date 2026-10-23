@@ -56,4 +56,20 @@ void main() {
     expect(bars[1].date, '2026-01-11');
     expect(bars[1].hours, 0);
   });
+
+  test('a short day labels every hour', () {
+    expect(hourAxisTicks(14.1, 17), [14, 15, 16, 17]);
+  });
+
+  test('a half day labels every two hours', () {
+    expect(hourAxisTicks(0, 12), [0, 2, 4, 6, 8, 10, 12]);
+  });
+
+  test('a full day labels every six hours', () {
+    expect(hourAxisTicks(0, 24), [0, 6, 12, 18, 24]);
+  });
+
+  test('a tick that would sit on the last hour is dropped', () {
+    expect(hourAxisTicks(9, 16), [9, 11, 13, 16]);
+  });
 }

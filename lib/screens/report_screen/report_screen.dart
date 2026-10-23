@@ -468,15 +468,14 @@ class _ReportScreenState extends State<ReportScreen> {
     }
     spots.add(FlSpot(dayEnd, cumulativeAt(dayEnd)));
 
-    final ticks = [
-      for (int h = dayStart.floor(); h <= dayEnd.ceil(); h++) h,
-    ];
+    final minX = dayStart.floorToDouble();
+    final maxX = dayEnd.ceilToDouble();
 
     return DsAreaChart(
       spots: spots,
-      minX: dayStart.floorToDouble(),
-      maxX: dayEnd.ceilToDouble(),
-      hourTicks: ticks,
+      minX: minX,
+      maxX: maxX,
+      hourTicks: hourAxisTicks(minX, maxX),
       labelForX: (x) =>
           inBreakAt(x) ? 'breakLabel'.tr : _formatHours(cumulativeAt(x)),
     );

@@ -83,6 +83,7 @@ class OpenTimeSession {
     required this.elapsedMs,
     this.projectId,
     this.projectTitle,
+    this.pauseStartedAt,
   });
 
   final String id;
@@ -90,6 +91,7 @@ class OpenTimeSession {
   final int elapsedMs;
   final String? projectId;
   final String? projectTitle;
+  final DateTime? pauseStartedAt;
 
   static OpenTimeSession? fromJson(dynamic raw) {
     if (raw is! Map) return null;
@@ -108,12 +110,16 @@ class OpenTimeSession {
         projectTitle = parsedTitle;
       }
     }
+    final rawPauseStart = raw['pauseStartedAt'];
     return OpenTimeSession(
       id: id,
       status: status is String ? status : 'active',
       elapsedMs: elapsed is num ? elapsed.round() : 0,
       projectId: projectId,
       projectTitle: projectTitle,
+      pauseStartedAt: rawPauseStart is String
+          ? DateTime.tryParse(rawPauseStart)
+          : null,
     );
   }
 }

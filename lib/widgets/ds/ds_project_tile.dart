@@ -63,6 +63,9 @@ class DsProjectTile extends StatelessWidget {
     this.onTap,
     this.onAction,
     this.actionIcon = Icons.play_arrow_rounded,
+    this.actionMuted = false,
+    this.selected = false,
+    this.onLongPress,
   });
 
   final String title;
@@ -73,12 +76,29 @@ class DsProjectTile extends StatelessWidget {
   final VoidCallback? onAction;
   final IconData actionIcon;
 
+  /// Quiets the action color without changing its size or ignoring the tap.
+  final bool actionMuted;
+
+  /// Primary hairline and a light primary fill.
+  final bool selected;
+
+  /// Selects this project without opening details.
+  final VoidCallback? onLongPress;
+
+  static final Color selectedFill = Color.alphaBlend(
+    AppColors.primary.withValues(alpha: 0.06),
+    AppColors.surface,
+  );
+
   @override
   Widget build(BuildContext context) {
     return DsCard(
       onTap: onTap,
+      onLongPress: onLongPress,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
+      color: selected ? selectedFill : null,
+      borderColor: selected ? AppColors.primary : null,
       child: Row(
         children: [
           DsAvatar(name: title),
@@ -114,14 +134,19 @@ class DsProjectTile extends StatelessWidget {
             const SizedBox(width: 10),
             GestureDetector(
               onTap: onAction,
+              behavior: HitTestBehavior.opaque,
               child: Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
+                  color: actionMuted ? AppColors.fill : AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(actionIcon, color: AppColors.primary, size: 22),
+                child: Icon(
+                  actionIcon,
+                  color: actionMuted ? AppColors.textFaint : AppColors.primary,
+                  size: 22,
+                ),
               ),
             ),
           ],

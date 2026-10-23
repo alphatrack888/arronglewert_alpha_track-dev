@@ -5,6 +5,30 @@ import 'package:alpha_track/services/api/timer_api.dart';
 
 export 'package:alpha_track/services/api/timer_api.dart' show OpenTimeSession;
 
+/// Result of POST /timetracker/pause. A missing start means the pause saved
+/// without an instant the phone can count from.
+class PauseTimerOutcome {
+  const PauseTimerOutcome.failed() : ok = false, pauseStartedAt = null;
+
+  const PauseTimerOutcome.ok(this.pauseStartedAt) : ok = true;
+
+  final bool ok;
+  final DateTime? pauseStartedAt;
+}
+
+DateTime? _pauseStartFromBody(dynamic response) {
+  if (response is! Map) return null;
+  final data = response['data'];
+  if (data is! Map) return null;
+  final pauses = data['pauses'];
+  if (pauses is! List || pauses.isEmpty) return null;
+  final last = pauses.last;
+  if (last is! Map) return null;
+  final start = last['start'];
+  if (start is! String || start.isEmpty) return null;
+  return DateTime.tryParse(start);
+}
+
 class TimeTrackerRepository {
   ApiServices apiServices = ApiServices.instance;
 
@@ -19,8 +43,8 @@ class TimeTrackerRepository {
     return postStartTimer(projectId: projectID, lat: lat, lng: lng);
   }
 
-  //! Pause Timer
-  Future<bool> pauseTimer({
+  //! Pause Timer. [pauseStartedAt] is the server pause instant when the body includes it.
+  Future<PauseTimerOutcome> pauseTimer({
     required String sessionID,
     required double lat,
     required double lng,
@@ -35,11 +59,11 @@ class TimeTrackerRepository {
         body: body,
       );
       if (response != null && response["success"] == true) {
-        return true;
+        return PauseTimerOutcome.ok(_pauseStartFromBody(response));
       }
-      return false;
+      return const PauseTimerOutcome.failed();
     } catch (e) {
-      return false;
+      return const PauseTimerOutcome.failed();
     }
   }
 

@@ -52,24 +52,30 @@ class PrimaryButton extends StatelessWidget {
         ),
         child: isLoading
             ? LoadingAnimationWidget.waveDots(color: AppColors.white50, size: 28)
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (svgIcon != null) ...[
-                    SvgPicture.asset(svgIcon!, width: 18, height: 18),
-                    const SizedBox(width: 8),
-                  ] else if (icon != null) ...[
-                    Icon(icon, size: 18, color: textColor ?? AppColors.white50),
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    isTranslate ? label.tr : label,
-                    style: AppTextStyles.button.copyWith(
-                      color: textColor ?? AppColors.white50,
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (svgIcon != null) ...[
+                      SvgPicture.asset(svgIcon!, width: 18, height: 18),
+                      const SizedBox(width: 8),
+                    ] else if (icon != null) ...[
+                      Icon(icon, size: 18, color: textColor ?? AppColors.white50),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      child: Text(
+                        isTranslate ? label.tr : label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.button.copyWith(
+                          color: textColor ?? AppColors.white50,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
       ),
     );

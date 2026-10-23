@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/bottom_navigation/controller/bottom_navigation_screen_controller.dart';
+import 'package:alpha_track/screens/home_screen/models/today_breaks_periods_model.dart';
 import 'package:alpha_track/screens/profile_screen/profile_screen_main/controller/profile_controller.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/widgets/ds/ds_buttons.dart';
@@ -12,6 +13,7 @@ import 'package:alpha_track/widgets/ds/ds_section_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -239,6 +241,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          if (!running) ...[
+            Text(
+              controller.currentProjectTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySemibold
+                  .copyWith(color: AppColors.white50),
+            ),
+            const SizedBox(height: 12),
+          ],
           running ? _runningProjectRow() : _startButton(),
         ],
       ),
@@ -435,24 +447,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: AppTextStyles.eyebrow.copyWith(
                           color: AppColors.white50.withValues(alpha: 0.9),
                           letterSpacing: 1)),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.white50.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
+                  if (controller.breakStartedLabel.isEmpty)
+                    const SizedBox.shrink()
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.white50.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        controller.breakStartedLabel,
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.white50),
+                      ),
                     ),
-                    child: Text(
-                      controller.breakStartedLabel,
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.white50),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 14),
-              Obx(() => Text(controller.formattedBreakTime,
-                  style: AppTextStyles.timer.copyWith(color: AppColors.white50))),
+              Obx(() {
+                final time = controller.formattedBreakTime;
+                return Text(
+                  time.isEmpty ? ' ' : time,
+                  style: AppTextStyles.timer.copyWith(color: AppColors.white50),
+                );
+              }),
               const SizedBox(height: 18),
               _breakProjectRow(),
             ],
@@ -512,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     width: 100,
                                     height: 38,
                                     color: AppColors.danger,
-                                    onTap: () => controller.resume(),
+                                    onTap: () => controller.dismissBreakReminder(),
                                   ),
                                 ],
                               ),
@@ -528,10 +548,31 @@ class _HomeScreenState extends State<HomeScreen> {
             : const SizedBox.shrink()),
         Text('todaysBreaks'.tr, style: AppTextStyles.eyebrow),
         const SizedBox(height: 12),
-        Obx(() => _breakItem(AppColors.danger, 'currentBreak'.tr, 'inProgress'.tr,
-            controller.formattedBreakTime)),
-        _breakItem(const Color(0xFFE9856B), 'Lunch', '12:30 – 13:05', '35m'),
-        _breakItem(const Color(0xFFE9B98C), 'Coffee', '10:15 – 10:23', '8m'),
+        Obx(() {
+          final current = controller.formattedBreakTime;
+          final periods =
+              controller.todayBreakPeriods.value?.data?.breakPeriods ??
+                  const <BreakPeriod>[];
+          final timeFmt = DateFormat('HH:mm');
+          return Column(
+            children: [
+              _breakItem(
+                AppColors.danger,
+                'currentBreak'.tr,
+                'inProgress'.tr,
+                current.isEmpty ? ' ' : current,
+              ),
+              for (final period in periods)
+                if (period.startTime != null && period.endTime != null)
+                  _breakItem(
+                    const Color(0xFFE9856B),
+                    period.projectName ?? '',
+                    '${timeFmt.format(period.startTime!.toLocal())} – ${timeFmt.format(period.endTime!.toLocal())}',
+                    '${period.durationMinutes ?? 0}m',
+                  ),
+            ],
+          );
+        }),
       ],
     );
   }
@@ -646,27 +687,29 @@ class _HomeScreenState extends State<HomeScreen> {
               isLoading: controller.isApiLoading,
               onStop: () => controller.stop(),
               onToggle: () => controller.togglePauseResume(),
-              onTap: () {
-                controller.setCurrentProjectId(project.id ?? '',
-                    projectTitle: title);
-                controller.gototheDetailsPage();
-              },
+              onTap: () => controller.gototheDetailsPage(project.id ?? ''),
             );
           }
+          final id = project.id ?? '';
           return DsProjectTile(
             title: title,
             subtitle: company,
             trailingText: '${project.projectTime ?? 0}h',
             trailingSub: 'today1'.tr,
-            onTap: () {
-              controller.setCurrentProjectId(project.id ?? '',
-                  projectTitle: title);
-              controller.gototheDetailsPage();
-            },
+            actionMuted: controller.isStartBlockedFor(id),
+            selected: controller.currentProjectId == id,
+            onLongPress: controller.showsSelectFor(id)
+                ? () => controller.selectProjectForTracking(
+                      id,
+                      projectTitle: title,
+                    )
+                : null,
+            onTap: () => controller.gototheDetailsPage(id),
             onAction: () {
-              controller.setCurrentProjectId(project.id ?? '',
-                  projectTitle: title);
-              controller.toggleStartReset();
+              controller.requestStartForProject(
+                project.id ?? '',
+                projectTitle: title,
+              );
             },
           );
         }).toList(),

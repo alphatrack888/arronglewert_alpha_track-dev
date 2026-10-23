@@ -17,6 +17,7 @@ import 'package:alpha_track/services/repository/time_tracker_repository/timer_st
 
 import 'package:alpha_track/services/storage_services/storage_services.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
+import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
 import 'package:alpha_track/utils/demo_data/demo_data.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_size/app_gap.dart';
@@ -47,6 +48,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final RxString _currentProjectId = ''.obs;
   final RxString _currentCompanyId = ''.obs;
 
+  /// The project that owns the open session. Kept apart from the project on
+  /// screen, because opening another project reloads that project's stopped clock.
+  final RxString _openSessionProjectId = ''.obs;
+  final RxString _openSessionProjectTitle = ''.obs;
+  bool _openSessionDialogVisible = false;
+
   // UI state variables
   final RxBool isTodaySelected = true.obs;
   final Rx<LoadingState> apiLoadingState = LoadingState.idle.obs;
@@ -62,22 +69,33 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final Rxn<SingleProjectModel> singleProjectData = Rxn<SingleProjectModel>();
   final RxString selectedProjectTitle = ''.obs;
 
-  // Break state (demo): counts up while on a break.
+  // Break clock. Counts from the pause instant while a session is paused.
   final RxInt _breakMilliseconds = 0.obs;
   Timer? _breakTimer;
   DateTime? breakStartedAt;
+  String? _breakProjectId;
+  DateTime? _reminderSnoozeUntil;
+  DateTime? _dismissedBreakStart;
 
-  // Whether the "Break Reminder" banner is currently shown. Snoozed via the
-  // "Remind in 15 min" action; reset each time a new break starts.
-  final RxBool reminderVisible = true.obs;
+  static const Duration _breakReminderDelay = Duration(minutes: 15);
 
-  /// Hide the break reminder banner ("Remind in 15 min").
+  // Shown only after the open pause has lasted [_breakReminderDelay].
+  final RxBool reminderVisible = false.obs;
+
+  /// Hide the break reminder for 15 minutes. It returns if the pause is still open.
   void snoozeReminder() {
+    _reminderSnoozeUntil = DateTime.now().add(_breakReminderDelay);
     reminderVisible.value = false;
     AppSnackBar.customMessage(
       'remindAgain15'.tr,
       color: AppColors.mediumBlue,
     );
+  }
+
+  /// Hide the reminder for this pause. Does not resume work.
+  void dismissBreakReminder() {
+    _dismissedBreakStart = breakStartedAt;
+    reminderVisible.value = false;
   }
 
   // Service instances
@@ -128,6 +146,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   void onClose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    _breakTimer?.cancel();
     if (_currentProjectId.value.isNotEmpty) {
       // Save timer state for background time tracking
       _saveTimerStateForProject(_currentProjectId.value);
@@ -181,10 +200,21 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   bool get isRunning => _timerState.value == TimerState.running;
   bool get isPaused => _timerState.value == TimerState.paused;
   bool get isStopped => _timerState.value == TimerState.stopped;
+
+  /// Project id of the session that is still running or paused. Empty when none.
+  String get openSessionProjectId => _openSessionProjectId.value;
+
+  /// True when [projectId] is not the project that already has an open session.
+  bool isStartBlockedFor(String projectId) {
+    final openId = _openSessionProjectId.value;
+    return openId.isNotEmpty && openId != projectId;
+  }
   bool get isOnBreak => _timerState.value == TimerState.paused;
 
   String get formattedBreakTime {
-    final s = _breakMilliseconds.value ~/ 1000;
+    final ms = _breakMilliseconds.value;
+    if (breakStartedAt == null) return '';
+    final s = ms ~/ 1000;
     final h = s ~/ 3600, m = (s % 3600) ~/ 60, sec = s % 60;
     String two(int v) => v.toString().padLeft(2, '0');
     return '${two(h)}:${two(m)}:${two(sec)}';
@@ -193,7 +223,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   int get breakMinutes => _breakMilliseconds.value ~/ 60000;
 
   String get breakStartedLabel {
-    final t = breakStartedAt;
+    final t = breakStartedAt?.toLocal();
     if (t == null) return '';
     final hour12 = t.hour % 12 == 0 ? 12 : t.hour % 12;
     final ampm = t.hour < 12 ? 'AM' : 'PM';
@@ -398,8 +428,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     String projectId, {
     String? projectTitle,
     bool announce = true,
+    bool loadDetails = true,
   }) async {
     try {
+      if (projectId.isEmpty) return;
+      final openId = _openSessionProjectId.value;
+      if (openId.isNotEmpty && openId != projectId) return;
       if (_currentProjectId.value == projectId) return;
 
       // Set the new project ID
@@ -432,11 +466,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Load the state for the new project
       await _loadTimerStateForProject(projectId);
 
-      // Fetch project details
-      await loadSingleProject(projectId);
-
-      // Initialize report data for the selected project
-      await initializeReportData();
+      // Details and the home summary stay put when the user only selects
+      // a project from the list. Loading them spins Start and clears the
+      // today total while the home screen is still visible.
+      if (loadDetails) {
+        await loadSingleProject(projectId);
+        await initializeReportData();
+      }
 
       appLog('Project selected: $projectId - $projectTitle');
 
@@ -452,13 +488,37 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void gototheDetailsPage() {
+  void gototheDetailsPage([String? projectId]) {
+    final id = (projectId != null && projectId.isNotEmpty)
+        ? projectId
+        : _currentProjectId.value;
     appLog('Navigating to project details page');
-    appLog("Details page project ID: ${_currentProjectId.value}");
+    appLog('Details page project ID: $id');
     Get.toNamed(
       AppRoute.projectDetailsScreen,
-      arguments: {"projectId": _currentProjectId.value},
+      arguments: {"projectId": id},
     );
+  }
+
+  /// Marks [projectId] as the project Start will use, without opening it
+  /// or reloading the home summary. Does nothing while another session is open.
+  Future<void> selectProjectForTracking(
+    String projectId, {
+    String? projectTitle,
+  }) {
+    return setCurrentProjectId(
+      projectId,
+      projectTitle: projectTitle,
+      announce: false,
+      loadDetails: false,
+    );
+  }
+
+  /// The ring/check is shown when nothing is open, and on the open project itself.
+  bool showsSelectFor(String projectId) {
+    final open = _openSessionProjectId.value;
+    if (open.isEmpty) return true;
+    return open == projectId;
   }
 
   void setSessionId(String sessionId) {
@@ -560,6 +620,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   String _sessionKey(String projectId) => 'session_id_$projectId';
   String _elapsedMsKey(String projectId) => 'elapsed_ms_$projectId';
   String _timerStateKey(String projectId) => 'timer_state_$projectId';
+  String _breakStartedKey(String projectId) => 'break_started_at_$projectId';
+
+  DateTime? _savedBreakStart(String projectId) {
+    if (projectId.isEmpty) return null;
+    final raw = _storageService.getData(_breakStartedKey(projectId));
+    if (raw is! String || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
 
   Future<void> _loadTimerStateForProject(String projectId) async {
     try {
@@ -571,6 +639,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
       //! Stop any currently running timer before loading new state
       _timer?.cancel();
+      final savedBreakStart = _savedBreakStart(projectId);
+      final keepBreak = _breakProjectId == projectId && breakStartedAt != null;
+      if (!keepBreak) {
+        _endBreak(clearStored: _breakProjectId != projectId);
+      }
 
       // Load stopwatch data using the service (includes background time calculation)
       final stopwatchData = await _stopwatchService.loadStopwatchData(
@@ -586,11 +659,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       _elapsedMilliseconds.value = stopwatchData['elapsedMs'] ?? 0;
       _currentSessionId.value = sessionId;
 
-      // Determine timer state - if it was running when app closed, keep it running
+      // Determine timer state - if it was running when app closed, keep it running.
+      // Assigned after the break start so a restored pause paints with its length.
+      final TimerState loadedState;
       if (stopwatchData['wasRunning'] == true) {
-        _timerState.value = TimerState.running;
+        loadedState = TimerState.running;
       } else {
-        _timerState.value = TimerState.values.firstWhere(
+        loadedState = TimerState.values.firstWhere(
           (e) => e.toString() == stateStr,
           orElse: () => TimerState.stopped,
         );
@@ -599,11 +674,31 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Reset the last dialog hour based on current elapsed time
       _lastDialogHour.value = (_elapsedMilliseconds.value / 3600000).floor();
 
-      appLog('Loaded state for project $projectId: ${timerStatusText}');
       appLog('Background time calculated: ${stopwatchData['elapsedMs']} ms');
 
-      if (_timerState.value == TimerState.running) {
+      if (loadedState == TimerState.running) {
+        _endBreak();
+        await _storageService.saveData(_breakStartedKey(projectId), '');
+        _timerState.value = TimerState.running;
         _startTimer();
+      } else if (loadedState == TimerState.paused &&
+          keepBreak &&
+          breakStartedAt != null) {
+        _timerState.value = TimerState.paused;
+        _syncBreakClock();
+        _startBreakClock();
+      } else if (loadedState == TimerState.paused && savedBreakStart != null) {
+        _beginBreak(savedBreakStart);
+        _timerState.value = TimerState.paused;
+        _syncBreakReminder();
+      } else {
+        _endBreak();
+        await _storageService.saveData(_breakStartedKey(projectId), '');
+        _timerState.value = loadedState;
+      }
+      appLog('Loaded state for project $projectId: ${timerStatusText}');
+      if (_timerState.value != TimerState.stopped) {
+        _rememberOpenSession(projectId, _titleForProject(projectId));
       }
     } catch (e) {
       appLog('Error loading timer state for project $projectId: $e');
@@ -647,6 +742,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   //! ==================== TIMER CONTROL ====================
 
   Future<void> start() async {
+    if (isApiLoading || _openSessionDialogVisible) return;
+    if (_openSessionProjectId.value.isNotEmpty &&
+        _openSessionProjectId.value != _currentProjectId.value) {
+      await _warnOpenSessionElsewhere();
+      return;
+    }
     if (_timerState.value != TimerState.stopped) {
       appLog('Timer already running or paused');
       AppSnackBar.error('timerAlreadyActive'.tr);
@@ -657,6 +758,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     if (kDemoMode) {
       _currentSessionId.value = 'demo_session';
       _timerState.value = TimerState.running;
+      _rememberOpenSession(_currentProjectId.value, currentProjectTitle);
       _startTimer();
       _refreshProjectTimeList();
       return;
@@ -754,6 +856,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         final sessionId = startResult.data!;
         _timerState.value = TimerState.running;
         setSessionId(sessionId);
+        _rememberOpenSession(_currentProjectId.value, currentProjectTitle);
         _startTimer();
         await _saveTimerStateForProject(_currentProjectId.value);
 
@@ -798,12 +901,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     }
 
     if (kDemoMode) {
-      _timerState.value = TimerState.paused;
       _freezeWorkClock();
-      breakStartedAt = DateTime.now();
-      reminderVisible.value = true;
-      _breakMilliseconds.value = 0;
-      _startBreakClock();
+      _beginBreak(DateTime.now());
+      _timerState.value = TimerState.paused;
+      _syncBreakReminder();
       if (isAutoPause) _showOneMinuteDialog();
       return;
     }
@@ -827,16 +928,25 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Validate session ID
       if (!_validateSession()) return;
 
-      // Call API to pause timer
-      bool success = await _timeTrackerRepository.pauseTimer(
+      bool success = false;
+      DateTime? pauseStartedAt;
+      final outcome = await _timeTrackerRepository.pauseTimer(
         sessionID: _currentSessionId.value,
         lat: currentLatitude.value,
         lng: currentLongitude.value,
       );
+      success = outcome.ok;
+      pauseStartedAt = outcome.pauseStartedAt;
 
       if (success) {
         committed = true;
+        if (pauseStartedAt != null) {
+          _beginBreak(pauseStartedAt);
+        } else {
+          _endBreak();
+        }
         _timerState.value = TimerState.paused;
+        _syncBreakReminder();
         await _saveTimerStateForProject(_currentProjectId.value);
 
         if (isAutoPause) {
@@ -869,9 +979,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     }
 
     if (kDemoMode) {
-      _freezeBreakClock();
-      _breakMilliseconds.value = 0;
-      breakStartedAt = null;
+      _endBreak();
       _timerState.value = TimerState.running;
       _startTimer();
       return;
@@ -903,9 +1011,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
       if (success) {
         committed = true;
+        _endBreak();
         _timerState.value = TimerState.running;
         _startTimer();
         await _saveTimerStateForProject(_currentProjectId.value);
+        unawaited(loadTodayBreaks());
 
         AppSnackBar.success('timerResumed'.tr);
         appLog('Timer resumed successfully via API');
@@ -928,10 +1038,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   Future<void> stop() async {
     if (isApiLoading) return;
     if (kDemoMode) {
-      _freezeBreakClock();
-      _breakMilliseconds.value = 0;
-      breakStartedAt = null;
+      _endBreak();
       _resetTimer();
+      _clearOpenSession();
       _refreshProjectTimeList();
       return;
     }
@@ -963,6 +1072,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (success) {
         committed = true;
         _resetTimer();
+        _clearOpenSession();
 
         AppSnackBar.success('timerStopped'.tr);
         appLog('Timer stopped successfully via API');
@@ -1016,8 +1126,89 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   void _startBreakClock() {
     _breakTimer?.cancel();
     _breakTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _breakMilliseconds.value += 1000;
+      _syncBreakClock();
     });
+  }
+
+  void _beginBreak(DateTime startedAt) {
+    breakStartedAt = startedAt;
+    _breakProjectId = _currentProjectId.value;
+    _reminderSnoozeUntil = null;
+    _dismissedBreakStart = null;
+    reminderVisible.value = false;
+    final projectId = _breakProjectId;
+    if (projectId != null && projectId.isNotEmpty) {
+      unawaited(
+        _storageService.saveData(
+          _breakStartedKey(projectId),
+          startedAt.toIso8601String(),
+        ),
+      );
+    }
+    _syncBreakClock();
+    _startBreakClock();
+    unawaited(loadTodayBreaks());
+  }
+
+  void _endBreak({bool clearStored = true}) {
+    final projectId = _breakProjectId;
+    _breakTimer?.cancel();
+    _breakTimer = null;
+    _breakMilliseconds.value = 0;
+    breakStartedAt = null;
+    _breakProjectId = null;
+    _reminderSnoozeUntil = null;
+    _dismissedBreakStart = null;
+    reminderVisible.value = false;
+    if (clearStored && projectId != null && projectId.isNotEmpty) {
+      unawaited(_storageService.saveData(_breakStartedKey(projectId), ''));
+    }
+  }
+
+  void _syncBreakClock() {
+    final start = breakStartedAt;
+    if (start == null) {
+      _breakMilliseconds.value = 0;
+      reminderVisible.value = false;
+      return;
+    }
+    final elapsed = DateTime.now().difference(start);
+    _breakMilliseconds.value = elapsed.isNegative ? 0 : elapsed.inMilliseconds;
+    _syncBreakReminder();
+  }
+
+  void _syncBreakReminder() {
+    final start = breakStartedAt;
+    if (start == null || _timerState.value != TimerState.paused) {
+      reminderVisible.value = false;
+      return;
+    }
+    final snoozed = _reminderSnoozeUntil != null &&
+        DateTime.now().isBefore(_reminderSnoozeUntil!);
+    final dismissed = _dismissedBreakStart == start;
+    reminderVisible.value =
+        breakMinutes >= _breakReminderDelay.inMinutes && !snoozed && !dismissed;
+  }
+
+  /// Finished pauses for the UTC day stored on the session.
+  Future<void> loadTodayBreaks() async {
+    if (kDemoMode) {
+      todayBreakPeriods.value = null;
+      return;
+    }
+    try {
+      final response = await _reportRepository.fetchTodayBreakPeriods(
+        todayDate: utcDateKey(),
+      );
+      if (response.success == true) {
+        todayBreakPeriods.value = response;
+      } else {
+        todayBreakPeriods.value = null;
+      }
+    } catch (e) {
+      appLog('Error loading today breaks: $e');
+      todayBreakPeriods.value = null;
+    }
   }
 
   void _startTimer() {
@@ -1056,8 +1247,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   void _resetTimer({bool clearPersistedState = true}) {
     _timer?.cancel();
     _timer = null;
-    _breakTimer?.cancel();
-    _breakTimer = null;
+    _endBreak();
     _timerState.value = TimerState.stopped;
     _elapsedMilliseconds.value = 0;
     _lastDialogHour.value = 0;
@@ -1092,7 +1282,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   }
 
   void toggleStartReset() {
-    if (isApiLoading) return;
+    if (isApiLoading || _openSessionDialogVisible) return;
+    if (_openSessionProjectId.value.isNotEmpty &&
+        _openSessionProjectId.value != _currentProjectId.value) {
+      _warnOpenSessionElsewhere();
+      return;
+    }
     if (isStopped && _elapsedMilliseconds.value == 0) {
       start();
     } else {
@@ -1164,6 +1359,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
     final session = sessions.first;
     final projectId = session.projectId;
+    final breakProjectId = (projectId != null && projectId.isNotEmpty)
+        ? projectId
+        : _currentProjectId.value;
+    final savedBreakStart = _savedBreakStart(breakProjectId);
     final switching = projectId != null &&
         projectId.isNotEmpty &&
         projectId != _currentProjectId.value;
@@ -1183,31 +1382,170 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       );
     }
 
-    await _applyServerSession(session);
+    await _applyServerSession(session, savedBreakStart);
     if (loadReport && !switching && _currentProjectId.value.isNotEmpty) {
       await initializeReportData();
     }
     return true;
   }
 
-  Future<void> _applyServerSession(OpenTimeSession session) async {
+  Future<void> _applyServerSession(
+    OpenTimeSession session,
+    DateTime? savedBreakStart,
+  ) async {
+    final breakProjectId = (session.projectId != null &&
+            session.projectId!.isNotEmpty)
+        ? session.projectId!
+        : _currentProjectId.value;
     _timer?.cancel();
     _timer = null;
-    _breakTimer?.cancel();
-    _breakTimer = null;
+    _endBreak(clearStored: false);
     final elapsed = session.elapsedMs < 0 ? 0 : session.elapsedMs;
     _elapsedMilliseconds.value = elapsed;
     _lastDialogHour.value = (elapsed / 3600000).floor();
     _currentSessionId.value = session.id;
     if (session.status == 'paused') {
+      final startedAt = session.pauseStartedAt ?? savedBreakStart;
+      if (startedAt != null) {
+        _beginBreak(startedAt);
+      } else if (breakProjectId.isNotEmpty) {
+        unawaited(_storageService.saveData(_breakStartedKey(breakProjectId), ''));
+      }
       _timerState.value = TimerState.paused;
+      _syncBreakReminder();
     } else {
+      _endBreak();
+      if (breakProjectId.isNotEmpty) {
+        unawaited(_storageService.saveData(_breakStartedKey(breakProjectId), ''));
+      }
       _timerState.value = TimerState.running;
       _startTimer();
     }
+    _rememberOpenSession(
+      session.projectId ?? _currentProjectId.value,
+      session.projectTitle ?? selectedProjectTitle.value,
+    );
     if (_currentProjectId.value.isNotEmpty) {
       await _saveTimerStateForProject(_currentProjectId.value);
     }
+  }
+
+  void _rememberOpenSession(String projectId, String? title) {
+    if (projectId.isEmpty) return;
+    _openSessionProjectId.value = projectId;
+    final trimmed = title?.trim() ?? '';
+    if (trimmed.isNotEmpty) {
+      _openSessionProjectTitle.value = trimmed;
+      return;
+    }
+    final known = _titleForProject(projectId);
+    if (known.isNotEmpty) _openSessionProjectTitle.value = known;
+  }
+
+  void _clearOpenSession() {
+    _openSessionProjectId.value = '';
+    _openSessionProjectTitle.value = '';
+  }
+
+  String _titleForProject(String projectId) {
+    final projects = allProjectData.value?.data?.data;
+    final match = projects?.firstWhereOrNull((project) => project.id == projectId);
+    final fromList = match?.title?.trim() ?? '';
+    if (fromList.isNotEmpty) return fromList;
+    if (_currentProjectId.value == projectId) {
+      return selectedProjectTitle.value.trim();
+    }
+    return '';
+  }
+
+  String _openSessionLabel() {
+    final name = _openSessionProjectTitle.value.trim();
+    if (name.isNotEmpty) return name;
+    return 'thisProject'.tr;
+  }
+
+  Widget _openSessionMessage(String name) {
+    final base = AppTextStyles.subtitle.copyWith(height: 1.45);
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: [
+          TextSpan(text: 'sessionOpenElsewhereBefore'.tr),
+          TextSpan(
+            text: name,
+            style: base.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TextSpan(text: 'sessionOpenElsewhereAfter'.tr),
+        ],
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  /// Names the open project and can take the user back to it. Does not stop
+  /// the session or change the selected project when dismissed.
+  Future<void> _warnOpenSessionElsewhere() async {
+    if (_openSessionDialogVisible) return;
+    _openSessionDialogVisible = true;
+    final name = _openSessionLabel();
+    try {
+      final go = await DsDialog.confirm(
+        title: 'sessionOpenElsewhereTitle'.tr,
+        content: _openSessionMessage(name),
+        confirmLabel: 'goToOpenProject'.trParams({'project': name}),
+        cancelLabel: 'notNow'.tr,
+        tone: DsDialogTone.warning,
+        destructive: false,
+      );
+      if (!go) return;
+      final openId = _openSessionProjectId.value;
+      if (openId.isEmpty) return;
+      final title = _openSessionProjectTitle.value.trim();
+      await setCurrentProjectId(
+        openId,
+        projectTitle: title.isEmpty ? null : title,
+        announce: false,
+      );
+      if (Get.currentRoute == AppRoute.projectDetailsScreen &&
+          Get.isRegistered<ProjectDetailsScreenController>()) {
+        Get.find<ProjectDetailsScreenController>().syncProject(openId);
+      } else {
+        gototheDetailsPage();
+      }
+    } finally {
+      _openSessionDialogVisible = false;
+    }
+  }
+
+  /// Starts [projectId], or warns when another project already has an open session.
+  /// Tapping the project that owns the open session only selects it again.
+  Future<void> requestStartForProject(
+    String projectId, {
+    String? projectTitle,
+  }) async {
+    if (projectId.isEmpty || isApiLoading || _openSessionDialogVisible) return;
+    final openId = _openSessionProjectId.value;
+    if (openId.isNotEmpty && openId != projectId) {
+      await _warnOpenSessionElsewhere();
+      return;
+    }
+    if (openId.isNotEmpty) {
+      if (_currentProjectId.value != projectId) {
+        await setCurrentProjectId(
+          projectId,
+          projectTitle: projectTitle,
+          announce: false,
+        );
+      }
+      return;
+    }
+    if (_currentProjectId.value != projectId) {
+      await setCurrentProjectId(projectId, projectTitle: projectTitle);
+    }
+    await start();
   }
 
   /// Picks the first loaded project when the saved id is empty or no longer

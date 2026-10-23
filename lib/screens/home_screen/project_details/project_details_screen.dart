@@ -754,6 +754,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     final projectId = data?.id ?? '';
     return Obx(() {
       final loading = home.isApiLoading;
+      final blocked = home.isStartBlockedFor(projectId);
       return Row(
         children: [
           Expanded(
@@ -762,6 +763,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               isTranslate: false,
               icon: LucideIcons.play,
               isLoading: loading,
+              color: blocked ? AppColors.fill : null,
+              textColor: blocked ? AppColors.textMuted : null,
               onTap: loading
                   ? null
                   : () => _startTracking(data, title, projectId: projectId),
@@ -923,10 +926,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       AppSnackBar.error('selectProjectFirst'.tr);
       return;
     }
-    // Await the project switch first so its state reload can't race the
-    // start() below and reset the timer back to stopped.
-    await home.setCurrentProjectId(projectId, projectTitle: title);
-    await home.start();
+    await home.requestStartForProject(projectId, projectTitle: title);
   }
 
   Future<void> _openCreateNote(

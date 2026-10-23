@@ -209,6 +209,7 @@ class DsDialog extends StatelessWidget {
   static Future<bool> confirm({
     required String title,
     String? message,
+    Widget? content,
     String confirmLabel = 'Confirm',
     String cancelLabel = 'Cancel',
     DsDialogTone tone = DsDialogTone.danger,
@@ -219,6 +220,7 @@ class DsDialog extends StatelessWidget {
       DsDialog(
         title: title,
         message: message,
+        content: content,
         tone: tone,
         icon: icon,
         confirmLabel: confirmLabel,

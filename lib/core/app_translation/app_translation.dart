@@ -89,6 +89,13 @@ class AppTranslation extends Translations {
           'A session is already running or paused. Stop or resume it before starting again.',
       'sessionStillOpen':
           'A session is still open. Clock out before starting another.',
+      'sessionOpenElsewhereTitle': 'A session is still open',
+      'sessionOpenElsewhereBody':
+          'Stop the session on @project before starting another.',
+      'sessionOpenElsewhereBefore': 'Stop the session on ',
+      'sessionOpenElsewhereAfter': ' before starting another.',
+      'goToOpenProject': 'Go to @project',
+      'thisProject': 'this project',
       'timerStartTimeout':
           'Starting tracking timed out. Check your connection and try again.',
       'sessionExpiredStartTimer':
@@ -769,6 +776,13 @@ class AppTranslation extends Translations {
           'Eine Sitzung läuft bereits oder ist pausiert. Beenden oder fortsetzen Sie sie, bevor Sie neu starten.',
       'sessionStillOpen':
           'Eine Zeiterfassung ist noch offen. Beenden Sie sie, bevor Sie eine neue starten.',
+      'sessionOpenElsewhereTitle': 'Eine Zeiterfassung ist noch offen',
+      'sessionOpenElsewhereBody':
+          'Beenden Sie die Zeiterfassung für @project, bevor Sie eine neue starten.',
+      'sessionOpenElsewhereBefore': 'Beenden Sie die Zeiterfassung für ',
+      'sessionOpenElsewhereAfter': ', bevor Sie eine neue starten.',
+      'goToOpenProject': 'Zu @project',
+      'thisProject': 'dieses Projekt',
       'timerStartTimeout':
           'Zeitüberschreitung beim Start. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.',
       'sessionExpiredStartTimer':
@@ -1467,6 +1481,13 @@ class AppTranslation extends Translations {
           'هناك جلسة قيد التشغيل أو متوقفة مؤقتًا. أوقفها أو استأنفها قبل البدء من جديد.',
       'sessionStillOpen':
           'هناك جلسة ما زالت مفتوحة. سجّل الخروج قبل بدء جلسة أخرى.',
+      'sessionOpenElsewhereTitle': 'هناك جلسة ما زالت مفتوحة',
+      'sessionOpenElsewhereBody':
+          'أوقف الجلسة في @project قبل بدء جلسة أخرى.',
+      'sessionOpenElsewhereBefore': 'أوقف الجلسة في ',
+      'sessionOpenElsewhereAfter': ' قبل بدء جلسة أخرى.',
+      'goToOpenProject': 'الانتقال إلى @project',
+      'thisProject': 'هذا المشروع',
       'timerStartTimeout':
           'انتهت مهلة بدء التتبع. تحقق من الاتصال وحاول مرة أخرى.',
       'sessionExpiredStartTimer':
@@ -2139,6 +2160,13 @@ class AppTranslation extends Translations {
           'Există deja o sesiune activă sau în pauză. Oprește-o sau reia-o înainte de a începe din nou.',
       'sessionStillOpen':
           'O sesiune este încă deschisă. Închide-o înainte de a începe alta.',
+      'sessionOpenElsewhereTitle': 'O sesiune este încă deschisă',
+      'sessionOpenElsewhereBody':
+          'Închide sesiunea de pe @project înainte de a începe alta.',
+      'sessionOpenElsewhereBefore': 'Închide sesiunea de pe ',
+      'sessionOpenElsewhereAfter': ' înainte de a începe alta.',
+      'goToOpenProject': 'Mergi la @project',
+      'thisProject': 'acest proiect',
       'timerStartTimeout':
           'Pornirea urmăririi a expirat. Verifică conexiunea și încearcă din nou.',
       'sessionExpiredStartTimer':

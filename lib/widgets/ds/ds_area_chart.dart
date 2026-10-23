@@ -67,14 +67,16 @@ class DsAreaChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               interval: 1,
-              reservedSize: 24,
+              reservedSize: 28,
               getTitlesWidget: (value, meta) {
                 final h = value.round();
                 if ((value - h).abs() > 0.01 || !hourTicks.contains(h)) {
                   return const SizedBox.shrink();
                 }
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                return SideTitleWidget(
+                  meta: meta,
+                  space: 8,
+                  fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
                   child: Text(
                     '$h:00',
                     style: AppTextStyles.caption.copyWith(

@@ -31,6 +31,27 @@ List<List<double>> workIntervalsLocal(
   return intervals;
 }
 
+/// Whole hours to label on a day chart whose axis runs from [minX] to [maxX].
+///
+/// A span of up to 6 hours is labeled every hour, up to 12 hours every 2
+/// hours, and a longer day every 6 hours. The first and last hours are always
+/// kept. Any other tick closer to either end than that step is dropped.
+List<int> hourAxisTicks(double minX, double maxX) {
+  final start = minX.floor();
+  final end = maxX.ceil();
+  if (end <= start) return [start];
+
+  final span = maxX - minX;
+  final step = span <= 6 ? 1 : (span <= 12 ? 2 : 6);
+  final ticks = <int>[start];
+  for (var h = start + step; h < end; h += step) {
+    if (end - h < step) continue;
+    ticks.add(h);
+  }
+  ticks.add(end);
+  return ticks;
+}
+
 /// Bar fill. Zero when nothing in the breakdown is above zero.
 double breakdownFraction(double value, double maxValue) {
   if (maxValue <= 0) return 0;
