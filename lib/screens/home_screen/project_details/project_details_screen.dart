@@ -283,6 +283,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Widget _statusChip(String? status) {
     switch ((status ?? '').toLowerCase()) {
       case 'active':
+      case 'in-progress':
         return DsChip.success('activeStatus'.tr);
       case 'upcoming':
         return DsChip.primary('statusUpcoming'.tr);

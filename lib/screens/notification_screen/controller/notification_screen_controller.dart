@@ -1,5 +1,6 @@
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
 import 'package:alpha_track/screens/notification_screen/notification_inbox_pagination.dart';
+import 'package:alpha_track/screens/notification_screen/notification_locale.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_channel_names.dart';
@@ -25,6 +26,10 @@ class NotificationScreenController extends GetxController {
   var currentPage = 1.obs;
   var totalPages = 1.obs;
   var hasMoreData = false.obs;
+  String? _loadedLocale;
+
+  String get _notificationLocale =>
+      NotificationLocale.normalize(storageServices.getLanguage());
 
   // Controllers
   final ScrollController scrollController = ScrollController();
@@ -93,9 +98,12 @@ class NotificationScreenController extends GetxController {
   void _handleNotification(dynamic data) {
     appLog("Notification received: $data");
     try {
-      if (data != null) {
-        // Parse the incoming notification data
-        final newNotification = Datum.fromJson(data);
+      if (data is Map) {
+        final localized = NotificationLocale.apply(
+          Map<String, dynamic>.from(data),
+          storageServices.getLanguage(),
+        );
+        final newNotification = Datum.fromJson(localized);
         
         // Add to the beginning of the list for real-time updates
         _addNewNotificationOptimized(newNotification);
@@ -139,6 +147,8 @@ class NotificationScreenController extends GetxController {
       return;
     }
     try {
+      final locale = _notificationLocale;
+      _loadedLocale = locale;
       if (isRefresh) {
         currentPage.value = 1;
         notifications.clear();
@@ -149,6 +159,7 @@ class NotificationScreenController extends GetxController {
 
       final response = await _notificationRepository.fetchAlltheNotificaton(
         page: currentPage.value,
+        locale: locale,
       );
 
       if (response.success == true && response.data != null) {
@@ -189,6 +200,7 @@ class NotificationScreenController extends GetxController {
       currentPage.value++;
       final response = await _notificationRepository.fetchAlltheNotificaton(
         page: currentPage.value,
+        locale: _notificationLocale,
       );
 
       if (response.success == true && response.data != null) {
@@ -205,6 +217,14 @@ class NotificationScreenController extends GetxController {
   // Refresh notifications
   Future<void> refreshNotifications() async {
     await fetchNotifications(isRefresh: true);
+  }
+
+  /// Reloads the list after the phone language changes. The controller stays
+  /// alive, so opening the screen again does not fetch on its own.
+  Future<void> reloadIfLocaleChanged() async {
+    if (kDemoMode) return;
+    if (_loadedLocale == _notificationLocale) return;
+    await refreshNotifications();
   }
 
   Future<void> markAsRead(String? id) async {

@@ -28,6 +28,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool _manageMode = false;
   final Set<String> _selectedIds = <String>{};
 
+  @override
+  void initState() {
+    super.initState();
+    controller.reloadIfLocaleChanged();
+  }
+
   void _enterManageMode() {
     setState(() {
       _manageMode = true;

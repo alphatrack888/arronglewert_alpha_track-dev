@@ -61,6 +61,16 @@ Future<ApiCallResult<String>> postStartTimer({
     errorLog('startTimer timeout', e);
     return ApiCallResult.fail(kind: ApiFailureKind.timeout);
   } on DioException catch (e) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      errorLog('startTimer timeout', e);
+      return ApiCallResult.fail(kind: ApiFailureKind.timeout);
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      errorLog('startTimer connection', e);
+      return ApiCallResult.fail(kind: ApiFailureKind.network);
+    }
     final status = e.response?.statusCode;
     final message = extractApiMessage(e.response?.data);
     appLog('startTimer DioException status=$status message=$message');

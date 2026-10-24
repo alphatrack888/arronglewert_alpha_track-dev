@@ -10,10 +10,11 @@ class NotificationRepository {
   Future<NotificationGetModel> fetchAlltheNotificaton({
     int page = 1,
     int limit = 20,
+    String locale = 'english',
   }) async {
     try {
       final response = await apiServices.apiGetServices(
-        '${ApiUrls.notification}?page=$page&limit=$limit',
+        '${ApiUrls.notification}?page=$page&limit=$limit&locale=${Uri.encodeQueryComponent(locale)}',
       );
       appLog("Raw API Response: $response");
       if (response != null) {

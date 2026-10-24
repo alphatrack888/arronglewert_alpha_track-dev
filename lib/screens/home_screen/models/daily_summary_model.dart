@@ -35,6 +35,7 @@ class DailySummaryModel {
 class Data {
     String? totalTime;
     String? overtime;
+    String? plannedHours;
     String? totalBreakInHours;
     String? totalBreakInHoursFormatted;
     String? overtimeInHoursFormatted;
@@ -43,6 +44,7 @@ class Data {
     Data({
         this.totalTime,
         this.overtime,
+        this.plannedHours,
         this.totalBreakInHours,
         this.totalBreakInHoursFormatted,
         this.overtimeInHoursFormatted,
@@ -56,6 +58,7 @@ class Data {
     factory Data.fromJson(Map<String, dynamic> json) => Data(
         totalTime: json["totalTime"],
         overtime: json["overtime"],
+        plannedHours: json["plannedHours"]?.toString(),
         totalBreakInHours: json["totalBreakInHours"],
         totalBreakInHoursFormatted: json["totalBreakInHoursFormatted"],
         overtimeInHoursFormatted: json["overtimeInHoursFormatted"],
@@ -65,6 +68,7 @@ class Data {
     Map<String, dynamic> toJson() => {
         "totalTime": totalTime,
         "overtime": overtime,
+        "plannedHours": plannedHours,
         "totalBreakInHours": totalBreakInHours,
         "totalBreakInHoursFormatted": totalBreakInHoursFormatted,
         "overtimeInHoursFormatted": overtimeInHoursFormatted,

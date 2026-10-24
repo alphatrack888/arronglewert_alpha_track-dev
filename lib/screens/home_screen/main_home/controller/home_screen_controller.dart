@@ -12,6 +12,7 @@ import 'package:alpha_track/screens/home_screen/models/working_hours_summary_mod
 import 'package:alpha_track/services/break_preference/break_preference_service.dart';
 import 'package:alpha_track/services/location_services/location_services.dart';
 import 'package:alpha_track/services/repository/report_repository/report_repository.dart';
+import 'package:alpha_track/services/api/api_call_result.dart';
 import 'package:alpha_track/services/repository/time_tracker_repository/time_tracker_repository.dart';
 import 'package:alpha_track/services/repository/time_tracker_repository/timer_start_errors.dart';
 
@@ -53,6 +54,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final RxString _openSessionProjectId = ''.obs;
   final RxString _openSessionProjectTitle = ''.obs;
   bool _openSessionDialogVisible = false;
+
+  /// Covers location and the start request so a second tap is ignored
+  /// without turning on the Start spinner.
+  bool _startInProgress = false;
 
   // UI state variables
   final RxBool isTodaySelected = true.obs;
@@ -742,7 +747,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   //! ==================== TIMER CONTROL ====================
 
   Future<void> start() async {
-    if (isApiLoading || _openSessionDialogVisible) return;
+    if (isApiLoading || _openSessionDialogVisible || _startInProgress) return;
     if (_openSessionProjectId.value.isNotEmpty &&
         _openSessionProjectId.value != _currentProjectId.value) {
       await _warnOpenSessionElsewhere();
@@ -764,119 +769,123 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return;
     }
 
+    _startInProgress = true;
     try {
-      apiLoadingState.value = LoadingState.loading;
-
-      await _ensureCurrentProject();
-      if (!_validateProjectSelection()) {
-        apiLoadingState.value = LoadingState.idle;
-        return;
-      }
+      await _ensureCurrentProject(loadDetails: false);
+      if (!_validateProjectSelection()) return;
 
       if (!isEmployeeRoleForTimer(_storageService.getUserRole())) {
-        apiLoadingState.value = LoadingState.idle;
         AppSnackBar.error('timerStartEmployeeOnly'.tr);
         return;
       }
 
-      // Ensure company ID is saved for the current project
       await _ensureCompanyIdIsSaved();
+      if (!await _prepareStartLocation()) return;
 
-      // Check location permission before proceeding
-      LocationPermission permission = await Geolocator.checkPermission();
-      appLog('Current location permission: $permission');
+      try {
+        apiLoadingState.value = LoadingState.loading;
+        final startResult = await _timeTrackerRepository.startTimer(
+          projectID: _currentProjectId.value,
+          lat: currentLatitude.value,
+          lng: currentLongitude.value,
+        );
 
-      // If permission is permanently denied, show dialog with Settings link
-      if (permission == LocationPermission.deniedForever) {
+        if (startResult.success && startResult.data != null) {
+          final sessionId = startResult.data!;
+          _timerState.value = TimerState.running;
+          setSessionId(sessionId);
+          _rememberOpenSession(_currentProjectId.value, currentProjectTitle);
+          _startTimer();
+          await _saveTimerStateForProject(_currentProjectId.value);
+
+          _announceStartSuccess();
+          appLog('Timer started successfully with session ID: $sessionId');
+          appLog('Company ID for running timer: ${_currentCompanyId.value}');
+          _refreshProjectTimeList();
+        } else if (startResult.statusCode == 409) {
+          await _restoreOpenSessionFromServer();
+          AppSnackBar.error('sessionStillOpen'.tr);
+        } else if (startResult.kind == ApiFailureKind.timeout) {
+          final adopted = await _restoreOpenSessionFromServer();
+          if (adopted) {
+            _announceStartSuccess();
+          } else {
+            AppSnackBar.error('timerStartTimeout'.tr);
+          }
+        } else {
+          AppSnackBar.error(timerStartFailureMessage(startResult));
+        }
+      } catch (e) {
+        appLog('Error starting timer: $e');
+        AppSnackBar.error('timerStartError'.tr);
+      } finally {
         apiLoadingState.value = LoadingState.idle;
-        appLog('Location permission permanently denied, showing dialog...');
+      }
+    } catch (e) {
+      appLog('Error preparing start: $e');
+      AppSnackBar.error('timerStartError'.tr);
+    } finally {
+      _startInProgress = false;
+    }
+  }
 
-        // Show dialog to user with option to open settings
-        bool shouldOpenSettings = await _showPermissionDeniedDialog();
+  void _announceStartSuccess() {
+    AppSnackBar.success('Timer started for: $currentProjectTitle');
+  }
+
+  /// Permission, location services, and a GPS fix. The Start spinner stays off.
+  /// Returns false after the user has been told why tracking cannot start.
+  Future<bool> _prepareStartLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    appLog('Current location permission: $permission');
+
+    if (permission == LocationPermission.deniedForever) {
+      appLog('Location permission permanently denied, showing dialog...');
+      final shouldOpenSettings = await _showPermissionDeniedDialog();
+      if (shouldOpenSettings) {
+        await Geolocator.openAppSettings();
+      }
+      return false;
+    }
+
+    if (permission == LocationPermission.denied) {
+      appLog('Location permission denied, requesting permission...');
+      permission = await Geolocator.requestPermission();
+
+      if (permission == LocationPermission.denied) {
+        AppSnackBar.error('locationRequiredToStart'.tr);
+        appLog('Location permission denied by user');
+        return false;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        final shouldOpenSettings = await _showPermissionDeniedDialog();
         if (shouldOpenSettings) {
           await Geolocator.openAppSettings();
         }
-        return;
+        return false;
       }
-
-      // If permission is denied, request it (shows native permission dialog)
-      if (permission == LocationPermission.denied) {
-        appLog('Location permission denied, requesting permission...');
-        permission = await Geolocator.requestPermission();
-
-        if (permission == LocationPermission.denied) {
-          apiLoadingState.value = LoadingState.idle;
-          AppSnackBar.error(
-            'locationRequiredToStart'.tr,
-          );
-          appLog('Location permission denied by user');
-          return;
-        }
-
-        // If still denied after request, it's now permanently denied
-        if (permission == LocationPermission.deniedForever) {
-          apiLoadingState.value = LoadingState.idle;
-          bool shouldOpenSettings = await _showPermissionDeniedDialog();
-          if (shouldOpenSettings) {
-            await Geolocator.openAppSettings();
-          }
-          return;
-        }
-      }
-
-      // Check if location services are enabled
-      if (!await _locationService.isLocationServiceEnabled()) {
-        apiLoadingState.value = LoadingState.idle;
-        appLog('Location services disabled, prompting user...');
-        await _locationService.checkAndRequestLocationPermission();
-        if (!await _locationService.isLocationServiceEnabled()) {
-          AppSnackBar.error('locationServicesDisabledBody'.tr);
-        }
-        return;
-      }
-
-      // Get current location for start event
-      bool locationSuccess = await _getCurrentLocationForEvent('start');
-      if (!locationSuccess) {
-        apiLoadingState.value = LoadingState.idle;
-        AppSnackBar.error(
-          'locationUnable'.tr,
-        );
-        return;
-      }
-
-      // Call API to start timer
-      final startResult = await _timeTrackerRepository.startTimer(
-        projectID: _currentProjectId.value,
-        lat: currentLatitude.value,
-        lng: currentLongitude.value,
-      );
-
-      if (startResult.success && startResult.data != null) {
-        final sessionId = startResult.data!;
-        _timerState.value = TimerState.running;
-        setSessionId(sessionId);
-        _rememberOpenSession(_currentProjectId.value, currentProjectTitle);
-        _startTimer();
-        await _saveTimerStateForProject(_currentProjectId.value);
-
-        AppSnackBar.success('Timer started for: $currentProjectTitle');
-        appLog('Timer started successfully with session ID: $sessionId');
-        appLog('Company ID for running timer: ${_currentCompanyId.value}');
-        _refreshProjectTimeList();
-      } else if (startResult.statusCode == 409) {
-        await _restoreOpenSessionFromServer();
-        AppSnackBar.error('sessionStillOpen'.tr);
-      } else {
-        final message = timerStartFailureMessage(startResult);
-        AppSnackBar.error(message);
-      }
-    } catch (e) {
-      appLog('Error starting timer: $e');
-      AppSnackBar.error('timerStartError'.tr);
-    } finally {
-      apiLoadingState.value = LoadingState.idle;
     }
+
+    if (!await _locationService.isLocationServiceEnabled()) {
+      appLog('Location services disabled, prompting user...');
+      await _locationService.checkAndRequestLocationPermission();
+      if (!await _locationService.isLocationServiceEnabled()) {
+        AppSnackBar.error('locationServicesDisabledBody'.tr);
+      }
+      return false;
+    }
+
+    AppSnackBar.message(
+      'readingLocation'.tr,
+      duration: const Duration(seconds: 60),
+    );
+    final locationSuccess = await _getCurrentLocationForEvent('start');
+    if (!locationSuccess) {
+      AppSnackBar.error('locationUnable'.tr);
+      return false;
+    }
+    return true;
   }
 
   /// Show dialog when location permission is permanently denied
@@ -1526,7 +1535,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     String projectId, {
     String? projectTitle,
   }) async {
-    if (projectId.isEmpty || isApiLoading || _openSessionDialogVisible) return;
+    if (projectId.isEmpty ||
+        isApiLoading ||
+        _openSessionDialogVisible ||
+        _startInProgress) {
+      return;
+    }
     final openId = _openSessionProjectId.value;
     if (openId.isNotEmpty && openId != projectId) {
       await _warnOpenSessionElsewhere();
@@ -1538,20 +1552,25 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
           projectId,
           projectTitle: projectTitle,
           announce: false,
+          loadDetails: false,
         );
       }
       return;
     }
     if (_currentProjectId.value != projectId) {
-      await setCurrentProjectId(projectId, projectTitle: projectTitle);
+      await setCurrentProjectId(
+        projectId,
+        projectTitle: projectTitle,
+        loadDetails: false,
+      );
     }
     await start();
   }
 
   /// Picks the first loaded project when the saved id is empty or no longer
   /// in the list. Returns true when [setCurrentProjectId] ran, which already
-  /// loads that project's timer state and report.
-  Future<bool> _ensureCurrentProject() async {
+  /// loads that project's timer state. [loadDetails] also loads the report.
+  Future<bool> _ensureCurrentProject({bool loadDetails = true}) async {
     final projects = allProjectData.value?.data?.data;
     if (projects == null || projects.isEmpty) return false;
 
@@ -1564,7 +1583,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     final id = first.id;
     if (id == null || id.isEmpty) return false;
 
-    await setCurrentProjectId(id, projectTitle: first.title);
+    await setCurrentProjectId(
+      id,
+      projectTitle: first.title,
+      loadDetails: loadDetails,
+    );
     return _currentProjectId.value == id;
   }
 

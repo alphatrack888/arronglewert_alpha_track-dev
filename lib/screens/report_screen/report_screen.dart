@@ -93,13 +93,40 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
+  /// Hours the company planned for this person across the open day or range.
+  double _plannedHours() {
+    return double.tryParse(
+          controller.dailySummaryData.value?.data?.plannedHours ?? '',
+        ) ??
+        0;
+  }
+
+  /// Logged work past the planned total. Zero when nothing was planned.
+  double _plannedOvertimeHours() {
+    final planned = _plannedHours();
+    if (planned <= 0) return 0;
+    final extra = (_periodWorkedHours() ?? 0) - planned;
+    return extra < 0 ? 0 : extra;
+  }
+
+  String _formatHoursMinutes(double hours) {
+    final totalMinutes = (hours * 60).round();
+    final safe = totalMinutes < 0 ? 0 : totalMinutes;
+    final h = safe ~/ 60;
+    final m = safe % 60;
+    return '${h}h ${m}m';
+  }
+
   /// Share a plain-text summary of the current report via the native share
-  /// sheet. Worked, break, and overtime come from the selected summary.
+  /// sheet. Worked and break come from the summary. Overtime is logged work
+  /// past the planned total, the same figure the breakdown card shows.
   Future<void> _shareReport() async {
     final summary = controller.dailySummaryData.value?.data;
 
     final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
-    final overtimeLabel = summary?.overtimeInHoursFormatted ?? '0h 0m';
+    final overtimeLabel = _plannedHours() <= 0
+        ? '0h 0m'
+        : _formatHoursMinutes(_plannedOvertimeHours());
 
     final date = controller.selectedDate.value;
     final String period;
@@ -539,11 +566,12 @@ class _ReportScreenState extends State<ReportScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildByProjectCard() {
-    // No per-project breakdown is provided by the report API, so we surface the
-    // real values that DO exist for the selected period: worked, break, overtime.
+    // The bars fill against the hours the company planned for this person on
+    // the open day or range. Logged work past that sum is the overtime row.
     final summary = controller.dailySummaryData.value?.data;
 
     final workedHours = _periodWorkedHours() ?? 0;
+    final plannedHours = _plannedHours();
     final String periodChip;
     switch (_tab) {
       case _ReportTab.day:
@@ -558,12 +586,11 @@ class _ReportScreenState extends State<ReportScreen> {
     }
 
     final breakHours = double.tryParse(summary?.totalBreakInHours ?? '') ?? 0;
-    final overtimeHours = double.tryParse(summary?.overtime ?? '') ?? 0;
+    final overtimeHours = _plannedOvertimeHours();
     final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
-    final overtimeLabel = summary?.overtimeInHoursFormatted ?? '0h 0m';
-    final maxHours = [workedHours, breakHours, overtimeHours].reduce(
-      (a, b) => a > b ? a : b,
-    );
+    final overtimeLabel = plannedHours <= 0
+        ? '0h 0m'
+        : _formatHoursMinutes(overtimeHours);
 
     return DsCard(
       padding: const EdgeInsets.all(18),
@@ -577,25 +604,30 @@ class _ReportScreenState extends State<ReportScreen> {
               _pillLabel(LucideIcons.calendar, periodChip),
             ],
           ),
+          const SizedBox(height: 6),
+          Text(
+            'plannedHoursLine'.trParams({'hours': _formatHours(plannedHours)}),
+            style: AppTextStyles.subtitle,
+          ),
           const SizedBox(height: 16),
           _breakdownRow(
             'worked'.tr,
             _formatHours(workedHours),
-            breakdownFraction(workedHours, maxHours),
+            breakdownFraction(workedHours, plannedHours),
             AppColors.primary,
           ),
           const SizedBox(height: 14),
           _breakdownRow(
             'breakLabel'.tr,
             breakLabel,
-            breakdownFraction(breakHours, maxHours),
+            breakdownFraction(breakHours, plannedHours),
             AppColors.success,
           ),
           const SizedBox(height: 14),
           _breakdownRow(
             'overtime'.tr,
             overtimeLabel,
-            breakdownFraction(overtimeHours, maxHours),
+            breakdownFraction(overtimeHours, plannedHours),
             AppColors.warning,
           ),
         ],

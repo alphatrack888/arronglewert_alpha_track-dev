@@ -99,12 +99,14 @@ class AppSnackBar {
     Color? backgroundColor,
     Color? color,
     SnackPosition? snackPosition,
+    Duration? duration,
   }) {
     _show(
       text: parameterValue,
       accent: color ?? AppColors.primary,
       icon: LucideIcons.info,
       snackPosition: snackPosition,
+      duration: duration,
     );
   }
 

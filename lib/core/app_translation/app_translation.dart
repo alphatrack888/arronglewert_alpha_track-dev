@@ -77,6 +77,7 @@ class AppTranslation extends Translations {
           'Location permission is required to start the timer.',
       'locationUnable':
           'Unable to get your location. Please check your location settings.',
+      'readingLocation': 'Reading your location…',
       'timerStartFailed': 'Failed to start timer. Please try again.',
       'timerStartFailedWithReason':
           'Couldn\'t start tracking: @reason',
@@ -179,6 +180,7 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'WORKED THIS MONTH',
       'workVsBreak': 'Work vs Break',
       'breakdown': 'BREAKDOWN',
+      'plannedHoursLine': 'Planned @hours',
       'worked': 'Worked',
       'breakLabel': 'Break',
       'breaks': 'Breaks',
@@ -763,6 +765,7 @@ class AppTranslation extends Translations {
           'Standortberechtigung ist erforderlich, um den Timer zu starten.',
       'locationUnable':
           'Ihr Standort konnte nicht ermittelt werden. Bitte prüfen Sie Ihre Standorteinstellungen.',
+      'readingLocation': 'Standort wird ermittelt…',
       'timerStartFailed':
           'Timer konnte nicht gestartet werden. Bitte versuchen Sie es erneut.',
       'timerStartFailedWithReason':
@@ -869,6 +872,7 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'DIESEN MONAT GEARBEITET',
       'workVsBreak': 'Arbeit vs. Pause',
       'breakdown': 'AUFSCHLÜSSELUNG',
+      'plannedHoursLine': 'Geplant @hours',
       'worked': 'Gearbeitet',
       'breakLabel': 'Pause',
       'breaks': 'Pausen',
@@ -1470,6 +1474,7 @@ class AppTranslation extends Translations {
       'errLoadProjectDetails': 'خطأ في تحميل تفاصيل المشروع',
       'locationRequiredToStart': 'إذن الموقع مطلوب لبدء المؤقت.',
       'locationUnable': 'تعذّر تحديد موقعك. يرجى التحقق من إعدادات الموقع.',
+      'readingLocation': 'جارٍ تحديد موقعك…',
       'timerStartFailed': 'فشل بدء المؤقت. يرجى المحاولة مرة أخرى.',
       'timerStartFailedWithReason': 'تعذّر بدء التتبع: @reason',
       'timerStartError': 'حدث خطأ أثناء بدء المؤقت',
@@ -1570,6 +1575,7 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'العمل هذا الشهر',
       'workVsBreak': 'العمل مقابل الاستراحة',
       'breakdown': 'التفصيل',
+      'plannedHoursLine': 'المخطط @hours',
       'worked': 'العمل',
       'breakLabel': 'الاستراحة',
       'breaks': 'الاستراحات',
@@ -2148,6 +2154,7 @@ class AppTranslation extends Translations {
           'Permisiunea de locație e necesară pentru a porni cronometrul.',
       'locationUnable':
           'Nu am putut obține locația. Verifică setările de locație.',
+      'readingLocation': 'Se citește locația…',
       'timerStartFailed': 'Pornirea cronometrului a eșuat. Încearcă din nou.',
       'timerStartFailedWithReason':
           'Nu s-a putut începe urmărirea: @reason',
@@ -2251,6 +2258,7 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'LUCRAT LUNA ACEASTA',
       'workVsBreak': 'Lucru vs Pauză',
       'breakdown': 'DEFALCARE',
+      'plannedHoursLine': 'Planificat: @hours',
       'worked': 'Lucrat',
       'breakLabel': 'Pauză',
       'breaks': 'Pauze',
