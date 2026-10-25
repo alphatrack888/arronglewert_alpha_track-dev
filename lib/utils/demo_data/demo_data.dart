@@ -169,17 +169,23 @@ class DemoData {
         }
       });
 
-  static daily.DailySummaryModel get dailySummary =>
-      daily.DailySummaryModel.fromJson({
+  static daily.DailySummaryModel get dailySummary {
+    final now = DateTime.now().toUtc();
+    final day =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return daily.DailySummaryModel.fromJson({
         "statusCode": 200,
         "success": true,
         "message": "demo",
         "data": {
           "totalTime": "5h 30m",
-          "overtime": "1h 0m",
+          "overtime": "0h 0m",
           "totalBreakInHours": "0.75",
           "totalBreakInHoursFormatted": "0h 45m",
-          "overtimeInHoursFormatted": "1h 0m",
+          "overtimeInHoursFormatted": "0h 0m",
+          "dailyWorkedHours": [
+            {"date": day, "hours": "5.50"}
+          ],
           "sessions": [
             {
               "_id": "s1",
@@ -210,6 +216,7 @@ class DemoData {
           ]
         }
       });
+  }
 
   // ---- Single project (Project Details) -------------------------------------
   static const Map<String, List<String>> _projectMeta = {

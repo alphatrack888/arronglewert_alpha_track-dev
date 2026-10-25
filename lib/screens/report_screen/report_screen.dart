@@ -533,28 +533,36 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Widget _buildBarChart() {
-    final sessions = controller.dailySummaryData.value?.data?.sessions ?? [];
-    final bars = workedBarsForRange(
-      sessions,
-      controller.reportFrom.value,
-      controller.reportTo.value,
-    );
-    if (bars.isEmpty || bars.every((bar) => bar.hours == 0)) {
+    final from = controller.reportFrom.value;
+    final to = controller.reportTo.value;
+    final bars = (controller.dailySummaryData.value?.data?.dailyWorkedHours ??
+            const <DailyWorkedHours>[])
+        .where((day) {
+      final date = day.date;
+      if (date == null || date.length < 10) return false;
+      if (from.isEmpty || to.isEmpty) return true;
+      return date.compareTo(from) >= 0 && date.compareTo(to) <= 0;
+    }).toList();
+    final values = bars
+        .map((day) => double.tryParse(day.hours ?? '') ?? 0)
+        .toList();
+    if (bars.isEmpty || values.every((hours) => hours == 0)) {
       return Center(
         child: Text('noSessionsPeriod'.tr, style: AppTextStyles.subtitle),
       );
     }
 
     final labels = bars.map((bar) {
+      final date = bar.date ?? '';
       if (_tab == _ReportTab.month) {
-        return int.parse(bar.date.substring(8)).toString();
+        return int.parse(date.substring(8, 10)).toString();
       }
-      final weekday = DateTime.parse('${bar.date}T00:00:00.000Z').weekday;
+      final weekday = DateTime.parse('${date.substring(0, 10)}T00:00:00.000Z').weekday;
       return AppDate.weekdayLabels(startMonday: true)[weekday - 1];
     }).toList();
 
     return DsBarChart(
-      values: bars.map((bar) => bar.hours).toList(),
+      values: values,
       labels: labels,
       barWidth: bars.length > 14 ? 8 : 18,
       labelBuilder: (_, value) => _formatHours(value),

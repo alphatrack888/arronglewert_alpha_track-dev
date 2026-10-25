@@ -258,17 +258,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _startButton() {
-    return Obx(() => PrimaryButton(
-          label: AppString.start,
-          svgIcon: null,
-          icon: LucideIcons.play,
-          color: AppColors.white50.withValues(alpha: 0.22),
-          textColor: AppColors.white50,
-          isLoading: controller.isApiLoading,
-          onTap: controller.isApiLoading
-              ? null
-              : () => controller.toggleStartReset(),
-        ));
+    return Obx(() {
+      final phaseLabel = controller.startPrepareLabelKey;
+      final apiLoading = controller.isApiLoading;
+      return PrimaryButton(
+        label: phaseLabel ?? AppString.start,
+        svgIcon: null,
+        icon: phaseLabel == null ? LucideIcons.play : null,
+        color: AppColors.white50.withValues(alpha: 0.22),
+        textColor: AppColors.white50,
+        isLoading: apiLoading,
+        onTap: (apiLoading || phaseLabel != null)
+            ? null
+            : () => controller.toggleStartReset(),
+      );
+    });
   }
 
   Widget _runningProjectRow() {
@@ -296,16 +300,17 @@ class _HomeScreenState extends State<HomeScreen> {
               style: AppTextStyles.bodySemibold.copyWith(color: AppColors.white50))),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: controller.isApiLoading
+            onTap: controller.isAnyTimerActionBusy
                 ? null
                 : () => controller.togglePauseResume(),
             child: Container(
               width: 38, height: 38,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AppColors.white50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: controller.isApiLoading
+              child: controller.isTimerActionBusy(TimerActionWait.takeBreak)
                   ? const Padding(
                       padding: EdgeInsets.all(9),
                       child: CircularProgressIndicator(
@@ -328,28 +333,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---- session actions (running) -------------------------------------------
   Widget _buildSessionActions() {
-    final loading = controller.isApiLoading;
+    final breakLabel = controller.locationLabelFor(TimerActionWait.takeBreak);
+    final stopLabel = controller.locationLabelFor(TimerActionWait.stop);
+    final locked = controller.isAnyTimerActionBusy;
     return Row(
       children: [
         Expanded(
           child: SecondaryButton(
-            label: 'takeABreak'.tr,
+            label: breakLabel != null ? breakLabel.tr : 'takeABreak'.tr,
             isTranslate: false,
-            icon: LucideIcons.coffee,
+            icon: breakLabel == null ? LucideIcons.coffee : null,
             color: AppColors.warning,
-            isLoading: loading,
-            onTap: () => controller.pause(),
+            isLoading: controller.isTimerActionBusy(TimerActionWait.takeBreak) &&
+                breakLabel == null,
+            onTap: locked ? null : () => controller.pause(),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: SecondaryButton(
-            label: 'stopSession'.tr,
+            label: stopLabel != null ? stopLabel.tr : 'stopSession'.tr,
             isTranslate: false,
-            icon: LucideIcons.square,
+            icon: stopLabel == null ? LucideIcons.square : null,
             color: AppColors.danger,
-            isLoading: loading,
-            onTap: () => controller.stop(),
+            isLoading: controller.isTimerActionBusy(TimerActionWait.stop) &&
+                stopLabel == null,
+            onTap: locked ? null : () => controller.stop(),
           ),
         ),
       ],
@@ -398,7 +407,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: controller.isApiLoading ? null : () => controller.resume(),
+            onTap: controller.isAnyTimerActionBusy
+                ? null
+                : () => controller.resume(),
             behavior: HitTestBehavior.opaque,
             child: Container(
               width: 44,
@@ -408,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: white.withValues(alpha: 0.22),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: controller.isApiLoading
+              child: controller.isTimerActionBusy(TimerActionWait.resume)
                   ? Padding(
                       padding: const EdgeInsets.all(12),
                       child: CircularProgressIndicator(
@@ -650,6 +661,10 @@ class _HomeScreenState extends State<HomeScreen> {
   // ---- recent projects ------------------------------------------------------
   Widget _buildRecentProjects() {
     return Obx(() {
+      controller.startPreparePhase.value;
+      controller.startingProjectId.value;
+      controller.timerActionWait.value;
+      controller.apiLoadingState.value;
       if (controller.isProjectLoading) {
         return Padding(
           padding: const EdgeInsets.all(20),
@@ -684,7 +699,10 @@ class _HomeScreenState extends State<HomeScreen> {
               thisWeek: _fmtMins(project.duration),
               billable: '\$0',
               paused: paused,
-              isLoading: controller.isApiLoading,
+              stopLoading: controller.isTimerActionBusy(TimerActionWait.stop),
+              toggleLoading: controller.isTimerActionBusy(
+                paused ? TimerActionWait.resume : TimerActionWait.takeBreak,
+              ),
               onStop: () => controller.stop(),
               onToggle: () => controller.togglePauseResume(),
               onTap: () => controller.gototheDetailsPage(project.id ?? ''),
@@ -697,6 +715,7 @@ class _HomeScreenState extends State<HomeScreen> {
             trailingText: '${project.projectTime ?? 0}h',
             trailingSub: 'today1'.tr,
             actionMuted: controller.isStartBlockedFor(id),
+            actionLoading: controller.isStartingProject(id),
             selected: controller.currentProjectId == id,
             onLongPress: controller.showsSelectFor(id)
                 ? () => controller.selectProjectForTracking(

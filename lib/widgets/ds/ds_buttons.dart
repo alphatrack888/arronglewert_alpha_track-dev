@@ -126,22 +126,29 @@ class SecondaryButton extends StatelessWidget {
         ),
         child: isLoading
             ? LoadingAnimationWidget.waveDots(color: accent, size: 28)
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (svgIcon != null) ...[
-                    SvgPicture.asset(svgIcon!, width: 18, height: 18),
-                    const SizedBox(width: 8),
-                  ] else if (icon != null) ...[
-                    Icon(icon, size: 18, color: accent),
-                    const SizedBox(width: 8),
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (svgIcon != null) ...[
+                      SvgPicture.asset(svgIcon!, width: 18, height: 18),
+                      const SizedBox(width: 8),
+                    ] else if (icon != null) ...[
+                      Icon(icon, size: 18, color: accent),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: Text(
+                        isTranslate ? label.tr : label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.button.copyWith(color: accent),
+                      ),
+                    ),
                   ],
-                  Text(
-                    isTranslate ? label.tr : label,
-                    style: AppTextStyles.button.copyWith(color: accent),
-                  ),
-                ],
+                ),
               ),
       ),
     );

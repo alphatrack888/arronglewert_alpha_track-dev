@@ -352,7 +352,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             _ttStat('thisWeek'.tr, _formatSummaryHours(week?.totalTime)),
             const SizedBox(width: 12),
             _ttStat('overtime'.tr,
-                daily?.overtimeInHoursFormatted ?? daily?.overtime ?? '0h 0m'),
+                week?.overtimeInHoursFormatted ?? week?.overtime ?? '0h 0m'),
           ],
         ),
         const SizedBox(height: 16),
@@ -754,19 +754,20 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     final home = _home;
     final projectId = data?.id ?? '';
     return Obx(() {
-      final loading = home.isApiLoading;
+      final phaseLabel = home.startPrepareLabelKey;
+      final apiLoading = home.isApiLoading;
       final blocked = home.isStartBlockedFor(projectId);
       return Row(
         children: [
           Expanded(
             child: PrimaryButton(
-              label: 'startTracking'.tr,
+              label: phaseLabel != null ? phaseLabel.tr : 'startTracking'.tr,
               isTranslate: false,
-              icon: LucideIcons.play,
-              isLoading: loading,
+              icon: phaseLabel == null ? LucideIcons.play : null,
+              isLoading: apiLoading,
               color: blocked ? AppColors.fill : null,
               textColor: blocked ? AppColors.textMuted : null,
-              onTap: loading
+              onTap: (apiLoading || phaseLabel != null)
                   ? null
                   : () => _startTracking(data, title, projectId: projectId),
             ),
@@ -778,7 +779,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 label: 'addNote'.tr,
                 isTranslate: false,
                 icon: LucideIcons.edit,
-                onTap: loading ? null : () => _openCreateNote(data, title),
+                onTap: apiLoading ? null : () => _openCreateNote(data, title),
               ),
             ),
           ],
@@ -814,7 +815,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   // The mini timer widget itself (also shared with Time Tracker/Notes tabs).
   Widget _trackingPill(HomeScreenController home) {
     final onBreak = home.isPaused;
-    final loading = home.isApiLoading;
+    final stopBusy = home.isTimerActionBusy(TimerActionWait.stop);
+    final toggleBusy = home.isTimerActionBusy(
+      onBreak ? TimerActionWait.resume : TimerActionWait.takeBreak,
+    );
+    final locked = home.isAnyTimerActionBusy;
     return Container(
       height: 44,
       padding: const EdgeInsets.fromLTRB(13, 5, 5, 5),
@@ -866,16 +871,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 icon: LucideIcons.square,
                 background: AppColors.trackingStopBg,
                 iconColor: AppColors.surface,
-                loading: loading,
-                onTap: () => home.stop(),
+                loading: stopBusy,
+                onTap: locked ? () {} : () => home.stop(),
               ),
               const SizedBox(width: 4),
               _pillButton(
                 icon: onBreak ? LucideIcons.play : LucideIcons.pause,
                 background: AppColors.trackingPauseBg,
                 iconColor: AppColors.primary,
-                loading: loading,
-                onTap: () => onBreak ? home.resume() : home.pause(),
+                loading: toggleBusy,
+                onTap: locked
+                    ? () {}
+                    : () => onBreak ? home.resume() : home.pause(),
               ),
             ],
           ),

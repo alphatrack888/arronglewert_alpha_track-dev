@@ -64,6 +64,7 @@ class DsProjectTile extends StatelessWidget {
     this.onAction,
     this.actionIcon = Icons.play_arrow_rounded,
     this.actionMuted = false,
+    this.actionLoading = false,
     this.selected = false,
     this.onLongPress,
   });
@@ -78,6 +79,9 @@ class DsProjectTile extends StatelessWidget {
 
   /// Quiets the action color without changing its size or ignoring the tap.
   final bool actionMuted;
+
+  /// Replaces the play icon with a spinner inside the same 38 by 38 box.
+  final bool actionLoading;
 
   /// Primary hairline and a light primary fill.
   final bool selected;
@@ -133,20 +137,34 @@ class DsProjectTile extends StatelessWidget {
           if (onAction != null) ...[
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: onAction,
+              onTap: actionLoading ? null : onAction,
               behavior: HitTestBehavior.opaque,
               child: Container(
                 width: 38,
                 height: 38,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: actionMuted ? AppColors.fill : AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  actionIcon,
-                  color: actionMuted ? AppColors.textFaint : AppColors.primary,
-                  size: 22,
-                ),
+                child: actionLoading
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: actionMuted
+                              ? AppColors.textFaint
+                              : AppColors.primary,
+                        ),
+                      )
+                    : Icon(
+                        actionIcon,
+                        color: actionMuted
+                            ? AppColors.textFaint
+                            : AppColors.primary,
+                        size: 22,
+                      ),
               ),
             ),
           ],

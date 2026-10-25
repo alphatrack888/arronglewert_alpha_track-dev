@@ -39,6 +39,13 @@ enum TimerState { stopped, running, paused }
 
 enum LoadingState { idle, loading, error }
 
+/// Location waits that run before a timer request. The request itself uses
+/// [LoadingState] on the button.
+enum StartPreparePhase { idle, checkingLocation, readingLocation }
+
+/// Which timer control is waiting on GPS or its request.
+enum TimerActionWait { idle, takeBreak, resume, stop }
+
 class HomeScreenController extends GetxController with WidgetsBindingObserver {
   // Timer related variables
   Timer? _timer;
@@ -58,6 +65,15 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   /// Covers location and the start request so a second tap is ignored
   /// without turning on the Start spinner.
   bool _startInProgress = false;
+
+  /// Location wait shown on the wide buttons. Idle during the API call.
+  final Rx<StartPreparePhase> startPreparePhase = StartPreparePhase.idle.obs;
+
+  /// Break, resume, or stop while that control is waiting. Idle during Start.
+  final Rx<TimerActionWait> timerActionWait = TimerActionWait.idle.obs;
+
+  /// Project whose list control spins for this start. Empty when idle.
+  final RxString startingProjectId = ''.obs;
 
   // UI state variables
   final RxBool isTodaySelected = true.obs;
@@ -238,6 +254,45 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   String get currentProjectId => _currentProjectId.value;
   String get currentCompanyId => _currentCompanyId.value;
   bool get isApiLoading => apiLoadingState.value == LoadingState.loading;
+
+  /// True while this start is waiting on location or the timer request.
+  bool isStartingProject(String projectId) {
+    if (projectId.isEmpty || startingProjectId.value != projectId) return false;
+    return startPreparePhase.value != StartPreparePhase.idle || isApiLoading;
+  }
+
+  /// Label key for the wide Start button during a location wait. Null during
+  /// the timer request, which keeps the wave-dots loader.
+  String? get startPrepareLabelKey {
+    if (timerActionWait.value != TimerActionWait.idle) return null;
+    switch (startPreparePhase.value) {
+      case StartPreparePhase.checkingLocation:
+        return 'checkingLocation';
+      case StartPreparePhase.readingLocation:
+        return 'readingLocation';
+      case StartPreparePhase.idle:
+        return null;
+    }
+  }
+
+  /// Location label for the wide break or stop button that is waiting.
+  String? locationLabelFor(TimerActionWait action) {
+    if (timerActionWait.value != action) return null;
+    if (startPreparePhase.value != StartPreparePhase.readingLocation) {
+      return null;
+    }
+    return 'readingLocation';
+  }
+
+  /// True while [action] is reading location or calling its request.
+  bool isTimerActionBusy(TimerActionWait action) {
+    if (timerActionWait.value != action) return false;
+    return startPreparePhase.value == StartPreparePhase.readingLocation ||
+        isApiLoading;
+  }
+
+  bool get isAnyTimerActionBusy =>
+      timerActionWait.value != TimerActionWait.idle;
   bool get isLocationLoading =>
       locationLoadingState.value == LoadingState.loading;
   bool get isProjectLoading =>
@@ -747,7 +802,12 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   //! ==================== TIMER CONTROL ====================
 
   Future<void> start() async {
-    if (isApiLoading || _openSessionDialogVisible || _startInProgress) return;
+    if (isApiLoading ||
+        _openSessionDialogVisible ||
+        _startInProgress ||
+        isAnyTimerActionBusy) {
+      return;
+    }
     if (_openSessionProjectId.value.isNotEmpty &&
         _openSessionProjectId.value != _currentProjectId.value) {
       await _warnOpenSessionElsewhere();
@@ -770,9 +830,11 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     }
 
     _startInProgress = true;
+    startingProjectId.value = _currentProjectId.value;
     try {
       await _ensureCurrentProject(loadDetails: false);
       if (!_validateProjectSelection()) return;
+      startingProjectId.value = _currentProjectId.value;
 
       if (!isEmployeeRoleForTimer(_storageService.getUserRole())) {
         AppSnackBar.error('timerStartEmployeeOnly'.tr);
@@ -784,6 +846,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
       try {
         apiLoadingState.value = LoadingState.loading;
+        startPreparePhase.value = StartPreparePhase.idle;
         final startResult = await _timeTrackerRepository.startTimer(
           projectID: _currentProjectId.value,
           lat: currentLatitude.value,
@@ -826,6 +889,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       AppSnackBar.error('timerStartError'.tr);
     } finally {
       _startInProgress = false;
+      startPreparePhase.value = StartPreparePhase.idle;
+      startingProjectId.value = '';
     }
   }
 
@@ -836,6 +901,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   /// Permission, location services, and a GPS fix. The Start spinner stays off.
   /// Returns false after the user has been told why tracking cannot start.
   Future<bool> _prepareStartLocation() async {
+    startPreparePhase.value = StartPreparePhase.checkingLocation;
     LocationPermission permission = await Geolocator.checkPermission();
     appLog('Current location permission: $permission');
 
@@ -876,6 +942,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       return false;
     }
 
+    startPreparePhase.value = StartPreparePhase.readingLocation;
     AppSnackBar.message(
       'readingLocation'.tr,
       duration: const Duration(seconds: 60),
@@ -903,7 +970,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> pause({bool isAutoPause = false}) async {
-    if (isApiLoading) return;
+    if (isApiLoading || isAnyTimerActionBusy) return;
     if (_timerState.value != TimerState.running) {
       appLog('Timer is not running, cannot pause');
       return;
@@ -920,9 +987,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
     final workWasRunning = _freezeWorkClock();
     var committed = false;
+    timerActionWait.value = TimerActionWait.takeBreak;
     try {
-      apiLoadingState.value = LoadingState.loading;
-
+      startPreparePhase.value = StartPreparePhase.readingLocation;
       // Get current location for pause event
       bool locationSuccess = await _getCurrentLocationForEvent(
         isAutoPause ? 'auto_pause_hourly' : 'pause',
@@ -937,6 +1004,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       // Validate session ID
       if (!_validateSession()) return;
 
+      apiLoadingState.value = LoadingState.loading;
+      startPreparePhase.value = StartPreparePhase.idle;
       bool success = false;
       DateTime? pauseStartedAt;
       final outcome = await _timeTrackerRepository.pauseTimer(
@@ -977,11 +1046,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         _startTimer();
       }
       apiLoadingState.value = LoadingState.idle;
+      startPreparePhase.value = StartPreparePhase.idle;
+      timerActionWait.value = TimerActionWait.idle;
     }
   }
 
   Future<void> resume() async {
-    if (isApiLoading) return;
+    if (isApiLoading || isAnyTimerActionBusy) return;
     if (_timerState.value != TimerState.paused) {
       appLog('Timer is not paused, cannot resume');
       return;
@@ -996,9 +1067,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
     final breakWasRunning = _freezeBreakClock();
     var committed = false;
+    timerActionWait.value = TimerActionWait.resume;
     try {
-      apiLoadingState.value = LoadingState.loading;
-
+      startPreparePhase.value = StartPreparePhase.readingLocation;
       // Get current location for resume event
       bool locationSuccess = await _getCurrentLocationForEvent('resume');
       if (!locationSuccess) {
@@ -1012,6 +1083,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       if (!_validateSession()) return;
 
       // Call API to resume timer
+      apiLoadingState.value = LoadingState.loading;
+      startPreparePhase.value = StartPreparePhase.idle;
       bool success = await _timeTrackerRepository.resumeTimer(
         sessionID: _currentSessionId.value,
         lat: currentLatitude.value,
@@ -1041,11 +1114,13 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         _startBreakClock();
       }
       apiLoadingState.value = LoadingState.idle;
+      startPreparePhase.value = StartPreparePhase.idle;
+      timerActionWait.value = TimerActionWait.idle;
     }
   }
 
   Future<void> stop() async {
-    if (isApiLoading) return;
+    if (isApiLoading || isAnyTimerActionBusy) return;
     if (kDemoMode) {
       _endBreak();
       _resetTimer();
@@ -1059,9 +1134,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     final workWasRunning = wasRunning && _freezeWorkClock();
     final breakWasRunning = wasPaused && _freezeBreakClock();
     var committed = false;
+    timerActionWait.value = TimerActionWait.stop;
     try {
-      apiLoadingState.value = LoadingState.loading;
-
+      startPreparePhase.value = StartPreparePhase.readingLocation;
       // Get current location for stop event
       bool locationSuccess = await _getCurrentLocationForEvent('stop');
       if (!locationSuccess) {
@@ -1072,6 +1147,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       }
 
       // Call API to stop timer
+      apiLoadingState.value = LoadingState.loading;
+      startPreparePhase.value = StartPreparePhase.idle;
       bool success = await _timeTrackerRepository.stopTimer(
         lat: currentLatitude.value,
         lng: currentLongitude.value,
@@ -1102,6 +1179,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         }
       }
       apiLoadingState.value = LoadingState.idle;
+      startPreparePhase.value = StartPreparePhase.idle;
+      timerActionWait.value = TimerActionWait.idle;
     }
   }
 
@@ -1538,7 +1617,8 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
     if (projectId.isEmpty ||
         isApiLoading ||
         _openSessionDialogVisible ||
-        _startInProgress) {
+        _startInProgress ||
+        isAnyTimerActionBusy) {
       return;
     }
     final openId = _openSessionProjectId.value;
@@ -1668,44 +1748,54 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       Rxn<TodayBreakPeriodsModel>();
 
   final Rx<LoadingState> reportLoadingState = LoadingState.idle.obs;
+  int _reportLoadGeneration = 0;
 
   /// Worked hours for the signed-in user, keyed by project id.
   final RxMap<String, double> projectTodayHours = <String, double>{}.obs;
   final RxMap<String, double> projectWeekHours = <String, double>{}.obs;
 
-  /// Today and this UTC week, summed from session `totalTime` per project.
+  /// Today and this UTC week from the summary total.
+  ///
+  /// The total is one number for the signed-in user. It is written onto a
+  /// project only when every session in that response belongs to that project.
   Future<void> loadProjectTrackedHours() async {
     if (kDemoMode) {
-      final hours = hoursByProject(
-        DemoData.dailySummary.data?.sessions ?? const [],
-      );
-      projectTodayHours.assignAll(hours);
-      projectWeekHours.assignAll(hours);
+      projectTodayHours.assignAll(_rangeHoursForSingleProject(DemoData.dailySummary));
+      projectWeekHours.assignAll(_rangeHoursForSingleProject(DemoData.dailySummary));
       return;
     }
     try {
       final today = utcDateKey();
       final weekFrom = utcMondayKey(DateTime.now());
-      final todaySummary = await _reportRepository.fetchDailySummary(
-        todayData: today,
-      );
-      final weekSummary = await _reportRepository.fetchDailySummary(
+      final todaySummary = _reportRepository.fetchDailySummary(todayData: today);
+      final weekSummary = _reportRepository.fetchDailySummary(
         from: weekFrom,
         to: today,
       );
-      if (todaySummary.statusCode == 200) {
-        projectTodayHours.assignAll(
-          hoursByProject(todaySummary.data?.sessions ?? const []),
-        );
+      final todayResponse = await todaySummary;
+      final weekResponse = await weekSummary;
+      if (todayResponse.statusCode == 200) {
+        projectTodayHours.assignAll(_rangeHoursForSingleProject(todayResponse));
       }
-      if (weekSummary.statusCode == 200) {
-        projectWeekHours.assignAll(
-          hoursByProject(weekSummary.data?.sessions ?? const []),
-        );
+      if (weekResponse.statusCode == 200) {
+        projectWeekHours.assignAll(_rangeHoursForSingleProject(weekResponse));
       }
     } catch (e) {
       appLog('Error loading project tracked hours: $e');
     }
+  }
+
+  Map<String, double> _rangeHoursForSingleProject(DailySummaryModel summary) {
+    final sessions = summary.data?.sessions ?? const <Session>[];
+    final ids = <String>{};
+    for (final session in sessions) {
+      final id = session.project?.id;
+      if (id != null && id.isNotEmpty) ids.add(id);
+    }
+    if (ids.length != 1) return const {};
+    final total = double.tryParse(summary.data?.totalTime ?? '');
+    if (total == null) return const {};
+    return {ids.single: total};
   }
 
   /// `day`, `week`, or `month`. Bounds are UTC date strings.
@@ -1716,10 +1806,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   void setReportPeriod(String period) {
     if (reportPeriod.value == period) return;
     reportPeriod.value = period;
-    loadReportData();
+    loadReportData(includeStrip: false);
   }
 
-  Future<void> loadReportData() async {
+  Future<void> loadReportData({bool includeStrip = true}) async {
     // TEMPORARY demo mode — populate report screens without a backend.
     if (kDemoMode) {
       breakHoursData.value = DemoData.breakHours;
@@ -1731,9 +1821,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       reportLoadingState.value = LoadingState.idle;
       return;
     }
+    final generation = ++_reportLoadGeneration;
     try {
       reportLoadingState.value = LoadingState.loading;
-      workingHoursSummary.value = null;
       dailySummaryData.value = null;
 
       final selected = utcDateKey(selectedDate.value);
@@ -1755,27 +1845,39 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       reportFrom.value = from ?? selected;
       reportTo.value = to ?? selected;
 
-      final dailySummaryResponse = await _reportRepository.fetchDailySummary(
+      final summaryFuture = _reportRepository.fetchDailySummary(
         todayData: date,
         from: from,
         to: to,
       );
+      final stripFuture = includeStrip
+          ? _reportRepository.fetchWorkingHoursSummary(todayDate: selected)
+          : null;
+
+      final dailySummaryResponse = await summaryFuture;
+      if (generation != _reportLoadGeneration) return;
       if (dailySummaryResponse.statusCode == 200) {
         dailySummaryData.value = dailySummaryResponse;
       }
+      reportLoadingState.value = LoadingState.idle;
 
-      final workingHoursResponse = await _reportRepository
-          .fetchWorkingHoursSummary(todayDate: selected);
-      if (workingHoursResponse.statusCode == 200) {
-        workingHoursSummary.value = workingHoursResponse;
+      if (stripFuture != null) {
+        final workingHoursResponse = await stripFuture;
+        if (generation != _reportLoadGeneration) return;
+        if (workingHoursResponse.statusCode == 200) {
+          workingHoursSummary.value = workingHoursResponse;
+        }
       }
 
       appLog('Report data loaded successfully for date: $selected');
     } catch (e) {
+      if (generation != _reportLoadGeneration) return;
       appLog('Error loading report data: $e');
       AppSnackBar.error('failedLoadReport'.tr);
     } finally {
-      reportLoadingState.value = LoadingState.idle;
+      if (generation == _reportLoadGeneration) {
+        reportLoadingState.value = LoadingState.idle;
+      }
     }
   }
 

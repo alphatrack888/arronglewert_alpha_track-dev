@@ -39,6 +39,7 @@ class Data {
     String? totalBreakInHours;
     String? totalBreakInHoursFormatted;
     String? overtimeInHoursFormatted;
+    List<DailyWorkedHours>? dailyWorkedHours;
     List<Session>? sessions;
 
     Data({
@@ -48,6 +49,7 @@ class Data {
         this.totalBreakInHours,
         this.totalBreakInHoursFormatted,
         this.overtimeInHoursFormatted,
+        this.dailyWorkedHours,
         this.sessions,
     });
 
@@ -62,6 +64,9 @@ class Data {
         totalBreakInHours: json["totalBreakInHours"],
         totalBreakInHoursFormatted: json["totalBreakInHoursFormatted"],
         overtimeInHoursFormatted: json["overtimeInHoursFormatted"],
+        dailyWorkedHours: json["dailyWorkedHours"] == null
+            ? []
+            : List<DailyWorkedHours>.from(json["dailyWorkedHours"]!.map((x) => DailyWorkedHours.fromJson(x))),
         sessions: json["sessions"] == null ? [] : List<Session>.from(json["sessions"]!.map((x) => Session.fromJson(x))),
     );
 
@@ -72,7 +77,30 @@ class Data {
         "totalBreakInHours": totalBreakInHours,
         "totalBreakInHoursFormatted": totalBreakInHoursFormatted,
         "overtimeInHoursFormatted": overtimeInHoursFormatted,
+        "dailyWorkedHours": dailyWorkedHours == null
+            ? []
+            : List<dynamic>.from(dailyWorkedHours!.map((x) => x.toJson())),
         "sessions": sessions == null ? [] : List<dynamic>.from(sessions!.map((x) => x.toJson())),
+    };
+}
+
+class DailyWorkedHours {
+    String? date;
+    String? hours;
+
+    DailyWorkedHours({
+        this.date,
+        this.hours,
+    });
+
+    factory DailyWorkedHours.fromJson(Map<String, dynamic> json) => DailyWorkedHours(
+        date: json["date"]?.toString(),
+        hours: json["hours"]?.toString(),
+    );
+
+    Map<String, dynamic> toJson() => {
+        "date": date,
+        "hours": hours,
     };
 }
 

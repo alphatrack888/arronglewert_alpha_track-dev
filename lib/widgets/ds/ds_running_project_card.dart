@@ -23,8 +23,8 @@ class DsRunningProjectCard extends StatelessWidget {
     required this.paused,
     required this.onStop,
     required this.onToggle,
-    this.isLoading = false,
-    this.overtime = 'Overtime',
+    this.stopLoading = false,
+    this.toggleLoading = false,
     this.onTap,
   });
 
@@ -34,10 +34,10 @@ class DsRunningProjectCard extends StatelessWidget {
   final String thisWeek;
   final String billable;
   final bool paused; // running vs paused (controls the pause/resume glyph)
-  final bool isLoading;
+  final bool stopLoading;
+  final bool toggleLoading;
   final VoidCallback onStop;
   final VoidCallback onToggle;
-  final String overtime;
   final VoidCallback? onTap;
 
   @override
@@ -69,13 +69,21 @@ class DsRunningProjectCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _squareBtn(LucideIcons.square, AppColors.danger,
-                  AppColors.danger.withValues(alpha: 0.12), onStop,
-                  loading: isLoading),
+              _squareBtn(
+                LucideIcons.square,
+                AppColors.danger,
+                AppColors.danger.withValues(alpha: 0.12),
+                (stopLoading || toggleLoading) ? null : onStop,
+                loading: stopLoading,
+              ),
               const SizedBox(width: 10),
-              _squareBtn(paused ? LucideIcons.play : LucideIcons.pause,
-                  Colors.white, AppColors.primary, onToggle,
-                  loading: isLoading),
+              _squareBtn(
+                paused ? LucideIcons.play : LucideIcons.pause,
+                Colors.white,
+                AppColors.primary,
+                (stopLoading || toggleLoading) ? null : onToggle,
+                loading: toggleLoading,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -95,7 +103,6 @@ class DsRunningProjectCard extends StatelessWidget {
             children: [
               DsChip.primary('chipDefault'.tr),
               paused ? DsChip.neutral('chipPaused'.tr) : DsChip.success('chipRunning'.tr),
-              DsChip.warning('overtime'.tr),
             ],
           ),
         ],
@@ -107,7 +114,7 @@ class DsRunningProjectCard extends StatelessWidget {
     IconData icon,
     Color fg,
     Color bg,
-    VoidCallback onTap, {
+    VoidCallback? onTap, {
     bool loading = false,
   }) {
     return GestureDetector(

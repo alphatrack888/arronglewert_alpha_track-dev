@@ -75,12 +75,13 @@ class ProjectDetailsScreenController extends GetxController {
     weekSummaryData.value = null;
     if (kDemoMode) {
       dailySummaryData.value = DemoData.dailySummary;
-      final hours = hoursByProject(
-        DemoData.dailySummary.data?.sessions ?? const [],
-      )[projectId] ?? 0;
       weekSummaryData.value = DailySummaryModel.fromJson({
         'statusCode': 200,
-        'data': {'totalTime': hours.toStringAsFixed(2)},
+        'data': {
+          'totalTime': DemoData.dailySummary.data?.totalTime,
+          'overtime': '0h 0m',
+          'overtimeInHoursFormatted': '0h 0m',
+        },
       });
       timeLoadingState.value = ProjectTimeLoadingState.idle;
       return;
@@ -88,11 +89,17 @@ class ProjectDetailsScreenController extends GetxController {
     try {
       final today = utcDateKey();
       final weekFrom = utcMondayKey(DateTime.now());
-
-      final daily = await _reportRepository.fetchDailySummary(
+      final dailyFuture = _reportRepository.fetchDailySummary(
         projectId: projectId,
         todayData: today,
       );
+      final weekFuture = _reportRepository.fetchDailySummary(
+        projectId: projectId,
+        from: weekFrom,
+        to: today,
+      );
+
+      final daily = await dailyFuture;
       if (daily.statusCode == 200) {
         dailySummaryData.value = daily;
         timeLoadingState.value = ProjectTimeLoadingState.idle;
@@ -101,11 +108,7 @@ class ProjectDetailsScreenController extends GetxController {
         appLog('Daily summary fetch failed: ${daily.statusCode} ${daily.message}');
       }
 
-      final week = await _reportRepository.fetchDailySummary(
-        projectId: projectId,
-        from: weekFrom,
-        to: today,
-      );
+      final week = await weekFuture;
       if (week.statusCode == 200) weekSummaryData.value = week;
     } catch (e) {
       appLog('Error loading project time data: $e');

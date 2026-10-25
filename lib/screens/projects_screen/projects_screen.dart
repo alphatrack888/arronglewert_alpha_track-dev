@@ -67,6 +67,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         child: Obx(() {
           controller.currentProjectId;
           controller.openSessionProjectId;
+          controller.startPreparePhase.value;
+          controller.startingProjectId.value;
+          controller.timerActionWait.value;
+          controller.apiLoadingState.value;
           final all = controller.allProjectData.value?.data?.data ?? <Datum>[];
           final buckets = <List<Datum>>[[], [], [], []];
           for (final p in all) {
@@ -197,7 +201,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         thisWeek: _weekLabel(project.id),
         billable: '\$0',
         paused: paused,
-        isLoading: controller.isApiLoading,
+        stopLoading: controller.isTimerActionBusy(TimerActionWait.stop),
+        toggleLoading: controller.isTimerActionBusy(
+          paused ? TimerActionWait.resume : TimerActionWait.takeBreak,
+        ),
         onStop: () => controller.stop(),
         onToggle: () => _toggleTracking(project),
         onTap: () => _openProject(project),
@@ -240,7 +247,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () => _toggleTracking(project),
+                onTap: controller.isStartingProject(project.id ?? '')
+                    ? null
+                    : () => _toggleTracking(project),
                 behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding:
@@ -254,11 +263,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(running ? LucideIcons.pause : LucideIcons.play,
-                          size: 16,
-                          color: controller.isStartBlockedFor(project.id ?? '')
-                              ? AppColors.textFaint
-                              : AppColors.primary),
+                      controller.isStartingProject(project.id ?? '')
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: controller
+                                        .isStartBlockedFor(project.id ?? '')
+                                    ? AppColors.textFaint
+                                    : AppColors.primary,
+                              ),
+                            )
+                          : Icon(
+                              running ? LucideIcons.pause : LucideIcons.play,
+                              size: 16,
+                              color: controller
+                                      .isStartBlockedFor(project.id ?? '')
+                                  ? AppColors.textFaint
+                                  : AppColors.primary,
+                            ),
                       const SizedBox(width: 6),
                       Text(running ? 'Pause' : (paused ? 'Resume' : 'Start'),
                           style: AppTextStyles.bodySemibold.copyWith(
@@ -289,7 +313,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             children: [
               DsChip.primary('chipDefault'.tr),
               DsChip.success('chipRunning'.tr),
-              DsChip.warning('overtime'.tr),
             ],
           ),
         ],
@@ -336,6 +359,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         actionIcon:
             running ? Icons.pause_rounded : Icons.play_arrow_rounded,
         actionMuted: controller.isStartBlockedFor(id),
+        actionLoading: controller.isStartingProject(id),
         selected: controller.currentProjectId == id,
         onLongPress: controller.showsSelectFor(id)
             ? () => controller.selectProjectForTracking(

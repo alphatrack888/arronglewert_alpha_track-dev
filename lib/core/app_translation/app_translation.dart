@@ -77,6 +77,7 @@ class AppTranslation extends Translations {
           'Location permission is required to start the timer.',
       'locationUnable':
           'Unable to get your location. Please check your location settings.',
+      'checkingLocation': 'Checking location…',
       'readingLocation': 'Reading your location…',
       'timerStartFailed': 'Failed to start timer. Please try again.',
       'timerStartFailedWithReason':
@@ -765,6 +766,7 @@ class AppTranslation extends Translations {
           'Standortberechtigung ist erforderlich, um den Timer zu starten.',
       'locationUnable':
           'Ihr Standort konnte nicht ermittelt werden. Bitte prüfen Sie Ihre Standorteinstellungen.',
+      'checkingLocation': 'Standort wird geprüft…',
       'readingLocation': 'Standort wird ermittelt…',
       'timerStartFailed':
           'Timer konnte nicht gestartet werden. Bitte versuchen Sie es erneut.',
@@ -1474,6 +1476,7 @@ class AppTranslation extends Translations {
       'errLoadProjectDetails': 'خطأ في تحميل تفاصيل المشروع',
       'locationRequiredToStart': 'إذن الموقع مطلوب لبدء المؤقت.',
       'locationUnable': 'تعذّر تحديد موقعك. يرجى التحقق من إعدادات الموقع.',
+      'checkingLocation': 'جارٍ التحقق من الموقع…',
       'readingLocation': 'جارٍ تحديد موقعك…',
       'timerStartFailed': 'فشل بدء المؤقت. يرجى المحاولة مرة أخرى.',
       'timerStartFailedWithReason': 'تعذّر بدء التتبع: @reason',
@@ -2154,6 +2157,7 @@ class AppTranslation extends Translations {
           'Permisiunea de locație e necesară pentru a porni cronometrul.',
       'locationUnable':
           'Nu am putut obține locația. Verifică setările de locație.',
+      'checkingLocation': 'Se verifică locația…',
       'readingLocation': 'Se citește locația…',
       'timerStartFailed': 'Pornirea cronometrului a eșuat. Încearcă din nou.',
       'timerStartFailedWithReason':
