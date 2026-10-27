@@ -409,7 +409,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   }
 
   //! ==================== PROJECT MANAGEMENT ====================
-  Future<void> loadProjectList() async {
+  Future<void> loadProjectList({bool keepVisible = false}) async {
     // TEMPORARY demo mode — show sample projects without a backend/login.
     if (kDemoMode) {
       allProjectData.value = DemoData.projects;
@@ -422,8 +422,10 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       projectLoadingState.value = LoadingState.idle;
       return;
     }
+    final hasProjects = allProjectData.value?.data?.data?.isNotEmpty == true;
+    final quiet = keepVisible && hasProjects;
     try {
-      projectLoadingState.value = LoadingState.loading;
+      if (!quiet) projectLoadingState.value = LoadingState.loading;
 
       final response = await _projectRepository.getAllProject();
 
@@ -445,16 +447,20 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         }
 
         appLog('Loaded ${response.data?.data?.length ?? 0} projects');
-      } else {
+      } else if (!quiet) {
         projectLoadingState.value = LoadingState.error;
         AppSnackBar.error('Failed to load projects: ${response.message}');
+      } else {
+        appLog('Quiet project reload failed: ${response.statusCode} ${response.message}');
       }
     } catch (e) {
-      projectLoadingState.value = LoadingState.error;
       appLog('Error loading project list: $e');
-      AppSnackBar.error(
-        'errLoadProjects'.tr,
-      );
+      if (!quiet) {
+        projectLoadingState.value = LoadingState.error;
+        AppSnackBar.error(
+          'errLoadProjects'.tr,
+        );
+      }
     } finally {
       if (projectLoadingState.value != LoadingState.error) {
         projectLoadingState.value = LoadingState.idle;
@@ -1033,6 +1039,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
 
         AppSnackBar.success('timerPaused'.tr);
         appLog('Timer paused successfully via API');
+        await loadProjectList(keepVisible: true);
       } else {
         AppSnackBar.error('timerPauseFailed'.tr);
       }
@@ -1163,6 +1170,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         AppSnackBar.success('timerStopped'.tr);
         appLog('Timer stopped successfully via API');
         _refreshProjectTimeList();
+        await loadProjectList(keepVisible: true);
       } else {
         AppSnackBar.error('timerStopFailed'.tr);
       }

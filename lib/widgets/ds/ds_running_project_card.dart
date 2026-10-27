@@ -19,7 +19,9 @@ class DsRunningProjectCard extends StatelessWidget {
     required this.company,
     required this.today,
     required this.thisWeek,
-    required this.billable,
+    this.billable,
+    this.todayLabel,
+    this.weekLabel,
     required this.paused,
     required this.onStop,
     required this.onToggle,
@@ -32,7 +34,9 @@ class DsRunningProjectCard extends StatelessWidget {
   final String company;
   final String today;
   final String thisWeek;
-  final String billable;
+  final String? billable;
+  final String? todayLabel;
+  final String? weekLabel;
   final bool paused; // running vs paused (controls the pause/resume glyph)
   final bool stopLoading;
   final bool toggleLoading;
@@ -87,15 +91,20 @@ class DsRunningProjectCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              _stat('today1'.tr, today),
-              _vDivider(),
-              _stat('thisWeek'.tr, thisWeek),
-              _vDivider(),
-              _stat('billable'.tr, billable),
-            ],
-          ),
+          Builder(builder: (context) {
+            final third = billable;
+            return Row(
+              children: [
+                _stat(todayLabel ?? 'today1'.tr, today),
+                _vDivider(),
+                _stat(weekLabel ?? 'thisWeek'.tr, thisWeek),
+                if (third != null) ...[
+                  _vDivider(),
+                  _stat('billable'.tr, third),
+                ],
+              ],
+            );
+          }),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,

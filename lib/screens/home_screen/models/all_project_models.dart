@@ -65,6 +65,7 @@ class Datum {
     DateTime? startDate;
     DateTime? endDate;
     int? projectTime;
+    double? workedHours;
     List<String>? images;
     String? status;
     String? description;
@@ -81,6 +82,7 @@ class Datum {
         this.startDate,
         this.endDate,
         this.projectTime,
+        this.workedHours,
         this.images,
         this.status,
         this.description,
@@ -102,6 +104,7 @@ class Datum {
         startDate: json["startDate"] == null ? null : DateTime.parse(json["startDate"]),
         endDate: json["endDate"] == null ? null : DateTime.parse(json["endDate"]),
         projectTime: json["projectTime"],
+        workedHours: json["workedHours"] == null ? null : (json["workedHours"] as num).toDouble(),
         images: json["images"] == null ? [] : List<String>.from(json["images"]!.map((x) => x)),
         status: json["status"],
         description: json["description"],
@@ -119,6 +122,7 @@ class Datum {
         "startDate": startDate?.toIso8601String(),
         "endDate": endDate?.toIso8601String(),
         "projectTime": projectTime,
+        "workedHours": workedHours,
         "images": images == null ? [] : List<dynamic>.from(images!.map((x) => x)),
         "status": status,
         "description": description,

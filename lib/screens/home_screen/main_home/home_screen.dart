@@ -54,6 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${hh}h ${mm}m';
   }
 
+  String _fmtCompactHours(double? h) {
+    final v = h ?? 0;
+    var hours = v.floor();
+    var minutes = ((v - hours) * 60).round();
+    if (minutes == 60) {
+      hours += 1;
+      minutes = 0;
+    }
+    if (minutes == 0) return '${hours}h';
+    return '${hours}h ${minutes}m';
+  }
+
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return '${'goodMorning'.tr},';
@@ -220,26 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
           Text(_fmtHours(today),
               style: AppTextStyles.timer.copyWith(color: AppColors.white50)),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('dailyGoal'.tr,
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white50)),
-              Text('${_fmtHours(today)} / 8h',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white50)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: (today / 8).clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: AppColors.white50.withValues(alpha: 0.25),
-              valueColor: const AlwaysStoppedAnimation(AppColors.white50),
-            ),
-          ),
           const SizedBox(height: 16),
           if (!running) ...[
             Text(
@@ -695,9 +687,10 @@ class _HomeScreenState extends State<HomeScreen> {
             return DsRunningProjectCard(
               title: title,
               company: company,
-              today: _fmtMins(project.projectTime),
-              thisWeek: _fmtMins(project.duration),
-              billable: '\$0',
+              today: _fmtCompactHours(project.workedHours),
+              thisWeek: '${project.projectTime ?? 0}h',
+              todayLabel: 'workedSoFar'.tr,
+              weekLabel: 'allocated'.tr,
               paused: paused,
               stopLoading: controller.isTimerActionBusy(TimerActionWait.stop),
               toggleLoading: controller.isTimerActionBusy(
@@ -712,8 +705,8 @@ class _HomeScreenState extends State<HomeScreen> {
           return DsProjectTile(
             title: title,
             subtitle: company,
-            trailingText: '${project.projectTime ?? 0}h',
-            trailingSub: 'today1'.tr,
+            trailingText:
+                '${_fmtCompactHours(project.workedHours)} / ${project.projectTime ?? 0}h',
             actionMuted: controller.isStartBlockedFor(id),
             actionLoading: controller.isStartingProject(id),
             selected: controller.currentProjectId == id,
@@ -735,9 +728,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     });
   }
-
-  String _fmtMins(int? m) =>
-      (m == null || m <= 0) ? '0h 0m' : '${m ~/ 60}h ${m % 60}m';
 
   // ---------------------------------------------------------------------------
   // Hourly "continue or break" dialog — wiring preserved from the original.
