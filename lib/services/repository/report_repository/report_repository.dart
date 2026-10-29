@@ -2,6 +2,7 @@ import 'package:alpha_track/core/api_urls/api_urls.dart';
 import 'package:alpha_track/screens/home_screen/models/break_hours_model.dart';
 import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart';
 import 'package:alpha_track/screens/home_screen/models/today_breaks_periods_model.dart';
+import 'package:alpha_track/screens/home_screen/models/standing_totals_model.dart';
 import 'package:alpha_track/screens/home_screen/models/working_hours_summary_model.dart';
 import 'package:alpha_track/services/api/api_services.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
@@ -56,6 +57,20 @@ class ReportRepository {
     } catch (e) {
       errorLog("Exception in fetchWorkingHoursSummary", e);
       return WorkingHoursSummaryModel();
+    }
+  }
+
+  //! Worked, allocation, overtime, and break across in-progress projects.
+  Future<StandingTotalsModel> fetchStanding() async {
+    try {
+      final response = await apiServices.apiGetServices(ApiUrls.projectStanding);
+      if (response != null) {
+        return StandingTotalsModel.fromJson(response);
+      }
+      return StandingTotalsModel();
+    } catch (e) {
+      errorLog("Exception in fetchStanding", e);
+      return StandingTotalsModel();
     }
   }
 

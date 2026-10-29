@@ -181,6 +181,8 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'WORKED THIS MONTH',
       'workVsBreak': 'Work vs Break',
       'breakdown': 'BREAKDOWN',
+      'activeProjects': 'ACTIVE PROJECTS',
+      'noActiveProjects': 'No active projects',
       'plannedHoursLine': 'Planned @hours',
       'worked': 'Worked',
       'breakLabel': 'Break',
@@ -303,6 +305,7 @@ class AppTranslation extends Translations {
       'failedFetchGallery': 'Failed to fetch gallery images',
       'failedPickImage': 'Failed to pick image',
       'failedTakePhoto': 'Failed to take photo',
+      'cameraAccessNeeded': 'Camera access is needed to take a photo.',
       'imageAdded': 'Image added successfully!',
       'uploadingImage': 'Please wait while we upload your image...',
       'imageUploaded': 'Image uploaded successfully!',
@@ -334,9 +337,9 @@ class AppTranslation extends Translations {
       'locBullet2':
           'Record your location when you start and stop work sessions.',
       'locBullet3':
-          'Track location in the background during active work sessions to confirm job-site presence.',
+          'Record a location fix while the app is open when you pause or resume a work session.',
       'locFooter':
-          'Your location data is sent to our servers and used solely for attendance and project management purposes. Location tracking is only active during your work sessions.',
+          'Your location is sent to our servers and used only for attendance and project management. A location fix is taken while the app is open when you start, pause, resume, or stop a session.',
       'allow': 'Allow',
       'deny': 'Deny',
       'locationServicesDisabled': 'Location Services Disabled',
@@ -876,6 +879,8 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'DIESEN MONAT GEARBEITET',
       'workVsBreak': 'Arbeit vs. Pause',
       'breakdown': 'AUFSCHLÜSSELUNG',
+      'activeProjects': 'AKTIVE PROJEKTE',
+      'noActiveProjects': 'Keine aktiven Projekte',
       'plannedHoursLine': 'Geplant @hours',
       'worked': 'Gearbeitet',
       'breakLabel': 'Pause',
@@ -1009,6 +1014,7 @@ class AppTranslation extends Translations {
       'failedFetchGallery': 'Galeriebilder konnten nicht geladen werden',
       'failedPickImage': 'Bild konnte nicht ausgewählt werden',
       'failedTakePhoto': 'Foto konnte nicht aufgenommen werden',
+      'cameraAccessNeeded': 'Kamerazugriff wird benötigt, um ein Foto aufzunehmen.',
       'imageAdded': 'Bild erfolgreich hinzugefügt!',
       'uploadingImage': 'Bitte warten, Ihr Bild wird hochgeladen...',
       'imageUploaded': 'Bild erfolgreich hochgeladen!',
@@ -1040,9 +1046,9 @@ class AppTranslation extends Translations {
       'locBullet2':
           'Ihren Standort beim Starten und Beenden von Arbeitssitzungen zu erfassen.',
       'locBullet3':
-          'Ihren Standort während aktiver Arbeitssitzungen im Hintergrund zu erfassen, um die Anwesenheit am Einsatzort zu bestätigen.',
+          'Einen Standortpunkt zu erfassen, während die App geöffnet ist, wenn Sie eine Arbeitssitzung pausieren oder fortsetzen.',
       'locFooter':
-          'Ihre Standortdaten werden an unsere Server gesendet und ausschließlich zur Anwesenheits- und Projektverwaltung verwendet. Die Standorterfassung ist nur während Ihrer Arbeitssitzungen aktiv.',
+          'Ihre Standortdaten werden an unsere Server gesendet und ausschließlich zur Anwesenheits- und Projektverwaltung verwendet. Ein Standortpunkt wird erfasst, während die App geöffnet ist, wenn Sie eine Sitzung starten, pausieren, fortsetzen oder beenden.',
       'allow': 'Erlauben',
       'deny': 'Ablehnen',
       'locationServicesDisabled': 'Ortungsdienste deaktiviert',
@@ -1582,6 +1588,8 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'العمل هذا الشهر',
       'workVsBreak': 'العمل مقابل الاستراحة',
       'breakdown': 'التفصيل',
+      'activeProjects': 'المشاريع النشطة',
+      'noActiveProjects': 'لا توجد مشاريع نشطة',
       'plannedHoursLine': 'المخطط @hours',
       'worked': 'العمل',
       'breakLabel': 'الاستراحة',
@@ -1707,6 +1715,7 @@ class AppTranslation extends Translations {
       'failedFetchGallery': 'فشل تحميل صور المعرض',
       'failedPickImage': 'فشل اختيار الصورة',
       'failedTakePhoto': 'فشل التقاط الصورة',
+      'cameraAccessNeeded': 'يلزم الوصول إلى الكاميرا لالتقاط صورة.',
       'imageAdded': 'تمت إضافة الصورة بنجاح!',
       'uploadingImage': 'يرجى الانتظار أثناء رفع الصورة...',
       'imageUploaded': 'تم رفع الصورة بنجاح!',
@@ -1735,9 +1744,9 @@ class AppTranslation extends Translations {
       'locBullet1': 'التحقق من حضورك في الموقع ومكان عملك لتتبع المشروع.',
       'locBullet2': 'تسجيل موقعك عند بدء جلسات العمل وإنهائها.',
       'locBullet3':
-          'تتبع الموقع في الخلفية أثناء جلسات العمل النشطة لتأكيد التواجد في موقع العمل.',
+          'تسجيل موقعك أثناء فتح التطبيق عند إيقاف جلسة العمل مؤقتاً أو استئنافها.',
       'locFooter':
-          'تُرسل بيانات موقعك إلى خوادمنا وتُستخدم فقط لأغراض الحضور وإدارة المشاريع. يكون تتبع الموقع نشطاً فقط أثناء جلسات العمل.',
+          'تُرسل بيانات موقعك إلى خوادمنا وتُستخدم فقط لأغراض الحضور وإدارة المشاريع. يُؤخذ موقع واحد أثناء فتح التطبيق عند بدء الجلسة أو إيقافها مؤقتاً أو استئنافها أو إنهائها.',
       'allow': 'السماح',
       'deny': 'رفض',
       'locationServicesDisabled': 'خدمات الموقع معطّلة',
@@ -2268,6 +2277,8 @@ class AppTranslation extends Translations {
       'workedThisMonth': 'LUCRAT LUNA ACEASTA',
       'workVsBreak': 'Lucru vs Pauză',
       'breakdown': 'DEFALCARE',
+      'activeProjects': 'PROIECTE ACTIVE',
+      'noActiveProjects': 'Niciun proiect activ',
       'plannedHoursLine': 'Planificat: @hours',
       'worked': 'Lucrat',
       'breakLabel': 'Pauză',
@@ -2395,6 +2406,7 @@ class AppTranslation extends Translations {
       'failedFetchGallery': 'Încărcarea imaginilor din galerie a eșuat',
       'failedPickImage': 'Selectarea imaginii a eșuat',
       'failedTakePhoto': 'Fotografierea a eșuat',
+      'cameraAccessNeeded': 'Este necesar accesul la cameră pentru a face o fotografie.',
       'imageAdded': 'Imagine adăugată cu succes!',
       'uploadingImage': 'Așteaptă, imaginea se încarcă...',
       'imageUploaded': 'Imagine încărcată cu succes!',
@@ -2426,9 +2438,9 @@ class AppTranslation extends Translations {
       'locBullet2':
           'Înregistra locația când pornești și oprești sesiunile de lucru.',
       'locBullet3':
-          'Urmări locația în fundal în timpul sesiunilor active pentru a confirma prezența la locul de muncă.',
+          'Înregistra un punct de locație cât timp aplicația este deschisă, când întrerupi sau reiei o sesiune de lucru.',
       'locFooter':
-          'Datele tale de locație sunt trimise pe serverele noastre și folosite exclusiv pentru prezență și managementul proiectelor. Urmărirea locației este activă doar în timpul sesiunilor de lucru.',
+          'Datele tale de locație sunt trimise pe serverele noastre și folosite exclusiv pentru prezență și managementul proiectelor. Un punct de locație este înregistrat cât timp aplicația este deschisă, când pornești, întrerupi, reiei sau oprești o sesiune.',
       'allow': 'Permite',
       'deny': 'Refuză',
       'locationServicesDisabled': 'Servicii de localizare dezactivate',

@@ -45,19 +45,27 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     return 0; // default everything else to Active
   }
 
-  String _formatHours(double? hours) {
-    final h = hours ?? 0;
-    final whole = h.floor();
-    final minutes = ((h - whole) * 60).round();
-    if (minutes == 0) return '${whole}h';
-    return '${whole}h ${minutes}m';
+  String _fmtCompactHours(double? h) {
+    final v = h ?? 0;
+    var hours = v.floor();
+    var minutes = ((v - hours) * 60).round();
+    if (minutes == 60) {
+      hours += 1;
+      minutes = 0;
+    }
+    if (minutes == 0) return '${hours}h';
+    return '${hours}h ${minutes}m';
   }
 
-  String _todayLabel(String? projectId) =>
-      _formatHours(controller.projectTodayHours[projectId]);
+  String _fmtLimitHours(double? h) {
+    final v = h ?? 0;
+    if (v == v.roundToDouble()) return '${v.toInt()}h';
+    final text = ((v * 100).round() / 100).toStringAsFixed(2);
+    return '${text.replaceFirst(RegExp(r'0+$'), '')}h';
+  }
 
-  String _weekLabel(String? projectId) =>
-      _formatHours(controller.projectWeekHours[projectId]);
+  String _allocationLabel(Datum project) =>
+      '${_fmtCompactHours(project.workedHours)} / ${_fmtLimitHours(project.projectTime)}';
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +147,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             project.id ?? '',
             projectTitle: project.title,
           ),
-          formatTime: _todayLabel,
+          allocationLabel: _allocationLabel,
         ));
   }
 
@@ -197,9 +205,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       return DsRunningProjectCard(
         title: title,
         company: company,
-        today: _todayLabel(project.id),
-        thisWeek: _weekLabel(project.id),
-        billable: '\$0',
+        today: _fmtCompactHours(project.workedHours),
+        thisWeek: _fmtLimitHours(project.projectTime),
+        todayLabel: 'workedSoFar'.tr,
+        weekLabel: 'allocated'.tr,
         paused: paused,
         stopLoading: controller.isTimerActionBusy(TimerActionWait.stop),
         toggleLoading: controller.isTimerActionBusy(
@@ -299,11 +308,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _stat('today1'.tr, _todayLabel(project.id)),
+              _stat('workedSoFar'.tr, _fmtCompactHours(project.workedHours)),
               _divider(),
-              _stat('thisWeek'.tr, _weekLabel(project.id)),
-              _divider(),
-              _stat('billable'.tr, '\$0'),
+              _stat('allocated'.tr, _fmtLimitHours(project.projectTime)),
             ],
           ),
           const SizedBox(height: 16),
@@ -354,8 +361,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       return DsProjectTile(
         title: title,
         subtitle: company,
-        trailingText: _todayLabel(project.id),
-        trailingSub: 'today1'.tr,
+        trailingText: _allocationLabel(project),
         actionIcon:
             running ? Icons.pause_rounded : Icons.play_arrow_rounded,
         actionMuted: controller.isStartBlockedFor(id),
@@ -412,13 +418,13 @@ class ProjectSearchScreen extends StatefulWidget {
     required this.projects,
     required this.onOpen,
     required this.onSelect,
-    required this.formatTime,
+    required this.allocationLabel,
   });
 
   final List<Datum> projects;
   final void Function(Datum) onOpen;
   final void Function(Datum) onSelect;
-  final String Function(String? projectId) formatTime;
+  final String Function(Datum project) allocationLabel;
 
   @override
   State<ProjectSearchScreen> createState() => _ProjectSearchScreenState();
@@ -509,7 +515,6 @@ class _ProjectSearchScreenState extends State<ProjectSearchScreen> {
             Expanded(
               child: Obx(() {
                 final home = Get.find<HomeScreenController>();
-                home.projectTodayHours.length;
                 home.currentProjectId;
                 home.openSessionProjectId;
                 if (results.isEmpty) return _noResults();
@@ -528,8 +533,7 @@ class _ProjectSearchScreenState extends State<ProjectSearchScreen> {
                       return DsProjectTile(
                         title: p.title ?? 'Untitled',
                         subtitle: p.company?.name ?? '',
-                        trailingText: widget.formatTime(p.id),
-                        trailingSub: 'today1'.tr,
+                        trailingText: widget.allocationLabel(p),
                         selected: home.currentProjectId == id,
                         onLongPress: home.showsSelectFor(id)
                             ? () => widget.onSelect(p)

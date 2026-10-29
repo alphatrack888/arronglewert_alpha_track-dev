@@ -7,6 +7,7 @@ import 'package:alpha_track/screens/home_screen/models/all_project_models.dart';
 import 'package:alpha_track/screens/home_screen/models/break_hours_model.dart';
 import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart';
 import 'package:alpha_track/screens/home_screen/models/single_project_model.dart';
+import 'package:alpha_track/screens/home_screen/models/standing_totals_model.dart';
 import 'package:alpha_track/screens/home_screen/models/today_breaks_periods_model.dart';
 import 'package:alpha_track/screens/home_screen/models/working_hours_summary_model.dart';
 import 'package:alpha_track/services/break_preference/break_preference_service.dart';
@@ -1752,6 +1753,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
   final Rxn<DailySummaryModel> dailySummaryData = Rxn<DailySummaryModel>();
   final Rxn<WorkingHoursSummaryModel> workingHoursSummary =
       Rxn<WorkingHoursSummaryModel>();
+  final Rxn<StandingTotalsModel> standingTotals = Rxn<StandingTotalsModel>();
   final Rxn<TodayBreakPeriodsModel> todayBreakPeriods =
       Rxn<TodayBreakPeriodsModel>();
 
@@ -1823,6 +1825,7 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       breakHoursData.value = DemoData.breakHours;
       dailySummaryData.value = DemoData.dailySummary;
       workingHoursSummary.value = DemoData.workingHours;
+      standingTotals.value = DemoData.standingTotals;
       final selected = utcDateKey(selectedDate.value);
       reportFrom.value = selected;
       reportTo.value = selected;
@@ -1861,6 +1864,9 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
       final stripFuture = includeStrip
           ? _reportRepository.fetchWorkingHoursSummary(todayDate: selected)
           : null;
+      final standingFuture = includeStrip
+          ? _reportRepository.fetchStanding()
+          : null;
 
       final dailySummaryResponse = await summaryFuture;
       if (generation != _reportLoadGeneration) return;
@@ -1874,6 +1880,14 @@ class HomeScreenController extends GetxController with WidgetsBindingObserver {
         if (generation != _reportLoadGeneration) return;
         if (workingHoursResponse.statusCode == 200) {
           workingHoursSummary.value = workingHoursResponse;
+        }
+      }
+
+      if (standingFuture != null) {
+        final standingResponse = await standingFuture;
+        if (generation != _reportLoadGeneration) return;
+        if (standingResponse.statusCode == 200) {
+          standingTotals.value = standingResponse;
         }
       }
 

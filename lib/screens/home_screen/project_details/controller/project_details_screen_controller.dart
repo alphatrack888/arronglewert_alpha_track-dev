@@ -3,7 +3,6 @@ import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart'
 import 'package:alpha_track/screens/home_screen/models/single_project_model.dart';
 import 'package:alpha_track/screens/home_screen/project_details/project_details_note_mapper.dart';
 import 'package:alpha_track/screens/home_screen/project_details/project_time_query.dart';
-import 'package:alpha_track/screens/report_screen/report_period.dart';
 import 'package:alpha_track/services/repository/note_repository/note_repository.dart';
 import 'package:alpha_track/services/repository/project_repository/project_repository.dart';
 import 'package:alpha_track/services/repository/report_repository/report_repository.dart';
@@ -34,7 +33,6 @@ class ProjectDetailsScreenController extends GetxController {
   String? currentProjectId;
 
   final Rxn<DailySummaryModel> dailySummaryData = Rxn<DailySummaryModel>();
-  final Rxn<DailySummaryModel> weekSummaryData = Rxn<DailySummaryModel>();
   final Rx<ProjectTimeLoadingState> timeLoadingState =
       ProjectTimeLoadingState.idle.obs;
 
@@ -72,34 +70,17 @@ class ProjectDetailsScreenController extends GetxController {
 
   Future<void> loadTimeData(String projectId) async {
     timeLoadingState.value = ProjectTimeLoadingState.loading;
-    weekSummaryData.value = null;
     if (kDemoMode) {
       dailySummaryData.value = DemoData.dailySummary;
-      weekSummaryData.value = DailySummaryModel.fromJson({
-        'statusCode': 200,
-        'data': {
-          'totalTime': DemoData.dailySummary.data?.totalTime,
-          'overtime': '0h 0m',
-          'overtimeInHoursFormatted': '0h 0m',
-        },
-      });
       timeLoadingState.value = ProjectTimeLoadingState.idle;
       return;
     }
     try {
       final today = utcDateKey();
-      final weekFrom = utcMondayKey(DateTime.now());
-      final dailyFuture = _reportRepository.fetchDailySummary(
+      final daily = await _reportRepository.fetchDailySummary(
         projectId: projectId,
         todayData: today,
       );
-      final weekFuture = _reportRepository.fetchDailySummary(
-        projectId: projectId,
-        from: weekFrom,
-        to: today,
-      );
-
-      final daily = await dailyFuture;
       if (daily.statusCode == 200) {
         dailySummaryData.value = daily;
         timeLoadingState.value = ProjectTimeLoadingState.idle;
@@ -107,9 +88,6 @@ class ProjectDetailsScreenController extends GetxController {
         timeLoadingState.value = ProjectTimeLoadingState.error;
         appLog('Daily summary fetch failed: ${daily.statusCode} ${daily.message}');
       }
-
-      final week = await weekFuture;
-      if (week.statusCode == 200) weekSummaryData.value = week;
     } catch (e) {
       appLog('Error loading project time data: $e');
       timeLoadingState.value = ProjectTimeLoadingState.error;

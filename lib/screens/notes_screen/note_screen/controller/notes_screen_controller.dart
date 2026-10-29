@@ -3,6 +3,7 @@ import 'package:alpha_track/screens/notes_screen/notes_view/controller/note_veiw
 import 'package:alpha_track/services/repository/project_repository/project_repository.dart';
 import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:get/get.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../../widgets/app_snackbar/app_snackbar.dart';
@@ -11,7 +12,7 @@ class NotesScreenController extends GetxController {
   final ProjectRepository projectRepository = ProjectRepository();
   RxBool isLoading = false.obs;
   Rxn<AllProjectModel> allProjectData = Rxn<AllProjectModel>();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePickerService _imagePicker = ImagePickerService();
   final RxList<XFile> selectedImages = <XFile>[].obs;
   final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
 
@@ -24,7 +25,9 @@ class NotesScreenController extends GetxController {
 
   Future<void> sendPhoto() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final context = Get.context;
+      if (context == null) return;
+      final images = await _imagePicker.pickMultipleFromGallery(context);
       if (images.isNotEmpty) {
         selectedImages.assignAll(images);
       }

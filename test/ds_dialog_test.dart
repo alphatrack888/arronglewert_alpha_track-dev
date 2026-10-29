@@ -40,13 +40,13 @@ void main() {
                         'for project tracking.'),
                     Text('Record your location when you start and stop work '
                         'sessions.'),
-                    Text('Track location in the background during active work '
-                        'sessions to confirm job-site presence.'),
+                    Text('Record a location fix while the app is open when you '
+                        'pause or resume a work session.'),
                     SizedBox(height: 12),
-                    Text('Your location data is sent to our servers and used '
-                        'solely for attendance and project management purposes. '
-                        'Location tracking is only active during your work '
-                        'sessions.'),
+                    Text('Your location is sent to our servers and used only '
+                        'for attendance and project management. A location fix '
+                        'is taken while the app is open when you start, pause, '
+                        'resume, or stop a session.'),
                   ],
                 ),
               ),

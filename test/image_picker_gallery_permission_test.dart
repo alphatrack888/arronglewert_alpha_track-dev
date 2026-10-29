@@ -3,26 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  group('shouldRequestGalleryPermissionBeforePick', () {
-    test('returns false on API 33+ (Photo Picker)', () {
-      expect(shouldRequestGalleryPermissionBeforePick(33), isFalse);
-      expect(shouldRequestGalleryPermissionBeforePick(34), isFalse);
-    });
-
-    test('returns true below API 33', () {
-      expect(shouldRequestGalleryPermissionBeforePick(32), isTrue);
-      expect(shouldRequestGalleryPermissionBeforePick(29), isTrue);
-    });
+  test('gallery pick does not require a storage or photos grant first', () {
+    expect(galleryRequiresPermissionBeforePick(), isFalse);
   });
 
-  group('isGalleryPermissionSufficient', () {
-    test('granted and limited allow pick', () {
-      expect(isGalleryPermissionSufficient(PermissionStatus.granted), isTrue);
-      expect(isGalleryPermissionSufficient(PermissionStatus.limited), isTrue);
+  group('cameraDenialOpensSettings', () {
+    test('a normal denial does not open Settings', () {
+      expect(cameraDenialOpensSettings(PermissionStatus.denied), isFalse);
+      expect(cameraDenialOpensSettings(PermissionStatus.granted), isFalse);
+      expect(cameraDenialOpensSettings(PermissionStatus.limited), isFalse);
     });
 
-    test('denied blocks pick', () {
-      expect(isGalleryPermissionSufficient(PermissionStatus.denied), isFalse);
+    test('a permanent or restricted denial opens Settings', () {
+      expect(
+        cameraDenialOpensSettings(PermissionStatus.permanentlyDenied),
+        isTrue,
+      );
+      expect(cameraDenialOpensSettings(PermissionStatus.restricted), isTrue);
     });
   });
 }

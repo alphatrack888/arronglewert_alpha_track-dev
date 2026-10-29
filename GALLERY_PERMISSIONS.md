@@ -6,8 +6,7 @@ Profile gallery and avatar use [`ImagePickerService`](lib/services/image_picker_
 
 | Android API | Before gallery pick | Manifest |
 |-------------|---------------------|----------|
-| **33+** | No `Permission.photos` — open picker directly | `READ_MEDIA_IMAGES` / legacy storage **stripped** (`tools:node="remove"`) |
-| **32−** | `Permission.storage` if needed | Same strip; plugins may merge legacy entries — CI verifies release bundle |
+| **Every version** | No storage or photos grant — open the system Photo Picker directly | `READ_MEDIA_IMAGES` / legacy storage **stripped** (`tools:node="remove"`). `CAMERA` is declared for taking a photo. |
 
 [`main.dart`](lib/main.dart) sets `ImagePickerAndroid.useAndroidPhotoPicker = true` on supported versions.
 

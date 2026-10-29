@@ -66,6 +66,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return '${hours}h ${minutes}m';
   }
 
+  /// Whole limits read `40h`. A fractional limit keeps its decimals (`40.5h`).
+  String _fmtLimitHours(double? h) {
+    final v = h ?? 0;
+    if (v == v.roundToDouble()) return '${v.toInt()}h';
+    final text = ((v * 100).round() / 100).toStringAsFixed(2);
+    return '${text.replaceFirst(RegExp(r'0+$'), '')}h';
+  }
+
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return '${'goodMorning'.tr},';
@@ -688,7 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: title,
               company: company,
               today: _fmtCompactHours(project.workedHours),
-              thisWeek: '${project.projectTime ?? 0}h',
+              thisWeek: _fmtLimitHours(project.projectTime),
               todayLabel: 'workedSoFar'.tr,
               weekLabel: 'allocated'.tr,
               paused: paused,
@@ -706,7 +714,7 @@ class _HomeScreenState extends State<HomeScreen> {
             title: title,
             subtitle: company,
             trailingText:
-                '${_fmtCompactHours(project.workedHours)} / ${project.projectTime ?? 0}h',
+                '${_fmtCompactHours(project.workedHours)} / ${_fmtLimitHours(project.projectTime)}',
             actionMuted: controller.isStartBlockedFor(id),
             actionLoading: controller.isStartingProject(id),
             selected: controller.currentProjectId == id,

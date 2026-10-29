@@ -64,7 +64,7 @@ class Datum {
     int? duration;
     DateTime? startDate;
     DateTime? endDate;
-    int? projectTime;
+    double? projectTime;
     double? workedHours;
     List<String>? images;
     String? status;
@@ -103,7 +103,7 @@ class Datum {
         duration: json["duration"],
         startDate: json["startDate"] == null ? null : DateTime.parse(json["startDate"]),
         endDate: json["endDate"] == null ? null : DateTime.parse(json["endDate"]),
-        projectTime: json["projectTime"],
+        projectTime: json["projectTime"] == null ? null : (json["projectTime"] as num).toDouble(),
         workedHours: json["workedHours"] == null ? null : (json["workedHours"] as num).toDouble(),
         images: json["images"] == null ? [] : List<String>.from(json["images"]!.map((x) => x)),
         status: json["status"],

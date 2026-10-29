@@ -5,6 +5,8 @@ import 'package:alpha_track/screens/home_screen/models/break_hours_model.dart'
     as brk;
 import 'package:alpha_track/screens/home_screen/models/daily_summary_model.dart'
     as daily;
+import 'package:alpha_track/screens/home_screen/models/standing_totals_model.dart'
+    as standing;
 import 'package:alpha_track/screens/home_screen/models/working_hours_summary_model.dart'
     as wh;
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart'
@@ -74,6 +76,7 @@ class DemoData {
               "company": {"_id": "c1", "name": "Alpha Team Security"},
               "duration": 480,
               "projectTime": 263,
+              "workedHours": 10,
               "status": "active",
               "startDate": "2026-06-01T09:00:00.000Z",
               "endDate": "2026-08-30T17:00:00.000Z",
@@ -89,6 +92,7 @@ class DemoData {
               "company": {"_id": "c2", "name": "Design retainer"},
               "duration": 120,
               "projectTime": 38,
+              "workedHours": 40,
               "status": "active",
               "startDate": "2026-06-10T09:00:00.000Z",
               "endDate": "2026-07-10T17:00:00.000Z",
@@ -104,6 +108,7 @@ class DemoData {
               "company": {"_id": "c3", "name": "Brand refresh"},
               "duration": 0,
               "projectTime": 0,
+              "workedHours": 5,
               "status": "upcoming",
               "startDate": "2026-07-15T09:00:00.000Z",
               "endDate": "2026-09-01T17:00:00.000Z",
@@ -119,6 +124,7 @@ class DemoData {
               "company": {"_id": "c4", "name": "Web platform"},
               "duration": 2400,
               "projectTime": 1820,
+              "workedHours": 100,
               "status": "completed",
               "startDate": "2026-02-01T09:00:00.000Z",
               "endDate": "2026-05-20T17:00:00.000Z",
@@ -134,6 +140,7 @@ class DemoData {
               "company": {"_id": "c5", "name": "iOS app"},
               "duration": 300,
               "projectTime": 95,
+              "workedHours": 12,
               "status": "cancelled",
               "startDate": "2026-03-01T09:00:00.000Z",
               "endDate": "2026-04-01T17:00:00.000Z",
@@ -143,6 +150,21 @@ class DemoData {
               "__v": 0
             }
           ]
+        }
+      });
+
+  /// Active demo projects are Osterberg (10h of 263h) and Sparktech (40h of 38h).
+  static standing.StandingTotalsModel get standingTotals =>
+      standing.StandingTotalsModel.fromJson({
+        "statusCode": 200,
+        "success": true,
+        "message": "demo",
+        "data": {
+          "workedHours": 50,
+          "allocatedHours": 301,
+          "overtimeHours": 2,
+          "breakHours": 0.75,
+          "projectCount": 2,
         }
       });
 
@@ -179,10 +201,8 @@ class DemoData {
         "message": "demo",
         "data": {
           "totalTime": "5h 30m",
-          "overtime": "0h 0m",
           "totalBreakInHours": "0.75",
           "totalBreakInHoursFormatted": "0h 45m",
-          "overtimeInHoursFormatted": "0h 0m",
           "dailyWorkedHours": [
             {"date": day, "hours": "5.50"}
           ],
@@ -219,6 +239,16 @@ class DemoData {
   }
 
   // ---- Single project (Project Details) -------------------------------------
+  /// Limit and committed hours for each demo project. Overtime is worked
+  /// minus the limit, and stays 0 when the limit is 0.
+  static const Map<String, List<num>> _projectHours = {
+    'demo_p1': [263, 10],
+    'demo_p2': [38, 40],
+    'demo_p3': [0, 5],
+    'demo_p4': [1820, 100],
+    'demo_p5': [95, 12],
+  };
+
   static const Map<String, List<String>> _projectMeta = {
     'demo_p1': ['Osterberg', 'Alpha Team Security', 'active'],
     'demo_p2': ['Sparktech Agency', 'Design retainer', 'active'],
@@ -229,6 +259,12 @@ class DemoData {
 
   static sp.SingleProjectModel singleProject(String id) {
     final m = _projectMeta[id] ?? ['Garden Cleaner', 'Green Co', 'active'];
+    final hours = _projectHours[id] ?? const [263, 0];
+    final projectTime = hours[0];
+    final workedHours = hours[1];
+    final overtimeHours = projectTime > 0 && workedHours > projectTime
+        ? workedHours - projectTime
+        : 0;
     return sp.SingleProjectModel.fromJson({
       "statusCode": 200,
       "success": true,
@@ -239,7 +275,9 @@ class DemoData {
         "company": {"_id": "c1", "name": m[1]},
         "status": m[2],
         "duration": 480,
-        "projectTime": 263,
+        "projectTime": projectTime,
+        "workedHours": workedHours,
+        "overtimeHours": overtimeHours,
         "startDate": "2026-03-12T09:00:00.000Z",
         "endDate": null,
         "employees": ["John Doe", "Dana R."],

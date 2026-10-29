@@ -15,6 +15,7 @@ class ApiUrls {
   static const String changePasswrod = "$baseUrl/auth/change-password";
 
   static const String allProject = "$baseUrl/project";
+  static const String projectStanding = "$baseUrl/project/standing";
   static const String singleProject = "$baseUrl/project/";
   static const String startTimer = "$baseUrl/timetracker/start";
   static const String openSessions = "$baseUrl/timetracker/open";

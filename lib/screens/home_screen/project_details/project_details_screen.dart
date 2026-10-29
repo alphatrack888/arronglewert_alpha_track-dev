@@ -333,7 +333,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   /// controller (daily summary + working-hours summary); nothing is hardcoded.
   Widget _timeTracker(SingleProjectModelData? data) {
     final daily = controller.dailySummaryData.value?.data;
-    final week = controller.weekSummaryData.value?.data;
     final timeState = controller.timeLoadingState.value;
     final sessions = sortedSessionsByStartDesc(daily?.sessions);
     final kind = timeTrackerListKind(
@@ -347,12 +346,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       children: [
         Row(
           children: [
-            _ttStat('totalLogged'.tr, _formatSummaryHours(daily?.totalTime)),
+            _ttStat('workedSoFar'.tr, _formatHours(data?.workedHours)),
             const SizedBox(width: 12),
-            _ttStat('thisWeek'.tr, _formatSummaryHours(week?.totalTime)),
+            _ttStat('allocated'.tr, _fmtLimitHours(data?.projectTime)),
             const SizedBox(width: 12),
-            _ttStat('overtime'.tr,
-                week?.overtimeInHoursFormatted ?? week?.overtime ?? '0h 0m'),
+            _ttStat('overtime'.tr, _formatHoursMinutes(data?.overtimeHours)),
           ],
         ),
         const SizedBox(height: 16),
@@ -415,22 +413,27 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
   }
 
-  /// Summary `totalTime` is a numeric hours string (`"5.50"`).
-  String _formatSummaryHours(String? raw) {
-    final parsed = double.tryParse(raw ?? '');
-    if (parsed == null) {
-      if (raw == null || raw.isEmpty) return '0h';
-      return raw;
-    }
-    return _formatHours(parsed);
-  }
-
   String _formatHours(double? hours) {
     final h = hours ?? 0;
     final whole = h.floor();
     final minutes = ((h - whole) * 60).round();
     if (minutes == 0) return '${whole}h';
     return '${whole}h ${minutes}m';
+  }
+
+  String _fmtLimitHours(double? h) {
+    final v = h ?? 0;
+    if (v == v.roundToDouble()) return '${v.toInt()}h';
+    final text = ((v * 100).round() / 100).toStringAsFixed(2);
+    return '${text.replaceFirst(RegExp(r'0+$'), '')}h';
+  }
+
+  String _formatHoursMinutes(double? hours) {
+    final totalMinutes = ((hours ?? 0) * 60).round();
+    final safe = totalMinutes < 0 ? 0 : totalMinutes;
+    final h = safe ~/ 60;
+    final m = safe % 60;
+    return '${h}h ${m}m';
   }
 
   Widget _timeEmptyState() {

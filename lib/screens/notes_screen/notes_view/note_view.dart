@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:alpha_track/screens/notes_screen/note_screen/controller/notes_screen_controller.dart';
 import 'package:alpha_track/screens/notes_screen/notes_view/controller/note_veiw_controller.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
@@ -584,8 +584,8 @@ class NoteView extends StatelessWidget {
                     icon: LucideIcons.imagePlus,
                     height: 44,
                     onTap: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final List<XFile> images = await picker.pickMultiImage();
+                      final images = await ImagePickerService()
+                          .pickMultipleFromGallery(Get.context!);
                       if (images.isNotEmpty) {
                         controller.selectedImages.addAll(images);
                       }

@@ -40,7 +40,9 @@ class SingleProjectModelData {
     int? duration;
     DateTime? startDate;
     DateTime? endDate;
-    int? projectTime;
+    double? projectTime;
+    double? workedHours;
+    double? overtimeHours;
     List<String>? images;
     String? audio; // Added audio field
     String? status;
@@ -58,6 +60,8 @@ class SingleProjectModelData {
         this.startDate,
         this.endDate,
         this.projectTime,
+        this.workedHours,
+        this.overtimeHours,
         this.images,
         this.audio, // Added audio field
         this.status,
@@ -79,7 +83,9 @@ class SingleProjectModelData {
         duration: json["duration"],
         startDate: json["startDate"] == null ? null : DateTime.parse(json["startDate"]),
         endDate: json["endDate"] == null ? null : DateTime.parse(json["endDate"]),
-        projectTime: json["projectTime"],
+        projectTime: json["projectTime"] == null ? null : (json["projectTime"] as num).toDouble(),
+        workedHours: json["workedHours"] == null ? null : (json["workedHours"] as num).toDouble(),
+        overtimeHours: json["overtimeHours"] == null ? null : (json["overtimeHours"] as num).toDouble(),
         images: json["images"] == null ? [] : List<String>.from(json["images"]!.map((x) => x)),
         audio: json["audio"], // Added audio field
         status: json["status"],
@@ -98,6 +104,8 @@ class SingleProjectModelData {
         "startDate": startDate?.toIso8601String(),
         "endDate": endDate?.toIso8601String(),
         "projectTime": projectTime,
+        "workedHours": workedHours,
+        "overtimeHours": overtimeHours,
         "images": images == null ? [] : List<dynamic>.from(images!.map((x) => x)),
         "audio": audio, // Added audio field
         "status": status,

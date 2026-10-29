@@ -11,7 +11,7 @@ import 'package:alpha_track/widgets/ds/ds_bottom_sheet.dart';
 import 'package:alpha_track/widgets/ds/ds_waveform.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Full-screen Create Note (Figma Notes flow): title + description, a GALLERY
@@ -33,7 +33,7 @@ class CreateNoteScreen extends StatefulWidget {
 class _CreateNoteScreenState extends State<CreateNoteScreen> {
   final NoteVeiwController c = Get.put(NoteVeiwController());
   final TextEditingController _titleCtrl = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePickerService _imagePicker = ImagePickerService();
   bool _showTranscript = false;
 
   // Demo transcript shown for an attached voice note (real transcription is a
@@ -60,7 +60,7 @@ class _CreateNoteScreenState extends State<CreateNoteScreen> {
   }
 
   Future<void> _pickImages() async {
-    final imgs = await _picker.pickMultiImage();
+    final imgs = await _imagePicker.pickMultipleFromGallery(context);
     if (imgs.isNotEmpty) c.selectedImages.addAll(imgs);
   }
 

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   static LocationService? _instance;
@@ -144,18 +143,12 @@ class LocationService {
     );
   }
 
-  /// Request location permissions with background support
+  /// Request while-in-use location permission.
   Future<LocationPermission> requestLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-    }
-
-    // Request background location permission if needed
-    if (permission == LocationPermission.whileInUse) {
-      // For background location, you might need additional permission
-      await Permission.locationAlways.request();
     }
 
     return permission;
@@ -217,13 +210,8 @@ class LocationService {
   /// Start background location tracking
   Future<void> startBackgroundLocationTracking() async {
     try {
-      // Ensure we have proper permissions
+      // While-in-use only. Clock actions take one fix while the app is open.
       await requestLocationPermission();
-
-      // Check background permission specifically
-      if (await Permission.locationAlways.isDenied) {
-        await Permission.locationAlways.request();
-      }
 
       // Start listening to location updates
       getLocationStream().listen(

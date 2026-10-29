@@ -34,21 +34,15 @@ class DailySummaryModel {
 
 class Data {
     String? totalTime;
-    String? overtime;
-    String? plannedHours;
     String? totalBreakInHours;
     String? totalBreakInHoursFormatted;
-    String? overtimeInHoursFormatted;
     List<DailyWorkedHours>? dailyWorkedHours;
     List<Session>? sessions;
 
     Data({
         this.totalTime,
-        this.overtime,
-        this.plannedHours,
         this.totalBreakInHours,
         this.totalBreakInHoursFormatted,
-        this.overtimeInHoursFormatted,
         this.dailyWorkedHours,
         this.sessions,
     });
@@ -59,11 +53,8 @@ class Data {
 
     factory Data.fromJson(Map<String, dynamic> json) => Data(
         totalTime: json["totalTime"],
-        overtime: json["overtime"],
-        plannedHours: json["plannedHours"]?.toString(),
         totalBreakInHours: json["totalBreakInHours"],
         totalBreakInHoursFormatted: json["totalBreakInHoursFormatted"],
-        overtimeInHoursFormatted: json["overtimeInHoursFormatted"],
         dailyWorkedHours: json["dailyWorkedHours"] == null
             ? []
             : List<DailyWorkedHours>.from(json["dailyWorkedHours"]!.map((x) => DailyWorkedHours.fromJson(x))),
@@ -72,11 +63,8 @@ class Data {
 
     Map<String, dynamic> toJson() => {
         "totalTime": totalTime,
-        "overtime": overtime,
-        "plannedHours": plannedHours,
         "totalBreakInHours": totalBreakInHours,
         "totalBreakInHoursFormatted": totalBreakInHoursFormatted,
-        "overtimeInHoursFormatted": overtimeInHoursFormatted,
         "dailyWorkedHours": dailyWorkedHours == null
             ? []
             : List<dynamic>.from(dailyWorkedHours!.map((x) => x.toJson())),

@@ -25,7 +25,13 @@ class AndroidPermissionsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml"
             manifest.parent.mkdir(parents=True)
-            for permission in ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", *FORBIDDEN]:
+            for permission in [
+                "android.permission.CAMERA",
+                "android.permission.RECORD_AUDIO",
+                "android.permission.ACCESS_FINE_LOCATION",
+                "android.permission.ACCESS_COARSE_LOCATION",
+                *FORBIDDEN,
+            ]:
                 for element in ("uses-permission", "uses-permission-sdk-23"):
                     with self.subTest(permission=permission, element=element):
                         manifest.write_text(
@@ -38,6 +44,21 @@ class AndroidPermissionsTest(unittest.TestCase):
                                 check_release_manifests(directory)
                         else:
                             self.assertEqual(check_release_manifests(directory), 1)
+
+    def test_final_manifest_rejects_geolocator_location_service(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(
+                '<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
+                "<application>"
+                '<service android:name="com.baseflow.geolocator.GeolocatorLocationService" '
+                'android:foregroundServiceType="location"/>'
+                "</application></manifest>",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "GeolocatorLocationService"):
+                check_release_manifests(directory)
 
 
 if __name__ == "__main__":

@@ -93,40 +93,12 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  /// Hours the company planned for this person across the open day or range.
-  double _plannedHours() {
-    return double.tryParse(
-          controller.dailySummaryData.value?.data?.plannedHours ?? '',
-        ) ??
-        0;
-  }
-
-  /// Logged work past the planned total. Zero when nothing was planned.
-  double _plannedOvertimeHours() {
-    final planned = _plannedHours();
-    if (planned <= 0) return 0;
-    final extra = (_periodWorkedHours() ?? 0) - planned;
-    return extra < 0 ? 0 : extra;
-  }
-
-  String _formatHoursMinutes(double hours) {
-    final totalMinutes = (hours * 60).round();
-    final safe = totalMinutes < 0 ? 0 : totalMinutes;
-    final h = safe ~/ 60;
-    final m = safe % 60;
-    return '${h}h ${m}m';
-  }
-
   /// Share a plain-text summary of the current report via the native share
-  /// sheet. Worked and break come from the summary. Overtime is logged work
-  /// past the planned total, the same figure the breakdown card shows.
+  /// sheet. Worked and break come from the summary for the open period.
   Future<void> _shareReport() async {
     final summary = controller.dailySummaryData.value?.data;
 
     final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
-    final overtimeLabel = _plannedHours() <= 0
-        ? '0h 0m'
-        : _formatHoursMinutes(_plannedOvertimeHours());
 
     final date = controller.selectedDate.value;
     final String period;
@@ -148,8 +120,7 @@ class _ReportScreenState extends State<ReportScreen> {
       ..writeln(period)
       ..writeln()
       ..writeln('${'worked'.tr}: $worked')
-      ..writeln('${'breakLabel'.tr}: $breakLabel')
-      ..write('${'overtime'.tr}: $overtimeLabel');
+      ..write('${'breakLabel'.tr}: $breakLabel');
 
     await SharePlus.instance.share(
       ShareParams(text: text.toString(), subject: 'timeReport'.tr),
@@ -195,6 +166,8 @@ class _ReportScreenState extends State<ReportScreen> {
               children: [
                 _buildSummaryStrip(),
                 const SizedBox(height: 16),
+                _buildStandingCard(),
+                const SizedBox(height: 16),
                 _buildSegmentedSwitcher(),
                 const SizedBox(height: 16),
                 _buildPeriodHeader(),
@@ -210,8 +183,6 @@ class _ReportScreenState extends State<ReportScreen> {
                   )
                 else ...[
                   _buildWorkedCard(),
-                  const SizedBox(height: 16),
-                  _buildByProjectCard(),
                   const SizedBox(height: 24),
                   _buildRecentSessions(),
                 ],
@@ -570,104 +541,83 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // By project card
+  // Standing totals for in-progress projects. Independent of the open tab.
   // ---------------------------------------------------------------------------
 
-  Widget _buildByProjectCard() {
-    // The bars fill against the hours the company planned for this person on
-    // the open day or range. Logged work past that sum is the overtime row.
-    final summary = controller.dailySummaryData.value?.data;
-
-    final workedHours = _periodWorkedHours() ?? 0;
-    final plannedHours = _plannedHours();
-    final String periodChip;
-    switch (_tab) {
-      case _ReportTab.day:
-        periodChip = 'today1'.tr;
-        break;
-      case _ReportTab.week:
-        periodChip = 'thisWeek'.tr;
-        break;
-      case _ReportTab.month:
-        periodChip = 'thisMonth'.tr;
-        break;
-    }
-
-    final breakHours = double.tryParse(summary?.totalBreakInHours ?? '') ?? 0;
-    final overtimeHours = _plannedOvertimeHours();
-    final breakLabel = summary?.totalBreakInHoursFormatted ?? '0h 0m';
-    final overtimeLabel = plannedHours <= 0
-        ? '0h 0m'
-        : _formatHoursMinutes(overtimeHours);
+  Widget _buildStandingCard() {
+    final standing = controller.standingTotals.value?.data;
+    final projectCount = standing?.projectCount ?? 0;
+    final allocated = standing?.allocatedHours ?? 0;
+    final overtime = standing?.overtimeHours ?? 0;
 
     return DsCard(
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('breakdown'.tr, style: AppTextStyles.eyebrow),
-              _pillLabel(LucideIcons.calendar, periodChip),
+          Text('activeProjects'.tr, style: AppTextStyles.eyebrow),
+          if (standing != null && projectCount == 0) ...[
+            const SizedBox(height: 16),
+            Text('noActiveProjects'.tr, style: AppTextStyles.subtitle),
+          ] else if (standing != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              allocated > 0
+                  ? '${_formatHours(standing.workedHours)} / ${_formatHours(allocated)}'
+                  : _formatHours(standing.workedHours),
+              style: AppTextStyles.timer.copyWith(fontSize: 34),
+            ),
+            if (allocated > 0) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(9999),
+                child: LinearProgressIndicator(
+                  value: _standingFill(standing.workedHours ?? 0, allocated),
+                  minHeight: 8,
+                  backgroundColor: AppColors.neutralSoft,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    overtime > 0 ? AppColors.danger : AppColors.primary,
+                  ),
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'plannedHoursLine'.trParams({'hours': _formatHours(plannedHours)}),
-            style: AppTextStyles.subtitle,
-          ),
-          const SizedBox(height: 16),
-          _breakdownRow(
-            'worked'.tr,
-            _formatHours(workedHours),
-            breakdownFraction(workedHours, plannedHours),
-            AppColors.primary,
-          ),
-          const SizedBox(height: 14),
-          _breakdownRow(
-            'breakLabel'.tr,
-            breakLabel,
-            breakdownFraction(breakHours, plannedHours),
-            AppColors.success,
-          ),
-          const SizedBox(height: 14),
-          _breakdownRow(
-            'overtime'.tr,
-            overtimeLabel,
-            breakdownFraction(overtimeHours, plannedHours),
-            AppColors.warning,
-          ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _standingFigure('overtime'.tr, _formatHours(overtime)),
+                ),
+                Expanded(
+                  child: _standingFigure(
+                    'breakLabel'.tr,
+                    _formatHours(standing.breakHours),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _breakdownRow(
-    String label,
-    String value,
-    double fraction,
-    Color color,
-  ) {
+  double _standingFill(double worked, double allocated) {
+    if (allocated <= 0) return 0;
+    final fraction = worked / allocated;
+    if (fraction < 0) return 0;
+    if (fraction > 1) return 1;
+    return fraction;
+  }
+
+  Widget _standingFigure(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: AppTextStyles.bodyMedium),
-            Text(value, style: AppTextStyles.caption),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(9999),
-          child: LinearProgressIndicator(
-            value: fraction.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: AppColors.neutralSoft,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
+        Text(label, style: AppTextStyles.caption),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: AppTextStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );

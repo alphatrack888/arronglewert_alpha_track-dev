@@ -12,7 +12,13 @@ FORBIDDEN = {
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "MANAGE_EXTERNAL_STORAGE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
     )
+}
+FORBIDDEN_SERVICES = {
+    "com.baseflow.geolocator.GeolocatorLocationService",
 }
 
 
@@ -24,20 +30,33 @@ def check_release_manifests(build_dir):
         raise ValueError("Packaged release manifest missing; build the release AAB first.")
     for manifest in manifests:
         tree = ET.parse(manifest)
+        root = tree.getroot()
         permissions = {
             node.get(ANDROID_NAME)
-            for node in tree.getroot()
+            for node in root.iter()
             if node.tag.startswith("uses-permission")
         }
         forbidden = permissions & FORBIDDEN
         if forbidden:
             raise ValueError(f"{manifest}: prohibited permissions: {', '.join(sorted(forbidden))}")
+        services = {
+            node.get(ANDROID_NAME)
+            for node in root.iter("service")
+        }
+        blocked_services = services & FORBIDDEN_SERVICES
+        if blocked_services:
+            raise ValueError(
+                f"{manifest}: prohibited services: {', '.join(sorted(blocked_services))}"
+            )
     return len(manifests)
 
 
 if __name__ == "__main__":
     try:
         count = check_release_manifests(sys.argv[1] if len(sys.argv) > 1 else "build")
-        print(f"Verified {count} packaged release manifest(s): no broad photo/storage access.")
+        print(
+            f"Verified {count} packaged release manifest(s): "
+            "no broad photo/storage access or background location service."
+        )
     except (ValueError, ET.ParseError) as error:
         sys.exit(str(error))

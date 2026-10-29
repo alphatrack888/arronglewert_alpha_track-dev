@@ -4,13 +4,14 @@ import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/widgets/app_text/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:alpha_track/services/image_picker_service/image_picker_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 
 class ProjectNotesScreenController extends GetxController {
   final TextEditingController textController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
+  final ImagePickerService _imagePicker = ImagePickerService();
   final RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
   final RxList<XFile> selectedImages = <XFile>[].obs;
 
@@ -32,7 +33,9 @@ class ProjectNotesScreenController extends GetxController {
 
   Future<void> sendPhoto() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final context = Get.context;
+      if (context == null) return;
+      final images = await _imagePicker.pickMultipleFromGallery(context);
       if (images.isNotEmpty) {
         selectedImages.assignAll(images);
         showSelectedImages();
