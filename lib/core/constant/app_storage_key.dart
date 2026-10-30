@@ -15,6 +15,9 @@ class AppStorageKey {
   String companyId = "companyId";
   String userId = "userId";
   String registeredDeviceToken = "registeredDeviceToken";
+  /// Survives [StorageServices.clearSession]. The logout delete retries this token.
+  String pendingDeregisterToken = "pendingDeregisterToken";
+  String pendingDeregisterUserId = "pendingDeregisterUserId";
   String automaticBreakEnabled = "automaticBreakEnabled";
   /// True after the user changes Break Settings (not set by profile seed).
   String automaticBreakUserSet = "automaticBreakUserSet";

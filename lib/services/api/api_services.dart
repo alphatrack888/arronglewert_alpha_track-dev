@@ -283,6 +283,26 @@ class ApiServices {
     }
   }
 
+  /// HTTP status from DELETE, or null when the server sent no response.
+  /// No snackbar. Device logout uses this so a 404 is not shown as an error.
+  Future<int?> quietDeleteStatus({required String url}) async {
+    try {
+      final response = await api.sendRequest.delete(url);
+      return response.statusCode;
+    } on DioException catch (e) {
+      return e.response?.statusCode;
+    } on SocketException catch (e) {
+      errorLog('quiet delete socket', e);
+      return null;
+    } on TimeoutException catch (e) {
+      errorLog('quiet delete timeout', e);
+      return null;
+    } catch (e) {
+      errorLog('quiet delete', e);
+      return null;
+    }
+  }
+
   Future<dynamic> apiDeleteServices({
     required String url,
     Object? body,

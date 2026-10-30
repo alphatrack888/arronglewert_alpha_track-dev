@@ -1,5 +1,6 @@
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/screens/notification_screen/controller/notification_screen_controller.dart';
+import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
@@ -296,7 +297,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
 
     final tappableRow = InkWell(
-      onTap: _manageMode ? () => _toggleSelection(id) : null,
+      onTap: _manageMode
+          ? () => _toggleSelection(id)
+          : () => PushNotificationService.instance.openNotification(
+                category: notification.category,
+                notificationId: id,
+                projectId: notification.projectId,
+              ),
       onLongPress: _manageMode
           ? null
           : () => _showNotificationDetails(notification),

@@ -1,6 +1,7 @@
 import 'package:alpha_track/screens/notification_screen/models/notification_screen_model.dart';
 import 'package:alpha_track/screens/notification_screen/notification_inbox_pagination.dart';
 import 'package:alpha_track/screens/notification_screen/notification_locale.dart';
+import 'package:alpha_track/services/push_notification_service/foreground_alert.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
 import 'package:alpha_track/services/repository/notification_repository/notification_repository.dart';
 import 'package:alpha_track/services/socket_service/socket_channel_names.dart';
@@ -227,6 +228,15 @@ class NotificationScreenController extends GetxController {
     await refreshNotifications();
   }
 
+  /// Updates a row that is already loaded. Does not call the server.
+  void applyReadLocally(String id) {
+    final index = notifications.indexWhere((notification) => notification.id == id);
+    if (index == -1) return;
+    if (notifications[index].isRead == true) return;
+    notifications[index].isRead = true;
+    notifications.refresh();
+  }
+
   Future<void> markAsRead(String? id) async {
     if (id == null) return;
     if (kDemoMode) {
@@ -370,21 +380,17 @@ class NotificationScreenController extends GetxController {
   /// Shows a visual indicator for new notifications (optional)
   void _showNewNotificationIndicator(Datum notification) {
     try {
-      if (!PushNotificationService.claimForDisplay(notification.id)) {
-        return;
-      }
-      if (Get.isSnackbarOpen == false) {
-        Get.snackbar(
-          notification.title ?? 'newNotification'.tr,
-          notification.body ?? 'newNotificationBody'.tr,
-          duration: const Duration(seconds: 3),
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.blue.withOpacity(0.8),
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(10),
-          borderRadius: 8,
-        );
-      }
+      final plan = SocketBannerPlan.decide(
+        lifecycle: WidgetsBinding.instance.lifecycleState,
+        title: notification.title ?? 'newNotification'.tr,
+        body: notification.body ?? 'newNotificationBody'.tr,
+        notificationId: notification.id,
+        category: notification.category,
+        projectId: notification.projectId,
+      );
+      if (!plan.claim || plan.payload == null) return;
+      if (!PushNotificationService.claimForDisplay(notification.id)) return;
+      ForegroundAlertPresenter.present(plan.payload!);
     } catch (e) {
       appLog("Error showing notification indicator: $e");
     }

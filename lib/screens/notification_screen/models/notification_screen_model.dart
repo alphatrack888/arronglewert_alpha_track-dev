@@ -63,6 +63,8 @@ class Datum {
     From? from;
     String? title;
     String? body;
+    String? category;
+    String? projectId;
     bool? isRead;
     DateTime? createdAt;
     DateTime? updatedAt;
@@ -74,6 +76,8 @@ class Datum {
         this.from,
         this.title,
         this.body,
+        this.category,
+        this.projectId,
         this.isRead,
         this.createdAt,
         this.updatedAt,
@@ -92,6 +96,8 @@ class Datum {
                 from: json["from"] == null ? null : _parseFromSafely(json["from"]),
                 title: json["title"],
                 body: json["body"],
+                category: json["category"] is String ? json["category"] as String : null,
+                projectId: json["projectId"] is String ? json["projectId"] as String : null,
                 isRead: json["isRead"] ?? false,
                 createdAt: json["createdAt"] == null ? null : DateTime.tryParse(json["createdAt"]),
                 updatedAt: json["updatedAt"] == null ? null : DateTime.tryParse(json["updatedAt"]),
@@ -120,6 +126,8 @@ class Datum {
         "from": from?.toJson(),
         "title": title,
         "body": body,
+        "category": category,
+        "projectId": projectId,
         "isRead": isRead,
         "createdAt": createdAt?.toIso8601String(),
         "updatedAt": updatedAt?.toIso8601String(),

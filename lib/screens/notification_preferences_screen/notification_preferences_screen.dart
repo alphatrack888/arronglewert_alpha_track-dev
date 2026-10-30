@@ -1,4 +1,5 @@
 import 'package:alpha_track/screens/notification_preferences_screen/controller/notification_preferences_controller.dart';
+import 'package:alpha_track/services/push_notification_service/notification_hygiene.dart';
 import 'package:alpha_track/utils/app_colors/app_colors.dart';
 import 'package:alpha_track/utils/app_string/app_string.dart';
 import 'package:alpha_track/utils/app_text_styles/app_text_styles.dart';
@@ -74,6 +75,22 @@ class NotificationPreferencesScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (controller.osPrompt.value?.showStatus == true) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    AppString.notificationsBlockedByPhone.tr,
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  SecondaryButton(
+                    label: controller.osPrompt.value?.action ==
+                            OsNotificationAction.openSettings
+                        ? AppString.openNotificationSettings
+                        : AppString.allowNotifications,
+                    onTap: controller.onOsPermissionButton,
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   AppString.categories.tr,

@@ -264,10 +264,10 @@ class AuthRepository {
 
     await EmployeeSocketSubscriptions.primeUserIdFromProfileIfNeeded();
 
-    PushNotificationService.instance.onAuthenticatedNavigationReady();
     await PushNotificationService.instance.registerCurrentToken();
 
     Get.offAllNamed(AppRoute.bottomNavigation);
+    PushNotificationService.instance.onAuthenticatedNavigationReady();
     AppSnackBar.success("Login Successfully");
   }
 

@@ -611,6 +611,10 @@ class AppTranslation extends Translations {
       'pushNotifications': 'Push Notifications',
       'pushNotificationsHint':
           'Turn off to stop receiving push alerts entirely. You\'ll still see everything in your notification list.',
+      'notificationsBlockedByPhone':
+          'This phone is blocking notifications. They still appear in your notification list.',
+      'allowNotifications': 'Allow notifications',
+      'openNotificationSettings': 'Open notification settings',
       'categories': 'Categories',
       'categoryLeave': 'Leave requests',
       'categoryProject': 'Project assignments',
@@ -1345,6 +1349,10 @@ class AppTranslation extends Translations {
       'pushNotifications': 'Push-Benachrichtigungen',
       'pushNotificationsHint':
           'Deaktivieren Sie diese Option, um keine Push-Benachrichtigungen mehr zu erhalten. Sie sehen weiterhin alles in Ihrer Benachrichtigungsliste.',
+      'notificationsBlockedByPhone':
+          'Dieses Telefon blockiert Benachrichtigungen. Sie erscheinen weiterhin in Ihrer Benachrichtigungsliste.',
+      'allowNotifications': 'Benachrichtigungen erlauben',
+      'openNotificationSettings': 'Benachrichtigungseinstellungen öffnen',
       'categories': 'Kategorien',
       'categoryLeave': 'Urlaubsanträge',
       'categoryProject': 'Projektzuweisungen',
@@ -2014,6 +2022,10 @@ class AppTranslation extends Translations {
       'pushNotifications': 'الإشعارات الفورية',
       'pushNotificationsHint':
           'أوقف هذا الخيار لإيقاف تلقي التنبيهات الفورية تمامًا. ستظل ترى كل شيء في قائمة إشعاراتك.',
+      'notificationsBlockedByPhone':
+          'هذا الهاتف يحظر الإشعارات. ستظل تظهر في قائمة الإشعارات.',
+      'allowNotifications': 'السماح بالإشعارات',
+      'openNotificationSettings': 'فتح إعدادات الإشعارات',
       'categories': 'الفئات',
       'categoryLeave': 'طلبات الإجازة',
       'categoryProject': 'تعيينات المشاريع',
@@ -2717,6 +2729,10 @@ class AppTranslation extends Translations {
       'pushNotifications': 'Notificări push',
       'pushNotificationsHint':
           'Dezactivați pentru a opri complet alertele push. Veți vedea în continuare totul în lista de notificări.',
+      'notificationsBlockedByPhone':
+          'Acest telefon blochează notificările. Ele apar în continuare în lista de notificări.',
+      'allowNotifications': 'Permite notificările',
+      'openNotificationSettings': 'Deschide setările de notificare',
       'categories': 'Categorii',
       'categoryLeave': 'Cereri de concediu',
       'categoryProject': 'Atribuiri de proiecte',

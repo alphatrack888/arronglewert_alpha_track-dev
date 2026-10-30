@@ -26,6 +26,7 @@ class SessionUnauthorized {
       }
 
       final storage = StorageServices.instance;
+      await storage.rememberDeviceTokenForDeregister();
       await storage.storageClear();
 
       final route = routeForUnauthorized(onboardComplete: storage.getOnboardScreen());

@@ -179,6 +179,55 @@ class StorageServices {
     }
   }
 
+  Future<void> setPendingDeregister({
+    required String token,
+    required String userId,
+  }) async {
+    try {
+      await _safeWrite(AppStorageKey.instance.pendingDeregisterToken, token);
+      await _safeWrite(AppStorageKey.instance.pendingDeregisterUserId, userId);
+    } catch (e) {
+      errorLog("set pending deregister", e);
+    }
+  }
+
+  String getPendingDeregisterToken() {
+    try {
+      return _safeRead<String>(AppStorageKey.instance.pendingDeregisterToken) ??
+          "";
+    } catch (e) {
+      errorLog("get pending deregister token", e);
+      return "";
+    }
+  }
+
+  String getPendingDeregisterUserId() {
+    try {
+      return _safeRead<String>(AppStorageKey.instance.pendingDeregisterUserId) ??
+          "";
+    } catch (e) {
+      errorLog("get pending deregister user", e);
+      return "";
+    }
+  }
+
+  Future<void> clearPendingDeregister() async {
+    try {
+      await _safeRemove(AppStorageKey.instance.pendingDeregisterToken);
+      await _safeRemove(AppStorageKey.instance.pendingDeregisterUserId);
+    } catch (e) {
+      errorLog("clear pending deregister", e);
+    }
+  }
+
+  /// Copies the current device token into the pending pair before a session
+  /// clear that cannot wait for a successful delete.
+  Future<void> rememberDeviceTokenForDeregister() async {
+    final token = getRegisteredDeviceToken();
+    if (token.isEmpty) return;
+    await setPendingDeregister(token: token, userId: getUserId());
+  }
+
   // Forgot password token
   Future<void> setForgotPasswordToken(String value) async {
     try {
@@ -391,6 +440,8 @@ class StorageServices {
       await _safeRemove(keys.automaticBreakEnabled);
       await _safeRemove(keys.automaticBreakUserSet);
       await _safeRemove(keys.registeredDeviceToken);
+      // pendingDeregisterToken and pendingDeregisterUserId stay. A failed
+      // logout delete retries them on the next authenticated launch.
       await _safeRemove(keys.forgotToken);
       await _safeRemove(keys.reviewToken);
       await clearLocationData();

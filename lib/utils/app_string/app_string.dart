@@ -214,6 +214,9 @@ class AppString {
   static const String notificationManage = "notificationManage";
   static const String pushNotifications = "pushNotifications";
   static const String pushNotificationsHint = "pushNotificationsHint";
+  static const String notificationsBlockedByPhone = "notificationsBlockedByPhone";
+  static const String allowNotifications = "allowNotifications";
+  static const String openNotificationSettings = "openNotificationSettings";
   static const String categories = "categories";
   static const String categoryLeave = "categoryLeave";
   static const String categoryProject = "categoryProject";

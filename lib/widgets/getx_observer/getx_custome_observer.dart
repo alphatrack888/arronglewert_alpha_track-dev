@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 
 class NavigationObserver extends NavigatorObserver {
+  static NavigationObserver? instance;
+
+  NavigationObserver() {
+    instance = this;
+  }
+
   final List<String> routeStack = <String>[];
+
+  bool containsRoute(String name) => routeStack.contains(name);
 
   // ANSI Color codes for colorful output
   static const String _reset = '\x1B[0m';

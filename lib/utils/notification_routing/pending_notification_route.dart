@@ -1,20 +1,23 @@
+import 'package:alpha_track/utils/notification_routing/notification_routing.dart';
+
 /// Holds a tapped notification until authenticated navigation is ready.
 class PendingNotificationRoute {
-  String? _route;
+  NotificationDestination? _destination;
   bool _ready = false;
 
-  void enqueue(String route) => _route = route;
+  void enqueue(NotificationDestination destination) => _destination = destination;
+
   void markReady() => _ready = true;
 
-  String? take() {
+  NotificationDestination? take() {
     if (!_ready) return null;
-    final route = _route;
-    _route = null;
-    return route;
+    final destination = _destination;
+    _destination = null;
+    return destination;
   }
 
   void reset() {
     _ready = false;
-    _route = null;
+    _destination = null;
   }
 }
