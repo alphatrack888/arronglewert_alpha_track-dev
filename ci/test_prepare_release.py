@@ -78,8 +78,8 @@ class ReleaseInputsTest(unittest.TestCase):
                 self.assertEqual(list(Path(directory).iterdir()), [])
 
     def test_ios_retains_its_own_bundle_id(self):
-        for bundle_id, accepted in (("com.marc.alphatrack", True),
-                                    ("com.marcgelwertz.alphatrack", False)):
+        for bundle_id, accepted in (("com.marcgelwertz.alphatrack", True),
+                                    ("com.marc.alphatrack", False)):
             with self.subTest(bundle_id=bundle_id), tempfile.TemporaryDirectory() as directory:
                 config = plistlib.dumps({"BUNDLE_ID": bundle_id})
                 with patch.object(release, "ROOT", Path(directory)), patch.dict(

@@ -1,11 +1,12 @@
 import 'dart:io';
 
+import 'package:alpha_track/utils/app_log/app_log.dart';
 import 'package:alpha_track/utils/app_log/error_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-/// Channel shared with [MainActivity]. Android posts here; iOS keeps a snackbar.
+/// Channel shared with [MainActivity]. Android posts here; iOS uses FCM presentation.
 const foregroundNotificationChannel = MethodChannel(
   'com.marcgelwertz.alphatrack/foreground_notification',
 );
@@ -91,7 +92,8 @@ class ForegroundAlertPresenter {
     }
   }
 
-  /// Android posts a system notification. Other platforms keep the snackbar.
+  /// Android posts a system notification. iOS relies on FCM foreground
+  /// presentation options (no snackbar — that would double the system banner).
   /// A failed Android post is logged and does not fall back to a snackbar.
   static Future<void> present(Map<String, String> payload) async {
     if (Platform.isAndroid) {
@@ -100,6 +102,13 @@ class ForegroundAlertPresenter {
       } catch (e) {
         errorLog('foreground notification', e);
       }
+      return;
+    }
+    if (Platform.isIOS) {
+      appLog(
+        'iOS foreground banner owned by system presentation '
+        '(notificationId=${payload['notificationId'] ?? ''})',
+      );
       return;
     }
     if (Get.isSnackbarOpen) return;

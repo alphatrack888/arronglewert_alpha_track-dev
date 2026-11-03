@@ -122,7 +122,7 @@ Full table: [NOTIFICATION_MODULE_REGRESSION.md §4.3](NOTIFICATION_MODULE_REGRES
 **Out of scope (accepted for this gate):**
 
 - Deferred socket: `updatedProject::<authId>`, `note::<projectId>`
-- iOS FCM until `GoogleService-Info.plist` for `com.marcgelwertz.alphatrack`
+- iOS FCM device delivery until APNs auth key on `alphatrack-2026` and a push-enabled App Store profile (plist + entitlements are in the app; see `ios/Runner/FIREBASE_SETUP.md`)
 - Phase 5 (PDF reports, location trail) unless separately agreed
 - Phase 6 (CI / Play internal track automation)
 

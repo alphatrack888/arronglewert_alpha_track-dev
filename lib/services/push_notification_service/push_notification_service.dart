@@ -60,6 +60,14 @@ class PushNotificationService {
     if (initialMessage != null) {
       _handleNotificationTap(initialMessage);
     }
+
+    // iOS shows the FCM notification payload while the app is open. Android
+    // still posts through ForegroundAlertPresenter (MethodChannel).
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   Future<void> registerCurrentToken() async {

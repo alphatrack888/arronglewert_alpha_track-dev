@@ -10,7 +10,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ANDROID_APP_ID = "com.marcgelwertz.alphatrack"
-IOS_APP_ID = "com.marc.alphatrack"
+IOS_APP_ID = "com.marcgelwertz.alphatrack"
 
 
 class ConfigurationError(ValueError):

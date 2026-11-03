@@ -1,7 +1,7 @@
 # Mobile CI/CD
 
 Production Android application ID: `com.marcgelwertz.alphatrack`.
-Production iOS bundle ID: `com.marc.alphatrack`.
+Production iOS bundle ID: `com.marcgelwertz.alphatrack`.
 The client has confirmed both store records and signing setup. Implementation
 proceeds on that basis; there is no additional identity-verification prerequisite.
 
