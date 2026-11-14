@@ -9,7 +9,7 @@ ROOT = File.expand_path("..", __dir__)
 SIGNING_DIR = File.join(ENV.fetch("RUNNER_TEMP", "/tmp"), "alphatrack-signing")
 KEYCHAIN = File.join(SIGNING_DIR, "release.keychain-db")
 ANDROID_APP_ID = "com.marcgelwertz.alphatrack"
-IOS_APP_ID = "com.marc.alphatrack"
+IOS_APP_ID = "com.marcgelwertz.alphatrack"
 
 def secret(name, allow_empty: false)
   value = ENV[name]
