@@ -22,47 +22,59 @@ def write_secret(path, bytes)
   File.write(path, bytes, mode: "wb", perm: 0600)
 end
 
-# macOS `security import` often fails to load private keys from modern
-# OpenSSL 3 AES-256 PKCS#12 files. Re-export with legacy ciphers when possible.
+# Prefer Apple LibreSSL on CI. Homebrew OpenSSL 3 AES PKCS#12 files are often
+# rejected by `security import`; LibreSSL re-export is what macOS accepts.
+def openssl_bin
+  return @openssl_bin if defined?(@openssl_bin)
+  # Prefer Apple LibreSSL; Homebrew OpenSSL 3 p12 exports break `security import`.
+  @openssl_bin = File.executable?("/usr/bin/openssl") ? "/usr/bin/openssl" : "openssl"
+end
+
+# Returns [path, import_password]. Import password may differ from the secret
+# after a LibreSSL re-pack (ASCII-only, avoids encoding mismatches).
 def mac_compatible_p12(source_p12, password)
   pem = File.join(SIGNING_DIR, "distribution.pem")
-  legacy = File.join(SIGNING_DIR, "distribution-mac.p12")
-  extract = Open3.capture3(
-    "openssl", "pkcs12", "-in", source_p12, "-nodes", "-legacy",
-    "-passin", "pass:#{password}", "-out", pem
-  )
-  unless extract[2].success?
+  repacked = File.join(SIGNING_DIR, "distribution-mac.p12")
+  openssl = openssl_bin
+  UI.message("Re-packing distribution .p12 with #{openssl}")
+
+  extractors = [openssl]
+  brew_ssl = ["/opt/homebrew/opt/openssl@3/bin/openssl", "/usr/local/opt/openssl@3/bin/openssl"].find { |p| File.executable?(p) }
+  extractors << brew_ssl if brew_ssl && brew_ssl != openssl
+  extract = nil
+  extractors.each do |bin|
     extract = Open3.capture3(
-      "openssl", "pkcs12", "-in", source_p12, "-nodes",
+      bin, "pkcs12", "-in", source_p12, "-nodes",
       "-passin", "pass:#{password}", "-out", pem
     )
-  end
-  UI.user_error!("Unable to read distribution .p12 (check IOS_DISTRIBUTION_P12_PASSWORD)") unless extract[2].success?
-
-  export = Open3.capture3(
-    "openssl", "pkcs12", "-export", "-legacy",
-    "-inkey", pem, "-in", pem, "-out", legacy,
-    "-passout", "pass:#{password}"
-  )
-  unless export[2].success?
-    export = Open3.capture3(
-      "openssl", "pkcs12", "-export",
-      "-inkey", pem, "-in", pem, "-out", legacy,
-      "-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1",
-      "-passout", "pass:#{password}"
+    break if extract[2].success?
+    extract = Open3.capture3(
+      bin, "pkcs12", "-in", source_p12, "-nodes", "-legacy",
+      "-passin", "pass:#{password}", "-out", pem
     )
+    break if extract[2].success?
   end
-  UI.user_error!("Unable to re-export distribution .p12 for macOS import") unless export[2].success?
+  UI.user_error!("Unable to read distribution .p12 (check IOS_DISTRIBUTION_P12_PASSWORD)") unless extract && extract[2].success?
+
+  import_password = SecureRandom.hex(16)
+  puts "::add-mask::#{import_password}"
+  export = Open3.capture3(
+    openssl, "pkcs12", "-export",
+    "-inkey", pem, "-in", pem, "-out", repacked,
+    "-passout", "pass:#{import_password}"
+  )
+  UI.user_error!("Unable to re-export distribution .p12 for macOS import: #{export[1]}") unless export[2].success?
   FileUtils.rm_f(pem)
-  legacy
+  [repacked, import_password]
 end
 
 def allow_codesign_key_access(keychain_password)
-  Open3.capture3(
+  _out, err, status = Open3.capture3(
     "security", "set-key-partition-list",
     "-S", "apple-tool:,apple:,codesign:",
     "-s", "-k", keychain_password, KEYCHAIN
   )
+  UI.user_error!("Unable to allow codesign keychain access: #{err}") unless status.success?
 end
 
 def assert_distribution_identity(team)
@@ -137,12 +149,12 @@ platform :ios do
       password = SecureRandom.hex(32)
       puts "::add-mask::#{password}"
       p12_password = secret("IOS_DISTRIBUTION_P12_PASSWORD", allow_empty: true)
-      p12 = mac_compatible_p12(raw_p12, p12_password)
+      p12, import_password = mac_compatible_p12(raw_p12, p12_password)
       create_keychain(path: KEYCHAIN, password: password, default_keychain: true,
                       unlock: true, timeout: 7200, lock_when_sleeps: false,
                       add_to_search_list: true)
       import_certificate(certificate_path: p12,
-                         certificate_password: p12_password,
+                         certificate_password: import_password,
                          keychain_path: KEYCHAIN, keychain_password: password)
       allow_codesign_key_access(password)
       assert_distribution_identity(team)
