@@ -22,6 +22,59 @@ def write_secret(path, bytes)
   File.write(path, bytes, mode: "wb", perm: 0600)
 end
 
+# macOS `security import` often fails to load private keys from modern
+# OpenSSL 3 AES-256 PKCS#12 files. Re-export with legacy ciphers when possible.
+def mac_compatible_p12(source_p12, password)
+  pem = File.join(SIGNING_DIR, "distribution.pem")
+  legacy = File.join(SIGNING_DIR, "distribution-mac.p12")
+  extract = Open3.capture3(
+    "openssl", "pkcs12", "-in", source_p12, "-nodes", "-legacy",
+    "-passin", "pass:#{password}", "-out", pem
+  )
+  unless extract[2].success?
+    extract = Open3.capture3(
+      "openssl", "pkcs12", "-in", source_p12, "-nodes",
+      "-passin", "pass:#{password}", "-out", pem
+    )
+  end
+  UI.user_error!("Unable to read distribution .p12 (check IOS_DISTRIBUTION_P12_PASSWORD)") unless extract[2].success?
+
+  export = Open3.capture3(
+    "openssl", "pkcs12", "-export", "-legacy",
+    "-inkey", pem, "-in", pem, "-out", legacy,
+    "-passout", "pass:#{password}"
+  )
+  unless export[2].success?
+    export = Open3.capture3(
+      "openssl", "pkcs12", "-export",
+      "-inkey", pem, "-in", pem, "-out", legacy,
+      "-certpbe", "PBE-SHA1-3DES", "-keypbe", "PBE-SHA1-3DES", "-macalg", "sha1",
+      "-passout", "pass:#{password}"
+    )
+  end
+  UI.user_error!("Unable to re-export distribution .p12 for macOS import") unless export[2].success?
+  FileUtils.rm_f(pem)
+  legacy
+end
+
+def allow_codesign_key_access(keychain_password)
+  Open3.capture3(
+    "security", "set-key-partition-list",
+    "-S", "apple-tool:,apple:,codesign:",
+    "-s", "-k", keychain_password, KEYCHAIN
+  )
+end
+
+def assert_distribution_identity(team)
+  identities, status = Open3.capture2("security", "find-identity", "-v", "-p", "codesigning", KEYCHAIN)
+  UI.message(identities)
+  UI.user_error!("No codesigning identities in CI keychain after import") unless status.success?
+  matched = identities.lines.any? do |line|
+    line.include?("Apple Distribution") && line.include?(team)
+  end
+  UI.user_error!("Apple Distribution identity for team #{team} not found after .p12 import") unless matched
+end
+
 def signing_cleanup
   if File.exist?(KEYCHAIN)
     # Capture output; it can contain local signing metadata.
@@ -59,10 +112,11 @@ platform :ios do
   desc "Create a distribution-signed IPA without publishing it"
   lane :build do
     begin
+      setup_ci(force: true) if ENV["CI"]
       FileUtils.mkdir_p(SIGNING_DIR)
-      p12 = File.join(SIGNING_DIR, "distribution.p12")
+      raw_p12 = File.join(SIGNING_DIR, "distribution.p12")
       profile_file = File.join(SIGNING_DIR, "distribution.mobileprovision")
-      write_secret(p12, Base64.strict_decode64(secret("IOS_DISTRIBUTION_P12_BASE64").gsub(/\s/, "")))
+      write_secret(raw_p12, Base64.strict_decode64(secret("IOS_DISTRIBUTION_P12_BASE64").gsub(/\s/, "")))
       write_secret(profile_file, Base64.strict_decode64(secret("IOS_PROVISIONING_PROFILE_BASE64").gsub(/\s/, "")))
       xml, status = Open3.capture2("security", "cms", "-D", "-i", profile_file)
       UI.user_error!("Unable to decode distribution provisioning profile") unless status.success?
@@ -82,12 +136,16 @@ platform :ios do
       write_secret(File.join(SIGNING_DIR, "profile-path"), profile_path)
       password = SecureRandom.hex(32)
       puts "::add-mask::#{password}"
-      create_keychain(path: KEYCHAIN, password: password, default_keychain: false,
+      p12_password = secret("IOS_DISTRIBUTION_P12_PASSWORD", allow_empty: true)
+      p12 = mac_compatible_p12(raw_p12, p12_password)
+      create_keychain(path: KEYCHAIN, password: password, default_keychain: true,
                       unlock: true, timeout: 7200, lock_when_sleeps: false,
                       add_to_search_list: true)
       import_certificate(certificate_path: p12,
-                         certificate_password: secret("IOS_DISTRIBUTION_P12_PASSWORD", allow_empty: true),
+                         certificate_password: p12_password,
                          keychain_path: KEYCHAIN, keychain_password: password)
+      allow_codesign_key_access(password)
+      assert_distribution_identity(team)
       update_code_signing_settings(
         path: File.join(ROOT, "ios/Runner.xcodeproj"),
         targets: ["Runner"], build_configurations: ["Release"],
@@ -97,11 +155,23 @@ platform :ios do
         profile_name: profile.fetch("Name"),
         bundle_identifier: IOS_APP_ID
       )
+      # Project-level sdk identity can override the target and still ask for
+      # development / legacy "iOS Distribution" names during archive.
+      pbx = File.join(ROOT, "ios/Runner.xcodeproj/project.pbxproj")
+      pbx_text = File.read(pbx)
+      pbx_text.gsub!(
+        /"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/,
+        '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";'
+      )
+      File.write(pbx, pbx_text)
       # Distribution signing needs production APNs; change only this ephemeral checkout.
-      entitlements_file = File.join(ROOT, "ios/Runner/Runner.entitlements")
-      app_entitlements = Plist.parse_xml(entitlements_file)
-      app_entitlements["aps-environment"] = "production"
-      File.write(entitlements_file, app_entitlements.to_plist)
+      %w[Runner/Runner.entitlements Runner/RunnerRelease.entitlements].each do |rel|
+        entitlements_file = File.join(ROOT, "ios", rel)
+        next unless File.exist?(entitlements_file)
+        app_entitlements = Plist.parse_xml(entitlements_file)
+        app_entitlements["aps-environment"] = "production"
+        File.write(entitlements_file, app_entitlements.to_plist)
+      end
       export_options = File.join(SIGNING_DIR, "ExportOptions.plist")
       File.write(export_options, {
         "method" => "app-store-connect", "signingStyle" => "manual",
