@@ -5,6 +5,7 @@ import 'package:alpha_track/utils/app_size/app_size.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:alpha_track/utils/app_log/agent_debug_log.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -14,6 +15,11 @@ class SplashScreen extends StatelessWidget {
     // Keep the controller wiring exactly as before (handles auto-navigation).
     // ignore: unused_local_variable
     final SplashScreenController controller = Get.find<SplashScreenController>();
+    agentDebugLog(
+      'splash_screen.dart:build',
+      'splash widget building',
+      'E',
+    );
     Size size = MediaQuery.of(context).size;
     AppSize.size = size;
     return Scaffold(

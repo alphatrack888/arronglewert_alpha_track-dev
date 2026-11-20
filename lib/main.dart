@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:alpha_track/core/app_route/app_route.dart';
 import 'package:alpha_track/core/bindings/initial_bindings.dart';
 import 'package:alpha_track/services/push_notification_service/push_notification_service.dart';
@@ -17,10 +19,12 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 import 'package:path_provider/path_provider.dart';
 
 import 'core/app_translation/app_translation.dart';
+import 'utils/app_log/agent_debug_log.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  agentDebugLog('main.dart:main', 'binding ready', 'A');
 
   configureAndroidPhotoPicker();
 
@@ -29,6 +33,7 @@ void main() async {
 
   // Initialize platform channels with error handling
   await initializePlatformChannels();
+  agentDebugLog('main.dart:main', 'platform channels done', 'A');
 
   // Initialize storage with enhanced error handling
   await initializeStorage();
@@ -38,18 +43,43 @@ void main() async {
 
   // Initialize bindings
   InitialBinding().dependencies();
+  agentDebugLog('main.dart:main', 'storage and bindings done', 'A');
 
-  await initializePushNotifications();
+  // First frame must not wait on Firebase/FCM. iOS LaunchScreen is white; a
+  // hang here looks like a frozen blank app.
+  unawaited(initializePushNotifications());
+  agentDebugLog('main.dart:main', 'runApp without awaiting push', 'A');
 
   runApp(const MyApp());
 }
 
 Future<void> initializePushNotifications() async {
   try {
-    await Firebase.initializeApp();
+    agentDebugLog(
+      'main.dart:initializePushNotifications',
+      'Firebase.initializeApp start',
+      'B',
+    );
+    await Firebase.initializeApp().timeout(const Duration(seconds: 8));
+    agentDebugLog(
+      'main.dart:initializePushNotifications',
+      'Firebase.initializeApp done',
+      'B',
+    );
     await PushNotificationService.instance.initialize();
+    agentDebugLog(
+      'main.dart:initializePushNotifications',
+      'PushNotificationService.initialize done',
+      'C',
+    );
     appLog('Push notifications initialized');
   } catch (e) {
+    agentDebugLog(
+      'main.dart:initializePushNotifications',
+      'push init threw',
+      'B',
+      {'error': e.toString()},
+    );
     appLog(
       'Push notification initialization failed (continuing without push): $e',
     );
@@ -134,6 +164,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    agentDebugLog('main.dart:MyApp.build', 'GetMaterialApp building', 'E');
     final String savedLanguage =
         StorageServices.instance.getLanguage() ?? 'english';
     return GetMaterialApp(

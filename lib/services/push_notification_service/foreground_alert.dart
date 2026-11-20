@@ -83,6 +83,7 @@ class ForegroundAlertPresenter {
   static Future<void> consumePendingTap(
     void Function(Map<String, String> data) onTap,
   ) async {
+    if (Platform.isIOS) return;
     try {
       final pending = await foregroundNotificationChannel
           .invokeMethod<dynamic>('consumePendingTap');

@@ -22,6 +22,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:alpha_track/utils/app_log/agent_debug_log.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
@@ -43,7 +44,17 @@ class PushNotificationService {
     _listenersAttached = true;
 
     ForegroundAlertPresenter.bindTap(_handleLocalNotificationTap);
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'consumePendingTap start',
+      'D',
+    );
     await ForegroundAlertPresenter.consumePendingTap(_handleLocalNotificationTap);
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'consumePendingTap done',
+      'D',
+    );
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -56,17 +67,59 @@ class PushNotificationService {
       await _registerToken(newToken);
     });
 
-    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'getInitialMessage start',
+      'C',
+    );
+    RemoteMessage? initialMessage;
+    try {
+      initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage()
+          .timeout(const Duration(seconds: 3));
+    } on TimeoutException {
+      agentDebugLog(
+        'push_notification_service.dart:initialize',
+        'getInitialMessage timed out',
+        'C',
+      );
+    }
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'getInitialMessage done',
+      'C',
+      {'hasMessage': initialMessage != null},
+    );
     if (initialMessage != null) {
       _handleNotificationTap(initialMessage);
     }
 
     // iOS shows the FCM notification payload while the app is open. Android
     // still posts through ForegroundAlertPresenter (MethodChannel).
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'setForegroundNotificationPresentationOptions start',
+      'C',
+    );
+    try {
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          )
+          .timeout(const Duration(seconds: 3));
+    } on TimeoutException {
+      agentDebugLog(
+        'push_notification_service.dart:initialize',
+        'setForegroundNotificationPresentationOptions timed out',
+        'C',
+      );
+    }
+    agentDebugLog(
+      'push_notification_service.dart:initialize',
+      'setForegroundNotificationPresentationOptions done',
+      'C',
     );
   }
 
